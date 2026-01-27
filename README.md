@@ -5,6 +5,7 @@ An intelligent setlist generator for church worship services that automatically 
 ## 🎵 Features
 
 - **Smart Song Selection**: Automatically picks songs based on configurable weights and preferences
+- **Energy-Based Sequencing**: Creates emotional arcs by ordering songs from upbeat to contemplative worship
 - **Variety Guaranteed**: Tracks song history and avoids repeating songs too frequently
 - **Service Structure**: Organizes songs into worship moments (prelúdio, louvor, ofertório, etc.)
 - **Manual Overrides**: Force specific songs when needed while letting the system fill the rest
@@ -23,7 +24,7 @@ An intelligent setlist generator for church worship services that automatically 
 - [Examples](#examples)
 - [Troubleshooting](#troubleshooting)
 
-## 🚀 Installation
+## Installation
 
 ### Requirements
 
@@ -47,7 +48,7 @@ If you have [uv](https://github.com/astral-sh/uv) installed:
 uv run generate_setlist.py
 ```
 
-## ⚡ Quick Start
+## Quick Start
 
 Generate a setlist for today:
 
@@ -62,7 +63,7 @@ This will:
 4. Save the output to `setlists/YYYY-MM-DD.md` (markdown with chords)
 5. Save history to `setlists/YYYY-MM-DD.json` (for tracking)
 
-## 🎯 How It Works
+## How It Works
 
 ### Service Moments
 
@@ -81,7 +82,11 @@ Each worship service is divided into moments, and the generator picks songs for 
 
 ### Song Selection Algorithm
 
-The system uses a **smart scoring algorithm** that considers:
+The system uses a **two-phase approach**:
+
+#### Phase 1: Selection (Score-Based)
+
+The system picks songs using a smart scoring algorithm:
 
 1. **Tag Weights**: Songs can have preference weights (1-10) for each moment
    - Example: A powerful worship song might have `louvor(5)` → higher chance of selection
@@ -97,6 +102,21 @@ The system uses a **smart scoring algorithm** that considers:
 
 **Formula**: `score = weight × recency + small_random_factor`
 
+#### Phase 2: Ordering (Energy-Based)
+
+After selecting songs, the system orders them by energy level to create emotional arcs:
+
+- **Energy Scale**: Each song has an energy value (1-4)
+  - **1** = High energy, upbeat, celebratory
+  - **2** = Moderate-high, engaging, rhythmic
+  - **3** = Moderate-low, reflective, slower
+  - **4** = Deep worship, contemplative, intimate
+
+- **Louvor Progression**: Songs are ordered 1→4 (upbeat to worship)
+  - Example: Hosana (1) → Oceanos (2) → Perfeito Amor (3) → Lugar Secreto (4)
+
+- **Override Preservation**: Manually specified songs maintain your exact order
+
 ### Example Selection
 
 For the "louvor" moment, if we have:
@@ -106,7 +126,7 @@ For the "louvor" moment, if we have:
 
 The generator will likely pick: Oceanos, A Casa é Sua, and two other high-scoring songs.
 
-## 📖 Usage Guide
+## Usage Guide
 
 ### Basic Usage
 
@@ -169,33 +189,41 @@ python generate_setlist.py --output ~/Desktop/next-sunday.md
 python generate_setlist.py --help
 ```
 
-## 🎼 Managing Songs
+## Managing Songs
 
 ### Song Database: `tags.csv`
 
-This file maps songs to service moments with optional weights.
+This file maps songs to service moments with energy levels and optional weights.
 
-**Format**: `song;tags`
+**Format**: `song;energy;tags`
 
-#### Basic Tag Format
+#### Basic Format with Energy
 
 ```csv
-song;tags
-Oceanos;louvor
-Deus Cuida de Mim;louvor
-Fico Feliz;crianças
-Tributo a Jehovah;ofertório
+song;energy;tags
+Hosana;1;louvor
+Oceanos;2;louvor
+Perfeito Amor;3;louvor
+Lugar Secreto;4;louvor
+Fico Feliz;1;crianças
+Tributo a Jehovah;2;ofertório
 ```
+
+**Energy column (1-4 scale):**
+- **1**: High energy, upbeat, celebratory (e.g., Hosana, Santo Pra Sempre)
+- **2**: Moderate-high, engaging, rhythmic (e.g., Oceanos, Grande É o Senhor)
+- **3**: Moderate-low, reflective, slower (e.g., Perfeito Amor, Consagração)
+- **4**: Deep worship, contemplative, intimate (e.g., Lugar Secreto, Tudo é Perda)
 
 #### Weighted Tags
 
 Add `(weight)` after a moment to increase selection probability (1-10 scale):
 
 ```csv
-song;tags
-Oceanos;louvor(5)           # Very likely to be selected for louvor
-Santo Pra Sempre;louvor(4)  # More likely than default
-A Casa é Sua;louvor(2)      # Less likely than default
+song;energy;tags
+Oceanos;2;louvor(5)           # High weight, moderate energy
+Santo Pra Sempre;1;louvor(4)  # Medium-high weight, high energy
+Lugar Secreto;4;louvor(3)     # Default weight, deep worship energy
 ```
 
 **Weight Guidelines:**
@@ -210,15 +238,76 @@ A Casa é Sua;louvor(2)      # Less likely than default
 Songs can work in different moments with different weights:
 
 ```csv
-song;tags
-Autoridade e Poder;prelúdio,poslúdio
-Brilha Jesus;saudação(4),poslúdio(2)
-Estamos de Pé;prelúdio(5),poslúdio(3)
+song;energy;tags
+Autoridade e Poder;1;prelúdio,poslúdio
+Brilha Jesus;2;saudação(4),poslúdio(2)
+Estamos de Pé;1;prelúdio(5),poslúdio(3)
 ```
 
 This means:
-- "Autoridade e Poder" can be used as prelúdio OR poslúdio (weight 3 for both)
-- "Brilha Jesus" works great for saudação (weight 4) or okay for poslúdio (weight 2)
+- "Autoridade e Poder" (energy 1) can be used as prelúdio OR poslúdio (weight 3 for both)
+- "Brilha Jesus" (energy 2) works great for saudação (weight 4) or okay for poslúdio (weight 2)
+
+### Song Energy Levels
+
+Each song has an **intrinsic energy level** (1-4) that defines its musical character and helps create emotional arcs during worship.
+
+#### Energy Scale Definitions
+
+| Energy | Musical Character | Tempo | Examples |
+|--------|------------------|-------|----------|
+| **1** | High energy, upbeat, celebratory | Fast | Hosana, Santo Pra Sempre, Estamos de Pé |
+| **2** | Moderate-high, engaging, rhythmic | Medium-fast | Oceanos, Ousado Amor, Grande É o Senhor |
+| **3** | Moderate-low, reflective, thoughtful | Medium-slow | Perfeito Amor, Consagração, Jesus Em Tua Presença |
+| **4** | Deep worship, contemplative, intimate | Slow | Tudo é Perda, Lugar Secreto, Aos Pés da Cruz |
+
+#### How Energy Affects Setlists
+
+**For multi-song moments (louvor - 4 songs):**
+- Songs are automatically ordered by energy: **1 → 2 → 3 → 4**
+- This creates a natural emotional arc from celebration to intimacy
+- Example progression:
+  1. Santo Pra Sempre (energy 1) - upbeat celebration
+  2. Oceanos (energy 2) - engaging worship
+  3. Perfeito Amor (energy 3) - reflective
+  4. Lugar Secreto (energy 4) - deep, intimate worship
+
+**Override behavior:**
+- If you manually specify songs using `--override`, your order is preserved
+- Only auto-selected songs are ordered by energy
+- Example: `--override "louvor:Lugar Secreto,Hosana"` keeps them in that exact order
+
+**Default for missing energy:**
+- Songs without energy values default to 2.5 (neutral/middle)
+- This maintains backward compatibility with older song entries
+
+#### Choosing Energy Levels
+
+When adding new songs, classify them by these characteristics:
+
+**Energy 1 (Upbeat):**
+- ✓ Fast tempo, driving rhythm
+- ✓ Celebratory, joyful lyrics
+- ✓ High intensity instrumentation
+- ✓ Congregation movement/clapping songs
+
+**Energy 2 (Moderate-High):**
+- ✓ Moderate tempo, steady rhythm
+- ✓ Engaging but not frantic
+- ✓ Good balance of energy and reflection
+- ✓ Most "standard" worship songs
+
+**Energy 3 (Reflective):**
+- ✓ Slower tempo
+- ✓ Thoughtful, meditative lyrics
+- ✓ Softer instrumentation
+- ✓ Transitioning from engagement to intimacy
+
+**Energy 4 (Deep Worship):**
+- ✓ Very slow, gentle tempo
+- ✓ Intimate, personal lyrics
+- ✓ Minimal instrumentation
+- ✓ Prayer-like, contemplative atmosphere
 
 ### Song Files: `chords/*.md`
 
@@ -260,12 +349,20 @@ G            D        A
 
 ### Adding a New Song
 
-1. **Add to `tags.csv`**:
-   ```csv
-   Nova Canção;louvor(3),prelúdio
-   ```
+1. **Classify the song's energy** (1-4):
+   - Listen to the song and assess its tempo, intensity, and mood
+   - Use the energy scale guide above
+   - When in doubt, use 2 or 3 (moderate energy)
 
-2. **Create chord file** `chords/Nova Canção.md`:
+2. **Add to `tags.csv`** with energy and tags:
+   ```csv
+   Nova Canção;2;louvor(3),prelúdio
+   ```
+   - Format: `song_name;energy;tags`
+   - Energy: 1 (upbeat) to 4 (contemplative)
+   - Tags: Moments with optional weights
+
+3. **Create chord file** `chords/Nova Canção.md`:
    ```markdown
    # Nova Canção (G)
 
@@ -275,7 +372,23 @@ G            D        A
    ```
    ```
 
-3. **Run generator** - the song is now in the pool!
+4. **Run generator** - the song is now in the pool!
+
+**Example additions:**
+
+```csv
+# High-energy praise song
+Celebração;1;louvor(4),prelúdio(3)
+
+# Moderate worship song
+Rendição;2;louvor(3)
+
+# Reflective song
+Silêncio;3;louvor(3),ofertório(2)
+
+# Deep worship ballad
+Intimidade;4;louvor(5)
+```
 
 ### Removing a Song
 
@@ -300,7 +413,7 @@ Oceanos;louvor(5)
 
 Changes take effect immediately on the next generation.
 
-## ⚙️ Configuration
+## Configuration
 
 Advanced users can modify the generator's behavior by editing `generate_setlist.py`.
 
@@ -318,6 +431,31 @@ MOMENTS_CONFIG = {
     "poslúdio": 1,
 }
 ```
+
+### Energy-Based Ordering
+
+Edit energy configuration (lines 44-48):
+
+```python
+# Enable/disable energy ordering
+ENERGY_ORDERING_ENABLED = True  # Set to False to disable
+
+# Configure ordering rules per moment
+ENERGY_ORDERING_RULES = {
+    "louvor": "ascending",  # 1→4 (upbeat to worship)
+    # Add more moments as needed:
+    # "ofertório": "descending",  # 4→1 (worship to upbeat)
+}
+
+# Default energy for songs without energy value
+DEFAULT_ENERGY = 2.5  # Neutral/middle energy
+```
+
+**Options:**
+- `ENERGY_ORDERING_ENABLED`: Toggle energy ordering on/off
+- `"ascending"`: Low to high energy (1→4) - upbeat to contemplative
+- `"descending"`: High to low energy (4→1) - contemplative to upbeat
+- `DEFAULT_ENERGY`: Fallback for songs missing energy values (2.5 = neutral)
 
 ### Change Recency Window
 
@@ -353,7 +491,7 @@ DEFAULT_WEIGHT = 3  # Default weight when not specified in tags
    Lugar Secreto;meditação
    ```
 
-## 📁 Output Files
+## Output Files
 
 ### Markdown Setlist (`setlists/YYYY-MM-DD.md`)
 
@@ -406,7 +544,7 @@ Machine-readable format for tracking which songs were used.
 
 **Purpose**: The generator reads these files to avoid repeating songs too soon.
 
-## 💡 Examples
+## Examples
 
 ### Example 1: Regular Sunday Service
 
@@ -440,10 +578,10 @@ CRIANÇAS:
   - Deus Grandão
 
 LOUVOR:
-  - Oceanos
   - Santo Pra Sempre
-  - Aos Pés da Cruz
+  - Oceanos
   - Consagração
+  - Aos Pés da Cruz
 
 POSLÚDIO:
   - Vou Seguir Com Fé
@@ -451,6 +589,14 @@ POSLÚDIO:
 Markdown saved to: setlists/2026-02-15.md
 History saved to: setlists/2026-02-15.json
 ```
+
+**Note**: The louvor songs are automatically ordered by energy level:
+- Santo Pra Sempre (energy 1) - upbeat celebration
+- Oceanos (energy 2) - engaging worship
+- Consagração (energy 3) - reflective
+- Aos Pés da Cruz (energy 4) - deep worship
+
+This creates a natural emotional arc from high energy to intimate worship.
 
 ### Example 2: Themed Service (Prayer Focus)
 
@@ -463,9 +609,20 @@ python generate_setlist.py \
 ```
 
 The system will:
-- Use your 3 specified louvor songs
-- Pick 1 more louvor song automatically
+- Use your 3 specified louvor songs **in the exact order you provided**
+- Pick 1 more louvor song automatically (sorted by energy with other auto-selected songs)
 - Fill all other moments with smart selection
+
+**Example output:**
+```
+LOUVOR:
+  - Lugar Secreto      (your override - energy 4)
+  - Mais Que Uma Voz   (your override - energy 3)
+  - Jesus Em Tua Presença (your override - energy 3)
+  - Oceanos            (auto-selected - energy 2)
+```
+
+**Note**: Your override songs (first 3) maintain the exact order you specified, even though they're not energy-sorted. Only the auto-selected song (Oceanos) follows energy ordering rules.
 
 ### Example 3: Special Music Request
 
@@ -501,7 +658,7 @@ python generate_setlist.py --date 2026-03-01
 
 Each service will automatically avoid songs used in previous services.
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Problem: Song not appearing in setlists
 
@@ -565,6 +722,41 @@ MOMENTS_CONFIG = {
 }
 ```
 
+### Problem: Songs in the wrong energy order
+
+If you want to disable energy ordering and use score-based order only:
+
+Edit `generate_setlist.py` (line 44):
+```python
+ENERGY_ORDERING_ENABLED = False  # Disable energy ordering
+```
+
+Or if energy classifications seem wrong, update individual songs in `tags.csv`:
+```csv
+# Before
+Hosana;3;louvor  # Classified as reflective (wrong!)
+
+# After
+Hosana;1;louvor  # Corrected to upbeat (right!)
+```
+
+### Problem: Override songs are being re-ordered
+
+This is expected behavior! Override songs maintain **your exact order**, but you might be seeing auto-selected songs sorted by energy.
+
+**Example:**
+```bash
+--override "louvor:Lugar Secreto,Hosana"
+# Output: Lugar Secreto, Hosana, [auto-song-1], [auto-song-2]
+# ✓ Your overrides stay in order
+# ✓ Auto-selected songs are energy-sorted
+```
+
+If you want complete control over order, override all songs for that moment:
+```bash
+--override "louvor:Song1,Song2,Song3,Song4"  # All 4 louvor songs
+```
+
 ### Problem: Wrong date in output
 
 The script uses today's date by default. Always specify the date:
@@ -589,21 +781,34 @@ Ensure your editor/terminal supports UTF-8:
 - Include accents: "Tributo a Jehovah" not "Tributo a Jehovah"
 - Be consistent: Once you name a song, use that exact spelling everywhere
 
-### Weight Strategy
+### Energy & Weight Strategy
 
-Start conservative with weights (mostly 3s), then adjust based on experience:
+**Energy classification** (rarely changes):
+- Classify songs by their intrinsic musical character
+- Energy values typically don't change over time
+- If reclassifying, test the worship flow with `--no-save` first
+
+**Weight strategy** (adjust frequently):
+- Start conservative with weights (mostly 3s)
+- Adjust based on congregation familiarity and response
 
 ```csv
-# Initial setup - everything at default
-Oceanos;louvor
-Santo Pra Sempre;louvor
-Hosana;louvor
+# Initial setup - classify energy, use default weights
+Oceanos;2;louvor
+Santo Pra Sempre;1;louvor
+Hosana;1;louvor
+Lugar Secreto;4;louvor
 
-# After a few months - adjust based on congregation response
-Oceanos;louvor(5)         # Everyone loves this
-Santo Pra Sempre;louvor(4)  # Popular
-Hosana;louvor(2)         # Less familiar, use less often
+# After a few months - adjust weights based on congregation response
+Oceanos;2;louvor(5)         # Everyone loves this (energy unchanged)
+Santo Pra Sempre;1;louvor(4)  # Popular (energy unchanged)
+Hosana;1;louvor(2)         # Less familiar, use less often (energy unchanged)
+Lugar Secreto;4;louvor(5)    # Powerful worship moment (energy unchanged)
 ```
+
+**Remember:**
+- **Energy** = What the song **is** (musical character)
+- **Weight** = How often we **want** it (selection preference)
 
 ### History Management
 
@@ -618,7 +823,7 @@ cp -r setlists setlists_backup
 rm setlists/*.json
 ```
 
-## 🎪 Advanced Workflows
+## Advanced Workflows
 
 ### Workflow 1: Planning Multiple Services
 
@@ -634,40 +839,52 @@ cat setlists/2026-02-*.md
 
 ### Workflow 2: Seasonal Adjustments
 
-For Christmas season, increase weights on Christmas songs:
+For the Christmas season, increase weights on Christmas songs:
 
 ```csv
 # Before
-Noite de Paz;louvor,prelúdio
+Noite de Paz;4;louvor,prelúdio
 
-# During December
-Noite de Paz;louvor(7),prelúdio(6)
+# During December (increase weight, keep energy)
+Noite de Paz;4;louvor(7),prelúdio(6)
 
-# After Christmas, reduce again
-Noite de Paz;louvor(2),prelúdio(2)
+# After Christmas, reduce weight again
+Noite de Paz;4;louvor(2),prelúdio(2)
 ```
+
+**Note**: Energy levels (column 2) typically stay the same as they reflect the song's intrinsic character, not seasonal preference. Adjust weights (in tags) to change selection frequency.
 
 ### Workflow 3: Testing New Songs
 
 Add new songs with low weights initially:
 
 ```csv
-New Song;louvor(1)  # Start low
+# New upbeat song - start with low weight
+New Song;1;louvor(1)  # Energy 1 (upbeat), weight 1 (rarely selected)
 ```
 
-After congregation learns it:
+After the congregation learns it, increase weight:
 ```csv
-New Song;louvor(3)  # Increase to normal
+# Congregation knows it now - increase weight
+New Song;1;louvor(3)  # Energy stays 1, weight now 3 (normal selection)
 ```
 
-## 📞 Support
+After it becomes a favorite:
+```csv
+# Everyone loves it - increase weight more
+New Song;1;louvor(5)  # Energy still 1, weight now 5 (frequent selection)
+```
+
+**Key principle**: Energy (column 2) defines the song's character and rarely changes. Weight (in tags) controls selection frequency and can be adjusted based on congregation familiarity.
+
+## Support
 
 For issues or questions:
 1. Check this README's Troubleshooting section
 2. Review `CLAUDE.md` for technical details
 3. Check the generated output files for clues
 
-## 📄 License
+## License
 
 This tool is provided as-is for church worship planning purposes.
 

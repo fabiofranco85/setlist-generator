@@ -40,6 +40,14 @@ MOMENTS_CONFIG = {
 DEFAULT_WEIGHT = 3
 RECENCY_PENALTY_PERFORMANCES = 3  # Number of performances until "fresh"
 
+# Energy ordering configuration
+ENERGY_ORDERING_ENABLED = True  # Master switch to enable/disable feature
+ENERGY_ORDERING_RULES = {
+    "louvor": "ascending",  # 1→4 (upbeat to worship)
+    # Future: "ofertório": "descending", etc.
+}
+DEFAULT_ENERGY = 2.5  # Default for songs without energy metadata
+
 
 def parse_tags(tags_str: str) -> dict[str, int]:
     """
@@ -72,7 +80,7 @@ def parse_tags(tags_str: str) -> dict[str, int]:
 def load_songs(base_path: Path) -> dict[str, dict]:
     """
     Load songs from tags.csv and their content from chords/*.md files.
-    Returns: {song_title: {"tags": {moment: weight}, "content": str}}
+    Returns: {song_title: {"tags": {moment: weight}, "energy": float, "content": str}}
     """
     songs = {}
     tags_file = base_path / "tags.csv"
@@ -82,6 +90,15 @@ def load_songs(base_path: Path) -> dict[str, dict]:
         reader = csv.DictReader(f, delimiter=";")
         for row in reader:
             title = row["song"]
+
+            # Parse energy (default if missing or invalid)
+            energy_str = row.get("energy", "").strip()
+            try:
+                energy = float(energy_str) if energy_str else DEFAULT_ENERGY
+            except ValueError:
+                energy = DEFAULT_ENERGY
+
+            # Parse tags (existing logic)
             tags = parse_tags(row["tags"])
 
             # Load song content from chords folder
@@ -91,7 +108,11 @@ def load_songs(base_path: Path) -> dict[str, dict]:
                 with open(song_file, "r", encoding="utf-8") as sf:
                     content = sf.read()
 
-            songs[title] = {"tags": tags, "content": content}
+            songs[title] = {
+                "tags": tags,
+                "energy": energy,
+                "content": content
+            }
 
     return songs
 
@@ -149,9 +170,10 @@ def select_songs_for_moment(
     recency_scores: dict,
     already_selected: set,
     overrides: list[str] | None = None
-) -> list[str]:
+) -> list[tuple[str, float]]:
     """
     Select songs for a specific moment.
+    Returns list of (title, energy) tuples.
     """
     selected = []
 
@@ -159,7 +181,8 @@ def select_songs_for_moment(
     if overrides:
         for song in overrides:
             if song in songs and song not in already_selected:
-                selected.append(song)
+                energy = songs[song].get("energy", DEFAULT_ENERGY)
+                selected.append((song, energy))
                 already_selected.add(song)
 
         if len(selected) >= count:
@@ -189,10 +212,55 @@ def select_songs_for_moment(
     for title, _ in candidates:
         if len(selected) >= count:
             break
-        selected.append(title)
+        energy = songs[title].get("energy", DEFAULT_ENERGY)
+        selected.append((title, energy))
         already_selected.add(title)
 
     return selected
+
+
+def apply_energy_ordering(
+    moment: str,
+    selected_songs: list[tuple[str, float]],
+    override_count: int = 0
+) -> list[str]:
+    """
+    Sort songs by energy level according to moment-specific rules.
+    Preserves the order of overridden songs (first override_count songs).
+
+    Args:
+        moment: The moment name (e.g., "louvor")
+        selected_songs: List of (title, energy) tuples
+        override_count: Number of songs at the start that were manually overridden
+
+    Returns:
+        List of song titles sorted by energy (except overrides)
+    """
+    if not ENERGY_ORDERING_ENABLED:
+        return [title for title, _ in selected_songs]
+
+    rule = ENERGY_ORDERING_RULES.get(moment)
+    if not rule:
+        return [title for title, _ in selected_songs]
+
+    # Separate overridden songs from auto-selected songs
+    overridden = selected_songs[:override_count]
+    auto_selected = selected_songs[override_count:]
+
+    # Sort only auto-selected songs by energy
+    if rule == "ascending":
+        # Low to high: 1→2→3→4 (upbeat to worship)
+        sorted_auto = sorted(auto_selected, key=lambda x: x[1])
+    elif rule == "descending":
+        # High to low: 4→3→2→1 (worship to upbeat)
+        sorted_auto = sorted(auto_selected, key=lambda x: x[1], reverse=True)
+    else:
+        sorted_auto = auto_selected
+
+    # Combine: overrides first (in original order), then sorted auto-selected
+    final_songs = [title for title, _ in overridden] + [title for title, _ in sorted_auto]
+
+    return final_songs
 
 
 def generate_setlist(
@@ -209,10 +277,15 @@ def generate_setlist(
 
     for moment, count in MOMENTS_CONFIG.items():
         moment_overrides = overrides.get(moment) if overrides else None
-        selected = select_songs_for_moment(
+        override_count = len(moment_overrides) if moment_overrides else 0
+
+        selected_with_energy = select_songs_for_moment(
             moment, count, songs, recency_scores, already_selected, moment_overrides
         )
-        setlist[moment] = selected
+
+        # Apply energy-based ordering (preserves override order)
+        ordered_songs = apply_energy_ordering(moment, selected_with_energy, override_count)
+        setlist[moment] = ordered_songs
 
     return setlist
 
