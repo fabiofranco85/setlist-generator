@@ -20,6 +20,7 @@ An intelligent setlist generator for church worship services that automatically 
 - [Usage Guide](#usage-guide)
 - [Managing Songs](#managing-songs)
 - [Configuration](#configuration)
+- [Programmatic Usage](#programmatic-usage)
 - [Output Files](#output-files)
 - [Examples](#examples)
 - [Troubleshooting](#troubleshooting)
@@ -490,6 +491,146 @@ DEFAULT_WEIGHT = 3  # Default weight when not specified in tags
    ```csv
    Lugar Secreto;meditação
    ```
+
+## Programmatic Usage
+
+The setlist generator can be used as a Python library in your own scripts, allowing you to integrate setlist generation into custom workflows, web applications, or automation tools.
+
+### Using the SetlistGenerator Class (Recommended)
+
+The object-oriented API provides better state management and is recommended for new code:
+
+```python
+from setlist import SetlistGenerator, load_songs, load_history
+from pathlib import Path
+
+# Load songs and history
+songs = load_songs(Path("."))
+history = load_history(Path("./setlists"))
+
+# Create generator instance
+generator = SetlistGenerator(songs, history)
+
+# Generate setlist
+setlist = generator.generate(
+    date="2026-03-15",
+    overrides={"louvor": ["Oceanos", "Santo Pra Sempre"]}
+)
+
+# Access results
+print(f"Setlist for {setlist.date}:")
+for moment, song_list in setlist.moments.items():
+    print(f"\n{moment.upper()}:")
+    for song in song_list:
+        print(f"  - {song}")
+
+# Generate multiple setlists with same instance
+setlist2 = generator.generate("2026-03-22")
+setlist3 = generator.generate("2026-03-29")
+```
+
+**Benefits:**
+- ✓ State managed internally (recency scores calculated once)
+- ✓ Reusable (generate multiple setlists efficiently)
+- ✓ Easy to test and extend
+
+### Using the Functional API (Backward Compatible)
+
+The functional API is still available and works identically:
+
+```python
+from setlist import load_songs, load_history, generate_setlist
+from pathlib import Path
+
+songs = load_songs(Path("."))
+history = load_history(Path("./setlists"))
+
+setlist = generate_setlist(
+    songs=songs,
+    history=history,
+    date="2026-03-15",
+    overrides={"louvor": ["Oceanos"]}
+)
+```
+
+Both APIs produce identical results. Choose based on your needs:
+- **SetlistGenerator class**: Better for complex workflows, testing, or multiple generations
+- **generate_setlist() function**: Simpler for one-off script usage
+
+### Custom Formatting and Saving
+
+```python
+from setlist import SetlistGenerator, load_songs, load_history
+from setlist import format_setlist_markdown, save_setlist_history
+from pathlib import Path
+
+# Generate setlist
+songs = load_songs(Path("."))
+history = load_history(Path("./setlists"))
+generator = SetlistGenerator(songs, history)
+setlist = generator.generate("2026-03-15")
+
+# Format as markdown
+markdown = format_setlist_markdown(setlist, songs)
+
+# Save to custom location
+output_path = Path("~/Desktop/next-service.md").expanduser()
+with open(output_path, "w", encoding="utf-8") as f:
+    f.write(markdown)
+
+# Save to history (optional)
+save_setlist_history(setlist, Path("./setlists"))
+```
+
+### Batch Generation
+
+Generate multiple setlists programmatically:
+
+```python
+from setlist import SetlistGenerator, load_songs, load_history
+from pathlib import Path
+from datetime import datetime, timedelta
+
+songs = load_songs(Path("."))
+history = load_history(Path("./setlists"))
+generator = SetlistGenerator(songs, history)
+
+# Generate setlists for next 4 Sundays
+start_date = datetime(2026, 3, 1)
+for i in range(4):
+    service_date = start_date + timedelta(weeks=i)
+    date_str = service_date.strftime("%Y-%m-%d")
+
+    setlist = generator.generate(date_str)
+    print(f"\n{date_str}: {sum(len(songs) for songs in setlist.moments.values())} songs")
+```
+
+### Integration Example: Web API
+
+```python
+from flask import Flask, jsonify
+from setlist import SetlistGenerator, load_songs, load_history
+from pathlib import Path
+
+app = Flask(__name__)
+
+# Initialize once at startup
+songs = load_songs(Path("."))
+history = load_history(Path("./setlists"))
+generator = SetlistGenerator(songs, history)
+
+@app.route('/generate/<date>')
+def generate_setlist_api(date):
+    setlist = generator.generate(date)
+    return jsonify({
+        "date": setlist.date,
+        "moments": setlist.moments,
+        "total_songs": sum(len(s) for s in setlist.moments.values())
+    })
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
 
 ## Output Files
 
