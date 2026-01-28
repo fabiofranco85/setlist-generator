@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python generate_setlist.py:*)"
+      "Bash(python generate_setlist.py:*)",
+      "Bash(wc:*)",
+      "Bash(python:*)",
+      "Bash(tree:*)"
     ]
   }
 }

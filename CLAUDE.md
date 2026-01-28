@@ -71,12 +71,65 @@ Where:
 ├── setlists/                # Generated outputs and history
 │   ├── YYYY-MM-DD.json      # History tracking (moments → song lists)
 │   └── YYYY-MM-DD.md        # Human-readable setlist with full chords
-└── generate_setlist.py      # Main generator script
+├── generate_setlist.py      # CLI entry point (157 lines)
+└── setlist/                 # Core package (modular architecture)
+    ├── __init__.py          # Public API exports
+    ├── config.py            # Configuration constants
+    ├── models.py            # Song and Setlist data structures
+    ├── loader.py            # Data loading (CSV, history, chords)
+    ├── selector.py          # Song selection algorithms
+    ├── ordering.py          # Energy-based ordering
+    ├── generator.py         # Core setlist generation
+    └── formatter.py         # Output formatting (markdown, JSON)
+```
+
+### Modular Architecture
+
+The codebase is organized into focused modules for better maintainability and reusability:
+
+**Benefits:**
+- **Single Responsibility**: Each module has one clear purpose
+- **Testability**: Modules can be tested independently
+- **Extensibility**: Easy to add new features (e.g., new selection algorithms, ordering strategies)
+- **Reusability**: Can be imported by other scripts or used to build a web API
+
+**Module Responsibilities:**
+- `config.py` - Configuration constants (moments, weights, energy rules)
+- `models.py` - Data structures (Song, Setlist dataclasses)
+- `loader.py` - Load songs from CSV and history from JSON
+- `selector.py` - Song selection algorithms (scoring, recency calculation)
+- `ordering.py` - Energy-based ordering for emotional arcs
+- `generator.py` - Orchestrates the complete setlist generation
+- `formatter.py` - Output formatting (markdown, JSON)
+
+**Programmatic Usage:**
+
+The package can be imported and used programmatically:
+
+```python
+from setlist import load_songs, generate_setlist, load_history
+from pathlib import Path
+
+# Load data
+songs = load_songs(Path("."))
+history = load_history(Path("./setlists"))
+
+# Generate setlist
+setlist = generate_setlist(
+    songs=songs,
+    history=history,
+    date="2026-02-15",
+    overrides={"louvor": ["Oceanos", "Ousado Amor"]}
+)
+
+# Access results
+for moment, song_list in setlist.moments.items():
+    print(f"{moment}: {', '.join(song_list)}")
 ```
 
 ### Moments Configuration
 
-Defined in `MOMENTS_CONFIG` (generate_setlist.py:31-38):
+Defined in `MOMENTS_CONFIG` (setlist/config.py):
 
 | Moment      | Count | Description                 |
 |-------------|-------|-----------------------------|
@@ -149,19 +202,22 @@ This ensures variety while still allowing high-weight songs to appear relatively
 ## Modifying Song Selection Behavior
 
 ### Change moment counts
-Edit `MOMENTS_CONFIG` in generate_setlist.py:31-38
+Edit `MOMENTS_CONFIG` in `setlist/config.py`
 
 ### Change recency window
-Edit `RECENCY_PENALTY_PERFORMANCES` in generate_setlist.py:41 (default: 3)
+Edit `RECENCY_PENALTY_PERFORMANCES` in `setlist/config.py` (default: 3)
 
 ### Change default weight
-Edit `DEFAULT_WEIGHT` in generate_setlist.py:40 (default: 3)
+Edit `DEFAULT_WEIGHT` in `setlist/config.py` (default: 3)
 
 ### Adjust randomization
-Edit the random factor in generate_setlist.py:186:
+Edit the random factor in `setlist/selector.py` (line ~87):
 ```python
 candidates.sort(key=lambda x: x[1] + random.uniform(0, 0.5), reverse=True)
 ```
+
+### Disable or modify energy ordering
+Edit `ENERGY_ORDERING_ENABLED` or `ENERGY_ORDERING_RULES` in `setlist/config.py`
 
 ## Adding New Songs
 
