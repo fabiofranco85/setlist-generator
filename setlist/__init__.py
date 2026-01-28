@@ -9,7 +9,7 @@ from .config import (
     RECENCY_PENALTY_PERFORMANCES,
 )
 from .formatter import format_setlist_markdown, save_setlist_history
-from .generator import generate_setlist
+from .generator import SetlistGenerator, generate_setlist
 from .loader import load_history, load_songs
 from .models import Setlist, Song
 
@@ -30,4 +30,6 @@ __all__ = [
     "generate_setlist",
     "format_setlist_markdown",
     "save_setlist_history",
+    # Classes
+    "SetlistGenerator",
 ]

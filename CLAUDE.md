@@ -99,25 +99,45 @@ The codebase is organized into focused modules for better maintainability and re
 - `loader.py` - Load songs from CSV and history from JSON
 - `selector.py` - Song selection algorithms (scoring, recency calculation)
 - `ordering.py` - Energy-based ordering for emotional arcs
-- `generator.py` - Orchestrates the complete setlist generation
+- `generator.py` - Orchestrates the complete setlist generation (includes SetlistGenerator class)
 - `formatter.py` - Output formatting (markdown, JSON)
 
-**Programmatic Usage:**
+### Hybrid Architecture (Functional + Object-Oriented)
 
-The package can be imported and used programmatically:
+The codebase uses a **hybrid approach** that combines functional and object-oriented programming:
+
+- **Classes** for stateful operations (SetlistGenerator)
+- **Functions** for stateless algorithms (ordering, formatting)
+
+**Philosophy:** "Use classes where state lives, functions where logic flows"
+
+**When to Use Classes:**
+- Managing state (recency scores, selected songs)
+- Providing query/command APIs
+- Encapsulating complex workflows
+
+**When to Use Functions:**
+- Stateless transformations (energy ordering)
+- Pure algorithms (score calculation)
+- Simple utilities (formatting)
+
+**SetlistGenerator Class:**
+
+The `SetlistGenerator` class encapsulates the stateful operations of setlist generation:
 
 ```python
-from setlist import load_songs, generate_setlist, load_history
+from setlist import SetlistGenerator, load_songs, load_history
 from pathlib import Path
 
 # Load data
 songs = load_songs(Path("."))
 history = load_history(Path("./setlists"))
 
+# Create generator (manages state internally)
+generator = SetlistGenerator(songs, history)
+
 # Generate setlist
-setlist = generate_setlist(
-    songs=songs,
-    history=history,
+setlist = generator.generate(
     date="2026-02-15",
     overrides={"louvor": ["Oceanos", "Ousado Amor"]}
 )
@@ -126,6 +146,39 @@ setlist = generate_setlist(
 for moment, song_list in setlist.moments.items():
     print(f"{moment}: {', '.join(song_list)}")
 ```
+
+**Benefits of SetlistGenerator class:**
+- ✓ State managed internally (no mutable parameter passing)
+- ✓ Clear lifecycle (init → generate → return)
+- ✓ Easy to test (mock constructor params)
+- ✓ Reusable (generate multiple setlists with same instance)
+
+**Backward-Compatible Functional API:**
+
+For backward compatibility, the functional API is still available:
+
+```python
+from setlist import load_songs, load_history, generate_setlist
+from pathlib import Path
+
+# Load data
+songs = load_songs(Path("."))
+history = load_history(Path("./setlists"))
+
+# Generate setlist (functional style)
+setlist = generate_setlist(
+    songs=songs,
+    history=history,
+    date="2026-02-15",
+    overrides={"louvor": ["Oceanos", "Ousado Amor"]}
+)
+```
+
+Both APIs produce identical results. New code should prefer `SetlistGenerator` for better state management.
+
+**Programmatic Usage:**
+
+The package can be imported and used programmatically. See the "Hybrid Architecture" section above for examples of both the object-oriented (`SetlistGenerator` class) and functional (`generate_setlist` function) APIs.
 
 ### Moments Configuration
 

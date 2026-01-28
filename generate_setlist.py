@@ -106,7 +106,7 @@ Moments: prelúdio, ofertório, saudação, crianças, louvor (4 songs), poslúd
 
     # Paths
     base_path = Path(__file__).parent
-setlists_path = base_path / "setlists"
+    setlists_path = base_path / "setlists"
 
     # Load data
     print("Loading songs...")
