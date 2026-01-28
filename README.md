@@ -61,8 +61,8 @@ This will:
 1. Load all songs from `tags.csv` and `chords/` directory
 2. Analyze the last 3 setlists to avoid repetition
 3. Generate a new setlist with songs for each service moment
-4. Save the output to `setlists/YYYY-MM-DD.md` (markdown with chords)
-5. Save history to `setlists/YYYY-MM-DD.json` (for tracking)
+4. Save the output to `output/YYYY-MM-DD.md` (markdown with chords)
+5. Save history to `history/YYYY-MM-DD.json` (for tracking)
 
 ## How It Works
 
@@ -181,7 +181,11 @@ Useful for:
 ### Custom Output Location
 
 ```bash
+# Custom file path for markdown output
 python generate_setlist.py --output ~/Desktop/next-sunday.md
+
+# Custom directories for all output
+python generate_setlist.py --output-dir custom/output --history-dir custom/history
 ```
 
 ### Getting Help
@@ -416,7 +420,49 @@ Changes take effect immediately on the next generation.
 
 ## Configuration
 
-Advanced users can modify the generator's behavior by editing `generate_setlist.py`.
+Advanced users can modify the generator's behavior through various configuration methods.
+
+### Output Paths
+
+The generator supports flexible output path configuration with the following priority (highest to lowest):
+
+**1. CLI Arguments (Highest Priority):**
+```bash
+python generate_setlist.py --output-dir custom/output --history-dir custom/history
+```
+
+**2. Environment Variables:**
+```bash
+export SETLIST_OUTPUT_DIR=/data/output
+export SETLIST_HISTORY_DIR=/data/history
+python generate_setlist.py
+```
+
+**3. Configuration File:**
+Edit `setlist/config.py`:
+```python
+DEFAULT_OUTPUT_DIR = "output"    # Markdown files
+DEFAULT_HISTORY_DIR = "history"  # JSON tracking
+```
+
+**4. Defaults:**
+If no configuration is provided:
+- Markdown files → `output/`
+- JSON history → `history/`
+
+**Examples:**
+```bash
+# Use defaults (output/ and history/)
+python generate_setlist.py
+
+# Custom directories via CLI
+python generate_setlist.py --output-dir /mnt/setlists --history-dir /mnt/tracking
+
+# Custom directories via environment
+export SETLIST_OUTPUT_DIR=$HOME/worship/output
+export SETLIST_HISTORY_DIR=$HOME/worship/history
+python generate_setlist.py
+```
 
 ### Change Songs Per Moment
 
@@ -506,7 +552,7 @@ from pathlib import Path
 
 # Load songs and history
 songs = load_songs(Path("."))
-history = load_history(Path("./setlists"))
+history = load_history(Path("./history"))
 
 # Create generator instance
 generator = SetlistGenerator(songs, history)
@@ -543,7 +589,7 @@ from setlist import load_songs, load_history, generate_setlist
 from pathlib import Path
 
 songs = load_songs(Path("."))
-history = load_history(Path("./setlists"))
+history = load_history(Path("./history"))
 
 setlist = generate_setlist(
     songs=songs,
@@ -566,7 +612,7 @@ from pathlib import Path
 
 # Generate setlist
 songs = load_songs(Path("."))
-history = load_history(Path("./setlists"))
+history = load_history(Path("./history"))
 generator = SetlistGenerator(songs, history)
 setlist = generator.generate("2026-03-15")
 
@@ -579,7 +625,7 @@ with open(output_path, "w", encoding="utf-8") as f:
     f.write(markdown)
 
 # Save to history (optional)
-save_setlist_history(setlist, Path("./setlists"))
+save_setlist_history(setlist, Path("./history"))
 ```
 
 ### Batch Generation
@@ -592,7 +638,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 
 songs = load_songs(Path("."))
-history = load_history(Path("./setlists"))
+history = load_history(Path("./history"))
 generator = SetlistGenerator(songs, history)
 
 # Generate setlists for next 4 Sundays
@@ -616,7 +662,7 @@ app = Flask(__name__)
 
 # Initialize once at startup
 songs = load_songs(Path("."))
-history = load_history(Path("./setlists"))
+history = load_history(Path("./history"))
 generator = SetlistGenerator(songs, history)
 
 @app.route('/generate/<date>')
@@ -634,7 +680,7 @@ if __name__ == '__main__':
 
 ## Output Files
 
-### Markdown Setlist (`setlists/YYYY-MM-DD.md`)
+### Markdown Setlist (`output/YYYY-MM-DD.md`)
 
 Human-readable setlist with full chords and lyrics for musicians.
 
@@ -664,7 +710,7 @@ Estamos de pé...
 - Display on tablet/screen during rehearsal
 - Share via email/WhatsApp
 
-### History File (`setlists/YYYY-MM-DD.json`)
+### History File (`history/YYYY-MM-DD.json`)
 
 Machine-readable format for tracking which songs were used.
 
@@ -727,8 +773,8 @@ LOUVOR:
 POSLÚDIO:
   - Vou Seguir Com Fé
 
-Markdown saved to: setlists/2026-02-15.md
-History saved to: setlists/2026-02-15.json
+Markdown saved to: output/2026-02-15.md
+History saved to: history/2026-02-15.json
 ```
 
 **Note**: The louvor songs are automatically ordered by energy level:
@@ -806,7 +852,7 @@ Each service will automatically avoid songs used in previous services.
 **Possible causes:**
 
 1. **Song was recently used**
-   - Check `setlists/*.json` files for recent usage
+   - Check `history/*.json` files for recent usage
    - Wait 3 services or use `--override` to force it
 
 2. **Tag/weight issue**
@@ -953,15 +999,15 @@ Lugar Secreto;4;louvor(5)    # Powerful worship moment (energy unchanged)
 
 ### History Management
 
-The system automatically manages history in `setlists/*.json`. These files are small and should be kept for accurate variety tracking.
+The system automatically manages history in `history/*.json`. These files are small and should be kept for accurate variety tracking.
 
 If you want to reset history (new year, etc.):
 ```bash
 # Backup first
-cp -r setlists setlists_backup
+cp -r history history_backup
 
-# Clear history (keep only markdown files)
-rm setlists/*.json
+# Clear history
+rm history/*.json
 ```
 
 ## Advanced Workflows
@@ -975,7 +1021,7 @@ for date in 2026-02-01 2026-02-08 2026-02-15 2026-02-22; do
 done
 
 # Review all setlists
-cat setlists/2026-02-*.md
+cat output/2026-02-*.md
 ```
 
 ### Workflow 2: Seasonal Adjustments
