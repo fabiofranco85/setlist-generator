@@ -12,7 +12,3 @@ wheels/
 .DS_Store
 .idea
 uv.lock
-
-# Output directories
-output/
-history/
