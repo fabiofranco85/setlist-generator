@@ -25,6 +25,7 @@ from setlist import (
     MOMENTS_CONFIG,
     format_setlist_markdown,
     generate_setlist,
+    get_output_paths,
     load_history,
     load_songs,
     save_setlist_history,
@@ -99,14 +100,28 @@ Moments: prelúdio, ofertório, saudação, crianças, louvor (4 songs), poslúd
 
     parser.add_argument(
         "--output",
-        help="Output file path (default: setlists/YYYY-MM-DD.md)"
+        help="Output file path (default: output/YYYY-MM-DD.md)"
+    )
+
+    parser.add_argument(
+        "--output-dir",
+        default=None,
+        help="Directory for markdown setlists (default: output/)"
+    )
+
+    parser.add_argument(
+        "--history-dir",
+        default=None,
+        help="Directory for JSON history (default: history/)"
     )
 
     args = parser.parse_args()
 
     # Paths
     base_path = Path(__file__).parent
-    setlists_path = base_path / "setlists"
+    paths = get_output_paths(base_path, args.output_dir, args.history_dir)
+    output_dir = paths.output_dir
+    history_dir = paths.history_dir
 
     # Load data
     print("Loading songs...")
@@ -114,7 +129,7 @@ Moments: prelúdio, ofertório, saudação, crianças, louvor (4 songs), poslúd
     print(f"Loaded {len(songs)} songs")
 
     print("Loading history...")
-    history = load_history(setlists_path)
+    history = load_history(history_dir)
     print(f"Found {len(history)} historical setlists")
 
     # Parse overrides
@@ -139,16 +154,16 @@ Moments: prelúdio, ofertório, saudação, crianças, louvor (4 songs), poslúd
     markdown = format_setlist_markdown(setlist, songs)
 
     # Save files
-    output_path = Path(args.output) if args.output else setlists_path / f"{args.date}.md"
-    output_path.parent.mkdir(exist_ok=True)
+    output_path = Path(args.output) if args.output else output_dir / f"{args.date}.md"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(markdown)
     print(f"\nMarkdown saved to: {output_path}")
 
     if not args.no_save:
-        save_setlist_history(setlist, setlists_path)
-        print(f"History saved to: {setlists_path / f'{args.date}.json'}")
+        save_setlist_history(setlist, history_dir)
+        print(f"History saved to: {history_dir / f'{args.date}.json'}")
     else:
         print("(Dry run - history not saved)")
 

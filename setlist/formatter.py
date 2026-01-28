@@ -38,7 +38,13 @@ def save_setlist_history(
     setlist: Setlist,
     setlists_path: Path
 ) -> None:
-    """Save setlist to history as JSON."""
+    """
+    Save setlist to history as JSON.
+
+    Args:
+        setlist: The setlist to save
+        setlists_path: Path to history directory (e.g., Path("./history"))
+    """
     setlists_path.mkdir(exist_ok=True)
 
     history_file = setlists_path / f"{setlist.date}.json"

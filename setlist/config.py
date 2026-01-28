@@ -21,3 +21,11 @@ ENERGY_ORDERING_RULES = {
     # Future: "ofertório": "descending", etc.
 }
 DEFAULT_ENERGY = 2.5  # Default for songs without energy metadata
+
+# Output path configuration
+DEFAULT_OUTPUT_DIR = "output"      # Markdown setlists directory
+DEFAULT_HISTORY_DIR = "history"    # JSON tracking directory
+
+# Environment variable names (for documentation)
+ENV_OUTPUT_DIR = "SETLIST_OUTPUT_DIR"
+ENV_HISTORY_DIR = "SETLIST_HISTORY_DIR"

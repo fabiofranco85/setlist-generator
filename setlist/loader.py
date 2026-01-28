@@ -81,8 +81,13 @@ def load_songs(base_path: Path) -> dict[str, Song]:
 
 def load_history(setlists_path: Path) -> list[dict]:
     """
-    Load historical setlists, sorted by date (most recent first).
-    Returns list of dicts for backward compatibility.
+    Load setlist history from JSON files.
+
+    Args:
+        setlists_path: Path to history directory (e.g., Path("./history"))
+
+    Returns:
+        List of historical setlists sorted by date (most recent first)
     """
     history = []
 

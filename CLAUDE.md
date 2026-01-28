@@ -27,6 +27,9 @@ python generate_setlist.py --override "prelúdio:Estamos de Pé" --override "lou
 
 # Dry run (don't save to history)
 python generate_setlist.py --no-save
+
+# Custom output directories
+python generate_setlist.py --output-dir custom/output --history-dir custom/history
 ```
 
 ### Running with uv
@@ -52,14 +55,14 @@ Where:
 ### Data Flow
 
 1. **Load songs** from `tags.csv` + `chords/*.md` files (includes energy metadata)
-2. **Load history** from `setlists/*.json` (sorted by date, most recent first)
+2. **Load history** from `history/*.json` (sorted by date, most recent first)
 3. **Calculate recency scores** for all songs based on last 3 performances
 4. **Generate setlist** by selecting songs for each moment using score-based algorithm
 5. **Apply energy ordering** to multi-song moments (e.g., louvor: 1→4 progression)
 6. **Output**:
    - Terminal summary (song titles only)
-   - `setlists/YYYY-MM-DD.md` (full markdown with chords)
-   - `setlists/YYYY-MM-DD.json` (history tracking)
+   - `output/YYYY-MM-DD.md` (full markdown with chords)
+   - `history/YYYY-MM-DD.json` (history tracking)
 
 ### File Structure
 
@@ -68,16 +71,18 @@ Where:
 ├── tags.csv                 # Song database: "song;energy;tags"
 ├── chords/                  # Individual song files with chords
 │   └── <Song Name>.md       # Format: "# Song (Key)\n```\nchords...\n```"
-├── setlists/                # Generated outputs and history
-│   ├── YYYY-MM-DD.json      # History tracking (moments → song lists)
+├── output/                  # Generated markdown setlists
 │   └── YYYY-MM-DD.md        # Human-readable setlist with full chords
-├── generate_setlist.py      # CLI entry point (157 lines)
+├── history/                 # JSON history tracking
+│   └── YYYY-MM-DD.json      # History tracking (moments → song lists)
+├── generate_setlist.py      # CLI entry point
 └── setlist/                 # Core package (modular architecture)
     ├── __init__.py          # Public API exports
     ├── config.py            # Configuration constants
     ├── models.py            # Song and Setlist data structures
     ├── loader.py            # Data loading (CSV, history, chords)
     ├── selector.py          # Song selection algorithms
+    ├── paths.py             # Path resolution utilities
     ├── ordering.py          # Energy-based ordering
     ├── generator.py         # Core setlist generation
     └── formatter.py         # Output formatting (markdown, JSON)
@@ -131,7 +136,7 @@ from pathlib import Path
 
 # Load data
 songs = load_songs(Path("."))
-history = load_history(Path("./setlists"))
+history = load_history(Path("./history"))
 
 # Create generator (manages state internally)
 generator = SetlistGenerator(songs, history)
@@ -163,7 +168,7 @@ from pathlib import Path
 
 # Load data
 songs = load_songs(Path("."))
-history = load_history(Path("./setlists"))
+history = load_history(Path("./history"))
 
 # Generate setlist (functional style)
 setlist = generate_setlist(
@@ -179,6 +184,49 @@ Both APIs produce identical results. New code should prefer `SetlistGenerator` f
 **Programmatic Usage:**
 
 The package can be imported and used programmatically. See the "Hybrid Architecture" section above for examples of both the object-oriented (`SetlistGenerator` class) and functional (`generate_setlist` function) APIs.
+
+### Output Path Configuration
+
+The generator supports configurable output paths through multiple methods with the following priority (highest to lowest):
+
+**1. CLI Arguments (Highest Priority):**
+```bash
+python generate_setlist.py --output-dir custom/output --history-dir custom/history
+```
+
+**2. Environment Variables:**
+```bash
+export SETLIST_OUTPUT_DIR=/data/output
+export SETLIST_HISTORY_DIR=/data/history
+python generate_setlist.py
+```
+
+**3. Configuration File (setlist/config.py):**
+```python
+DEFAULT_OUTPUT_DIR = "output"    # Markdown files
+DEFAULT_HISTORY_DIR = "history"  # JSON tracking
+```
+
+**4. Hardcoded Defaults:**
+If no configuration is provided, uses `output/` for markdown files and `history/` for JSON tracking.
+
+**Programmatic Usage:**
+```python
+from setlist import get_output_paths
+from pathlib import Path
+
+# Use defaults
+paths = get_output_paths(Path("."))
+print(paths.output_dir)   # Path("output")
+print(paths.history_dir)  # Path("history")
+
+# Override with custom paths
+paths = get_output_paths(
+    base_path=Path("."),
+    cli_output_dir="custom/out",
+    cli_history_dir="custom/hist"
+)
+```
 
 ### Moments Configuration
 
