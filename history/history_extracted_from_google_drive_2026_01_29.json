@@ -1,0 +1,524 @@
+{
+  "2026-01-25": {
+    "format": "setlist_with_moments",
+    "service_moments": {
+      "Prelúdio": [
+        {"title": "Estamos de Pé", "key": "D"}
+      ],
+      "Oferta": [
+        {"title": "Tributo a Jehovah", "key": "E"}
+      ],
+      "Comunhão": [
+        {"title": "Brilha Jesus", "key": "A"}
+      ],
+      "Crianças": [
+        {"title": "Deus grandão", "key": "D"}
+      ],
+      "Louvor": [
+        {"title": "Entrega", "key": "G"},
+        {"title": "Lugar Secreto", "key": "C"},
+        {"title": "Ousado Amor", "key": "D"},
+        {"title": "Perfeito Amor", "key": "C"}
+      ],
+      "Poslúdio": [
+        {"title": "Rude Cruz", "key": "A"}
+      ]
+    }
+  },
+  "2025-12-28": {
+    "format": "setlist_with_moments",
+    "service_moments": {
+      "Prelúdio": [
+        {"title": "Espírito, Enche a Minha Vida", "key": "C"}
+      ],
+      "Oferta": [
+        {"title": "Agradeço", "key": "D"}
+      ],
+      "Comunhão": [
+        {"title": "Corpo e Família", "key": "G"}
+      ],
+      "Crianças": [
+        {"title": "Homenzinho Torto", "key": "A"}
+      ],
+      "Louvor": [
+        {"title": "Santo de Deus", "key": "G"},
+        {"title": "Jesus Em Tua Presença", "key": "C"},
+        {"title": "Ao Único", "key": "C"},
+        {"title": "Eu Navegarei", "key": "Am"}
+      ],
+      "Ceia": [
+        {"title": "Santo Pra Sempre", "key": "G"}
+      ],
+      "Poslúdio": [
+        {"title": "Noite de Paz", "key": "A"}
+      ]
+    }
+  },
+  "2025-12-07": {
+    "format": "setlist_with_moments",
+    "service_moments": {
+      "Prelúdio": [
+        {"title": "Noite de Paz", "key": "A"}
+      ],
+      "Oferta": [
+        {"title": "Eu Te Busco", "key": "G"}
+      ],
+      "Comunhão": [
+        {"title": "O Nosso General É Cristo", "key": "Am"}
+      ],
+      "Crianças": [
+        {"title": "A Alegria Está No Coração", "key": "G"}
+      ],
+      "Louvor": [
+        {"title": "Entrega", "key": "G"},
+        {"title": "Santo Pra Sempre", "key": "G"},
+        {"title": "Consagração", "key": "G"},
+        {"title": "Em Espirito Em Verdade", "key": "G"}
+      ],
+      "Poslúdio": [
+        {"title": "Noite de Paz", "key": "A"}
+      ]
+    }
+  },
+  "2025-11-16": {
+    "format": "setlist_with_moments",
+    "service_moments": {
+      "Prelúdio": [
+        {"title": "Estamos de Pé", "key": "D"}
+      ],
+      "Oferta": [
+        {"title": "Tributo a Jehovah", "key": "E"}
+      ],
+      "Comunhão": [
+        {"title": "Brilha Jesus", "key": "A"}
+      ],
+      "Crianças": [
+        {"title": "Deus grandão", "key": "D"}
+      ],
+      "Louvor": [
+        {"title": "Santo de Deus", "key": "G"},
+        {"title": "Lugar Secreto", "key": "C"},
+        {"title": "Ousado Amor", "key": "D"},
+        {"title": "Perfeito Amor", "key": "C"}
+      ],
+      "Poslúdio": [
+        {"title": "Rude Cruz", "key": "A"}
+      ]
+    }
+  },
+  "2025-11-09": {
+    "format": "setlist_with_moments",
+    "service_moments": {
+      "Prelúdio": [
+        {"title": "Espírito, Enche a Minha Vida", "key": "C"}
+      ],
+      "Oferta": [
+        {"title": "Agradeço", "key": "D"}
+      ],
+      "Comunhão": [
+        {"title": "Corpo e Família", "key": "G"}
+      ],
+      "Crianças": [
+        {"title": "Homenzinho Torto", "key": "A"}
+      ],
+      "Louvor": [
+        {"title": "Santo de Deus", "key": "G"},
+        {"title": "Jesus Em Tua Presença", "key": "C"},
+        {"title": "Ao Único", "key": "C"},
+        {"title": "Eu Navegarei", "key": "Am"}
+      ],
+      "Poslúdio": [
+        {"title": "Autoridade e Poder", "key": "G"}
+      ]
+    }
+  },
+  "2025-10-05": {
+    "format": "setlist_with_moments",
+    "service_moments": {
+      "Prelúdio": [
+        {"title": "Eu Te Busco", "key": "G"}
+      ],
+      "Oferta": [
+        {"title": "Te Agradeço", "key": "D"}
+      ],
+      "Comunhão": [
+        {"title": "O Nosso General É Cristo", "key": "Am"}
+      ],
+      "Crianças": [
+        {"title": "Rei Davi", "key": "Em"}
+      ],
+      "Louvor": [
+        {"title": "Vim para adorar-te", "key": "G"},
+        {"title": "Mais Que Uma Voz", "key": "A"},
+        {"title": "Precioso", "key": "Gm7"},
+        {"title": "Quebrantado", "key": "Bb"}
+      ],
+      "Poslúdio": [
+        {"title": "Santo de Deus", "key": "G"}
+      ]
+    }
+  },
+  "2025-09-21": {
+    "format": "setlist_with_moments",
+    "service_moments": {
+      "Prelúdio": [
+        {"title": "Estamos de Pé", "key": "D"}
+      ],
+      "Oferta": [
+        {"title": "Vivemos Pra Jesus", "key": "G"}
+      ],
+      "Comunhão": [
+        {"title": "Reina em mim", "key": "Bb"}
+      ],
+      "Crianças": [
+        {"title": "Deus grandão", "key": "D"}
+      ],
+      "Louvor": [
+        {"title": "Santo de Deus", "key": "G"},
+        {"title": "Lugar Secreto", "key": "C"},
+        {"title": "Ousado Amor", "key": "D"},
+        {"title": "Perfeito Amor", "key": "C"}
+      ],
+      "Poslúdio": [
+        {"title": "Tributo a Jehovah", "key": "E"}
+      ]
+    }
+  },
+  "2025-09-14": {
+    "format": "setlist_with_moments",
+    "service_moments": {
+      "Prelúdio": [
+        {"title": "Espírito, Enche a Minha Vida", "key": "C"}
+      ],
+      "Oferta": [
+        {"title": "Agradeço", "key": "D"}
+      ],
+      "Comunhão": [
+        {"title": "Corpo e Família", "key": "G"}
+      ],
+      "Crianças": [
+        {"title": "Homenzinho Torto", "key": "A"}
+      ],
+      "Louvor": [
+        {"title": "Santo de Deus", "key": "G"},
+        {"title": "Jesus Em Tua Presença", "key": "C"},
+        {"title": "Ao Único", "key": "C"},
+        {"title": "Eu Navegarei", "key": "Am"}
+      ],
+      "Poslúdio": [
+        {"title": "Autoridade e Poder", "key": "G"}
+      ]
+    }
+  },
+  "2025-08-31": {
+    "format": "setlist_with_moments",
+    "service_moments": {
+      "Prelúdio": [
+        {"title": "Estamos de Pé", "key": "D"}
+      ],
+      "Oferta": [
+        {"title": "Tributo a Jehovah", "key": "E"}
+      ],
+      "Comunhão": [
+        {"title": "Reina em mim", "key": "Bb"}
+      ],
+      "Crianças": [
+        {"title": "Deus grandão", "key": "D"}
+      ],
+      "Louvor": [
+        {"title": "Santo de Deus", "key": "G"},
+        {"title": "Lugar Secreto", "key": "C"},
+        {"title": "Ousado Amor", "key": "D"},
+        {"title": "Creio que tú és a cura", "key": "E"}
+      ],
+      "Poslúdio": [
+        {"title": "Santo de Deus", "key": "G"}
+      ]
+    }
+  },
+  "2025-08-17": {
+    "format": "setlist_with_moments",
+    "service_moments": {
+      "Prelúdio": [
+        {"title": "Rude Cruz", "key": "A"}
+      ],
+      "Oferta": [
+        {"title": "Te Agradeço", "key": "C"}
+      ],
+      "Comunhão": [
+        {"title": "Brilha Jesus", "key": "A"}
+      ],
+      "Crianças": [
+        {"title": "A Alegria Está No Coração", "key": "G"}
+      ],
+      "Louvor": [
+        {"title": "Santo de Deus", "key": "G"},
+        {"title": "Perfeito Amor", "key": "C"},
+        {"title": "Hosana", "key": "E"},
+        {"title": "Aos Pés da Cruz", "key": "E"}
+      ],
+      "Poslúdio": [
+        {"title": "Santo de Deus", "key": "G"}
+      ]
+    }
+  },
+  "2025-07-27": {
+    "format": "setlist_with_moments",
+    "service_moments": {
+      "Prelúdio": [
+        {"title": "Abra os olhos do meu coração", "key": "E"}
+      ],
+      "Oferta": [
+        {"title": "Tributo a Jehovah", "key": "E"}
+      ],
+      "Comunhão": [
+        {"title": "Reina em mim", "key": "Bb"}
+      ],
+      "Crianças": [
+        {"title": "Deus grandão", "key": "D"}
+      ],
+      "Louvor": [
+        {"title": "Ousado Amor", "key": "D"},
+        {"title": "Perfeito Amor", "key": "C"},
+        {"title": "Hosana", "key": "E"},
+        {"title": "Oceanos", "key": "Bm"}
+      ],
+      "Poslúdio": [
+        {"title": "Naves Imperiais", "key": "Am"}
+      ]
+    }
+  },
+  "2025-07-06": {
+    "format": "setlist_with_moments",
+    "service_moments": {
+      "Prelúdio": [
+        {"title": "Estamos de Pé", "key": "D"}
+      ],
+      "Oferta": [
+        {"title": "Venho, Senhor, Minha Vida Oferecer", "key": "G"}
+      ],
+      "Comunhão": [
+        {"title": "Brilha Jesus", "key": "A"}
+      ],
+      "Crianças": [
+        {"title": "A Alegria Está No Coração", "key": "G"}
+      ],
+      "Louvor": [
+        {"title": "Entrega", "key": "G"},
+        {"title": "Ousado Amor", "key": "D"},
+        {"title": "Consagração", "key": "G"},
+        {"title": "Em Espírito, Em Verdade", "key": "G"}
+      ],
+      "Intercessão": [
+        {"title": "Hosana", "key": "E"}
+      ],
+      "Poslúdio": [
+        {"title": "Autoridade e Poder", "key": "G"}
+      ]
+    }
+  },
+  "2025-05-31": {
+    "format": "setlist_with_moments",
+    "service_moments": {
+      "Prelúdio": [
+        {"title": "Abra os olhos do meu coração", "key": "E"}
+      ],
+      "Oferta": [
+        {"title": "Tributo a Jehovah", "key": "E"}
+      ],
+      "Comunhão": [
+        {"title": "Reina em mim", "key": "Bb"}
+      ],
+      "Crianças": [
+        {"title": "Deus grandão", "key": "D"}
+      ],
+      "Louvor": [
+        {"title": "Ousado Amor", "key": "D"},
+        {"title": "Perfeito Amor", "key": "C"},
+        {"title": "Hosana", "key": "E"},
+        {"title": "Oceanos", "key": "Bm"}
+      ],
+      "Poslúdio": [
+        {"title": "Naves Imperiais", "key": "Am"}
+      ]
+    }
+  },
+  "2025-05-04": {
+    "format": "song_list",
+    "songs": [
+      {"order": 1, "title": "Espírito, Enche a Minha Vida"},
+      {"order": 2, "title": "Agradeço"},
+      {"order": 3, "title": "Estamos de Pé"},
+      {"order": 4, "title": "Fico Feliz"},
+      {"order": 5, "title": "A Casa é Sua"},
+      {"order": 6, "title": "Aos Pés da Cruz"},
+      {"order": 7, "title": "Mais que uma voz"},
+      {"order": 8, "title": "Lugar Secreto"},
+      {"order": 9, "title": "Livre Acesso"},
+      {"order": 10, "title": "Autoridade e Poder"}
+    ]
+  },
+  "2025-04-20": {
+    "format": "song_list",
+    "songs": [
+      {"order": 1, "title": "Rio de Vida"},
+      {"order": 2, "title": "Fico Feliz"},
+      {"order": 3, "title": "Oceanos (Oceans)"},
+      {"order": 4, "title": "Perfeito Amor"},
+      {"order": 5, "title": "Vou Deixar Na Cruz", "notes": "capo na 3 casa"},
+      {"order": 6, "title": "Rude Cruz"}
+    ]
+  },
+  "2025-04-13": {
+    "format": "song_list",
+    "songs": [
+      {"order": 1, "title": "Rude Cruz", "key": "A"},
+      {"order": 2, "title": "Te Agradeço", "key": "C"},
+      {"order": 3, "title": "Eu Te Busco"},
+      {"order": 4, "title": "Homenzinho Torto"},
+      {"order": 5, "title": "Jesus Em Tua Presença"},
+      {"order": 6, "title": "Ao Único"},
+      {"order": 7, "title": "Eu Navegarei"},
+      {"order": 8, "title": "Me Derramar"},
+      {"order": 9, "title": "Santo Pra Sempre"},
+      {"order": 10, "title": "Autoridade e Poder"}
+    ]
+  },
+  "2025-03-30": {
+    "format": "song_list",
+    "songs": [
+      {"order": 1, "title": "Estamos de Pé"},
+      {"order": 2, "title": "Vamos Completar a Missão"},
+      {"order": 3, "title": "Brilha Jesus"},
+      {"order": 4, "title": "Rei Davi"},
+      {"order": 5, "title": "Lugar Secreto"},
+      {"order": 6, "title": "Oceanos (Oceans)"},
+      {"order": 7, "title": "Grande É o Senhor"},
+      {"order": 8, "title": "Rude Cruz"},
+      {"order": 9, "title": "A Casa É Sua"},
+      {"order": 10, "title": "Porque Ele Vive"}
+    ]
+  },
+  "2025-03-23": {
+    "format": "song_list",
+    "songs": [
+      {"order": 1, "title": "Leão da Tribo de Judá"},
+      {"order": 2, "title": "Vamos Completar a Missão"},
+      {"order": 3, "title": "Há Uma Unção"},
+      {"order": 4, "title": "Fico Feliz"},
+      {"order": 5, "title": "Oceanos (Oceans)"},
+      {"order": 6, "title": "Precioso"},
+      {"order": 7, "title": "Santo Pra Sempre"},
+      {"order": 8, "title": "Perfeito Amor"},
+      {"order": 9, "title": "Vaso Novo"},
+      {"order": 10, "title": "Vou Seguir Com Fé"}
+    ]
+  },
+  "2025-02-23": {
+    "format": "song_list",
+    "songs": [
+      {"order": 1, "title": "Rio de Vida"},
+      {"order": 2, "title": "Tributo a Yehovah"},
+      {"order": 3, "title": "Brilha Jesus"},
+      {"order": 4, "title": "Deus Grandão"},
+      {"order": 5, "title": "Perfeito Amor"},
+      {"order": 6, "title": "Lugar Secreto"},
+      {"order": 7, "title": "Consagração"},
+      {"order": 8, "title": "Em Espirito Em Verdade"},
+      {"order": 9, "title": "Deus de Promessas"},
+      {"order": 10, "title": "Vaso Novo"}
+    ]
+  },
+  "2025-02-02": {
+    "format": "song_list",
+    "songs": [
+      {"order": 1, "title": "O Nosso General É Cristo"},
+      {"order": 2, "title": "Agradeço"},
+      {"order": 3, "title": "Corpo e Família"},
+      {"order": 4, "title": "Fico Feliz"},
+      {"order": 5, "title": "Santo Pra Sempre"},
+      {"order": 6, "title": "Vou Deixar Na Cruz"},
+      {"order": 7, "title": "Mais Que Uma Voz"},
+      {"order": 8, "title": "Amigo de Deus"},
+      {"order": 9, "title": "Deus Cuida de Mim"},
+      {"order": 10, "title": "Vou Seguir Com Fé"}
+    ]
+  },
+  "2025-01-19": {
+    "format": "song_list",
+    "songs": [
+      {"order": 1, "title": "Rio de Vida"},
+      {"order": 2, "title": "Te Agradeço"},
+      {"order": 3, "title": "Reina Em Mim"},
+      {"order": 4, "title": "Rei Davi"},
+      {"order": 5, "title": "Leva-me Além"},
+      {"order": 6, "title": "Consagração"},
+      {"order": 7, "title": "Em Espirito Em Verdade"},
+      {"order": 8, "title": "Lugar Secreto"},
+      {"order": 9, "title": "Livre Acesso"},
+      {"order": 10, "title": "Autoridade e Poder"}
+    ]
+  },
+  "2025-01-05": {
+    "format": "song_list",
+    "songs": [
+      {"order": 1, "title": "O Nosso General É Cristo"},
+      {"order": 2, "title": "Venho, Senhor, Minha Vida Oferecer"},
+      {"order": 3, "title": "Corpo e Família"},
+      {"order": 4, "title": "A Alegria Está No Coração"},
+      {"order": 5, "title": "Precioso", "notes": "capo na 3 casa"},
+      {"order": 6, "title": "Vou Deixar Na Cruz", "notes": "capo na 3 casa"},
+      {"order": 7, "title": "Mais Que Uma Voz"},
+      {"order": 8, "title": "Amigo de Deus"},
+      {"order": 9, "title": "Deus Cuida de Mim"},
+      {"order": 10, "title": "Tributo a Yehovah"}
+    ]
+  },
+  "2024-12-22": {
+    "format": "song_list",
+    "songs": [
+      {"order": 1, "title": "Vem Chegando o Natal!"},
+      {"order": 2, "title": "Ó Vinde Adoremos"},
+      {"order": 3, "title": "Estrela da Manhã"}
+    ]
+  },
+  "2024-12-08": {
+    "format": "song_list",
+    "songs": [
+      {"order": 1, "title": "Noite de Paz"},
+      {"order": 2, "title": "Te Agradeço"},
+      {"order": 3, "title": "Leão da Tribo de Judá"},
+      {"order": 4, "title": "Rei Davi"},
+      {"order": 5, "title": "Precioso"},
+      {"order": 6, "title": "Meu Universo"},
+      {"order": 7, "title": "Consagração"},
+      {"order": 8, "title": "Em Espirito Em Verdade"},
+      {"order": 9, "title": "Lugar Secreto"},
+      {"order": 10, "title": "Ó Vinde Adoremos"}
+    ]
+  },
+  "2024-11-10": {
+    "format": "individual_files",
+    "songs": [
+      {"order": 4, "author": "Aline Barros", "title": "Homenzinho Torto"},
+      {"order": 5, "author": "Asaph Borba", "title": "Jesus Em Tua Presença"},
+      {"order": 6, "author": "Aline Barros", "title": "Ao Único"},
+      {"order": 7, "author": "Gabriela Rocha", "title": "Eu Navegarei"}
+    ],
+    "additional_songs_from_chords_book": [
+      {"title": "Reina Em Mim", "author": "Vineyard"}
+    ]
+  },
+  "2024-10-27": {
+    "format": "song_list",
+    "songs": [
+      {"order": 1, "title": "Ele É Exaltado", "author": "Adhemar de Campos"},
+      {"order": 2, "title": "Venho Senhor Minha Vida Oferecer", "author": "Corinhos Evangélicos"}
+    ]
+  },
+  "2024-10-13": {
+    "format": "unknown",
+    "songs": [],
+    "notes": "Folder appears to be empty or inaccessible"
+  }
+}
