@@ -1,38 +1,76 @@
 """Song selection algorithms based on weights, recency, and randomness."""
 
 import random
+from datetime import datetime, date
+from math import exp
 from typing import Dict, Set
 
-from .config import RECENCY_PENALTY_PERFORMANCES, DEFAULT_ENERGY
+from .config import RECENCY_DECAY_DAYS, DEFAULT_ENERGY
 from .models import Song
 
 
 def calculate_recency_scores(
     songs: dict[str, Song],
-    history: list[dict]
+    history: list[dict],
+    current_date: str | None = None
 ) -> dict[str, float]:
     """
-    Calculate the recency score for each song.
-    Higher score = longer since last used = better candidate.
+    Calculate recency scores using time-based exponential decay.
 
-    Returns: {song_title: recency_score}
+    Songs get higher scores the longer it's been since they were last used.
+    Score formula: 1.0 - exp(-days_since_last_use / DECAY_CONSTANT)
+
+    Args:
+        songs: Dictionary of all available songs
+        history: List of historical setlists (sorted by date, most recent first)
+        current_date: Current date for calculation (defaults to today, format: YYYY-MM-DD)
+
+    Returns:
+        Dictionary mapping song titles to recency scores (0.0-1.0)
     """
-    scores = {}
+    # Parse current date
+    if current_date is None:
+        today = date.today()
+    else:
+        today = datetime.strptime(current_date, "%Y-%m-%d").date()
 
-    # Initialize all songs with max score (never used)
-    for title in songs:
-        scores[title] = 1.0
+    # Initialize all songs with maximum score (never used)
+    scores = {title: 1.0 for title in songs}
 
-    # Penalize recently used songs
-    for i, setlist in enumerate(history[:RECENCY_PENALTY_PERFORMANCES]):
-        penalty_factor = 1 - ((RECENCY_PENALTY_PERFORMANCES - i) / RECENCY_PENALTY_PERFORMANCES)
+    # Track last use date for each song
+    last_used = {}  # {song_title: date_object}
 
-        # Get all songs from this setlist
+    # Scan all history files to find last use of each song
+    for setlist in history:  # Already sorted by date (most recent first)
+        setlist_date_str = setlist.get("date")
+        if not setlist_date_str:
+            continue
+
+        try:
+            setlist_date = datetime.strptime(setlist_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            continue  # Skip malformed dates
+
+        # Collect songs from this setlist
         for moment, song_list in setlist.get("moments", {}).items():
             for song in song_list:
-                if song in scores:
-                    # Apply penalty (more recent = lower score)
-                    scores[song] = min(scores[song], penalty_factor)
+                if song in scores and song not in last_used:
+                    # Record first (most recent) occurrence
+                    last_used[song] = setlist_date
+
+    # Calculate decay-based scores
+    for song, last_date in last_used.items():
+        days_since = (today - last_date).days
+
+        # Exponential decay formula
+        # Score approaches 1.0 as days_since increases
+        # RECENCY_DECAY_DAYS controls the decay rate
+        if days_since <= 0:
+            # Same day or future date (shouldn't happen, but handle gracefully)
+            scores[song] = 0.0
+        else:
+            decay_factor = exp(-days_since / RECENCY_DECAY_DAYS)
+            scores[song] = 1.0 - decay_factor
 
     return scores
 

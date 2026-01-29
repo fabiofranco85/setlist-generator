@@ -59,7 +59,7 @@ python generate_setlist.py
 
 This will:
 1. Load all songs from `tags.csv` and `chords/` directory
-2. Analyze the last 3 setlists to avoid repetition
+2. Analyze **all historical setlists** to calculate time-based recency scores
 3. Generate a new setlist with songs for each service moment
 4. Save the output to `output/YYYY-MM-DD.md` (markdown with chords)
 5. Save history to `history/YYYY-MM-DD.json` (for tracking)
@@ -93,11 +93,12 @@ The system picks songs using a smart scoring algorithm:
    - Example: A powerful worship song might have `louvor(5)` → higher chance of selection
    - Default weight is 3 if not specified
 
-2. **Recency Penalty**: Songs used recently are penalized
-   - Just used → heavily penalized
-   - Used 2 services ago → moderately penalized
-   - Used 3 services ago → lightly penalized
-   - Not used in last 3 services → no penalty
+2. **Time-Based Recency**: Songs used recently are penalized based on actual days elapsed
+   - Used 7 days ago → heavily penalized (score: 0.14)
+   - Used 30 days ago → moderately penalized (score: 0.49)
+   - Used 60 days ago → lightly penalized (score: 0.74)
+   - Used 90+ days ago → almost no penalty (score: 0.86+)
+   - **Considers full history**, not just recent services
 
 3. **Randomization**: Adds variety to prevent the exact same order each time
 
@@ -327,9 +328,7 @@ Each song has a markdown file with chords and lyrics.
 ```markdown
 # Song Title (Key)
 
-```
 [Chord notation with lyrics]
-```
 ```
 
 **Example** (`chords/Oceanos.md`):
@@ -337,7 +336,6 @@ Each song has a markdown file with chords and lyrics.
 ```markdown
 # Oceanos (Bm)
 
-```
 Bm                   A/C#    D
    Tua voz me chama sobre as águas
          A              G
@@ -349,7 +347,6 @@ G         D       A
   Ao Teu nome clamarei
 G            D        A
   E além das ondas olharei
-```
 ```
 
 ### Adding a New Song
@@ -371,10 +368,8 @@ G            D        A
    ```markdown
    # Nova Canção (G)
 
-   ```
    G              D
    Letra da música...
-   ```
    ```
 
 4. **Run generator** - the song is now in the pool!
@@ -504,16 +499,21 @@ DEFAULT_ENERGY = 2.5  # Neutral/middle energy
 - `"descending"`: High to low energy (4→1) - contemplative to upbeat
 - `DEFAULT_ENERGY`: Fallback for songs missing energy values (2.5 = neutral)
 
-### Change Recency Window
+### Change Recency Decay Rate
 
-Edit `RECENCY_PENALTY_PERFORMANCES` (line 41):
+Edit `RECENCY_DECAY_DAYS` in `setlist/config.py`:
 
 ```python
-RECENCY_PENALTY_PERFORMANCES = 3  # Change to 4 or 5 for more variety
+RECENCY_DECAY_DAYS = 45  # Days for a song to feel "fresh" again
 ```
 
-- `3` = avoid repeating songs used in last 3 services
-- `5` = avoid repeating songs used in last 5 services
+**Tuning options:**
+- `30` = Faster cycling (songs fresh after 1 month)
+- `45` = Balanced (default - songs fresh after 1.5 months)
+- `60` = Slower cycling (songs fresh after 2 months)
+- `90` = Maximum variety (songs fresh after 3 months)
+
+**How it works:** The system uses exponential decay based on actual days elapsed since last use, considering the **full history** of all services. See [`RECENCY_SYSTEM.md`](./RECENCY_SYSTEM.md) for details.
 
 ### Change Default Weight
 
@@ -853,7 +853,8 @@ Each service will automatically avoid songs used in previous services.
 
 1. **Song was recently used**
    - Check `history/*.json` files for recent usage
-   - Wait 3 services or use `--override` to force it
+   - Songs used within the last 30-45 days are heavily penalized
+   - Use `--override` to force it if needed
 
 2. **Tag/weight issue**
    - Verify song is in `tags.csv`
@@ -878,9 +879,10 @@ The song is in `tags.csv` but the chord file is missing or misnamed.
 
 **Solutions:**
 
-1. **Increase recency window** (line 41 in `generate_setlist.py`):
+1. **Increase recency decay period** in `setlist/config.py`:
    ```python
-   RECENCY_PENALTY_PERFORMANCES = 5  # Instead of 3
+   RECENCY_DECAY_DAYS = 60  # Instead of 45 (slower cycling)
+   # Or even 90 for maximum variety
    ```
 
 2. **Add more songs** to `tags.csv` for variety
@@ -888,10 +890,10 @@ The song is in `tags.csv` but the chord file is missing or misnamed.
 3. **Adjust weights** - lower weights on overused songs:
    ```csv
    # Before
-   Oceanos;louvor(5)
+   Oceanos;2;louvor(5)
 
    # After
-   Oceanos;louvor(3)
+   Oceanos;2;louvor(3)
    ```
 
 ### Problem: Too many/few songs for a moment

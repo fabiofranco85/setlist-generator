@@ -8,7 +8,7 @@ from .config import (
     ENERGY_ORDERING_ENABLED,
     ENERGY_ORDERING_RULES,
     MOMENTS_CONFIG,
-    RECENCY_PENALTY_PERFORMANCES,
+    RECENCY_DECAY_DAYS,
 )
 from .formatter import format_setlist_markdown, save_setlist_history
 from .generator import SetlistGenerator, generate_setlist
@@ -20,7 +20,7 @@ __all__ = [
     # Configuration
     "MOMENTS_CONFIG",
     "DEFAULT_WEIGHT",
-    "RECENCY_PENALTY_PERFORMANCES",
+    "RECENCY_DECAY_DAYS",
     "ENERGY_ORDERING_ENABLED",
     "ENERGY_ORDERING_RULES",
     "DEFAULT_ENERGY",

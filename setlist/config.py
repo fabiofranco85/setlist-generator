@@ -12,7 +12,7 @@ MOMENTS_CONFIG = {
 
 # Selection algorithm parameters
 DEFAULT_WEIGHT = 3
-RECENCY_PENALTY_PERFORMANCES = 3  # Number of performances until "fresh"
+RECENCY_DECAY_DAYS = 45  # Days for a song to feel "fresh" again (time-based decay)
 
 # Energy ordering configuration
 ENERGY_ORDERING_ENABLED = True  # Master switch to enable/disable feature

@@ -49,14 +49,14 @@ score = weight × (recency + 0.1) + random(0, 0.5)
 
 Where:
 - **weight**: From tags.csv (e.g., `louvor(5)` → weight=5)
-- **recency**: Penalty factor based on last 3 performances (0.0 = just used, 1.0 = never used)
+- **recency**: Time-based decay score (0.0 = just used, 1.0 = never used / very long ago)
 - **random factor**: Adds variety to avoid deterministic selection
 
 ### Data Flow
 
 1. **Load songs** from `tags.csv` + `chords/*.md` files (includes energy metadata)
 2. **Load history** from `history/*.json` (sorted by date, most recent first)
-3. **Calculate recency scores** for all songs based on last 3 performances
+3. **Calculate recency scores** for all songs using time-based exponential decay (considers full history)
 4. **Generate setlist** by selecting songs for each moment using score-based algorithm
 5. **Apply energy ordering** to multi-song moments (e.g., louvor: 1→4 progression)
 6. **Output**:
@@ -288,25 +288,47 @@ Songs have an intrinsic **energy level** (1-4) that defines their musical charac
 4. Lugar Secreto (energy: 4) - deep worship
 ```
 
-### Recency Penalty System
+### Time-Based Recency System
 
-`RECENCY_PENALTY_PERFORMANCES = 3` (generate_setlist.py:41)
+`RECENCY_DECAY_DAYS = 45` (setlist/config.py:16)
 
-Songs are penalized based on how recently they were used:
-- **Used in last setlist**: recency = 0.0 (heavily penalized)
-- **Used 2 setlists ago**: recency = 0.33
-- **Used 3 setlists ago**: recency = 0.67
-- **Not used in last 3**: recency = 1.0 (no penalty)
+**NEW:** The system now uses **time-based exponential decay** to calculate recency scores, considering the **full history** of all services (not just the last 3).
 
-This ensures variety while still allowing high-weight songs to appear relatively frequently.
+**Formula:** `recency_score = 1.0 - exp(-days_since_last_use / DECAY_CONSTANT)`
+
+Songs get higher scores the longer it's been since they were last used:
+
+| Days Since Last Use | Score | Impact |
+|---------------------|-------|--------|
+| 7 days | 0.14 | Heavy penalty |
+| 14 days | 0.27 | Strong penalty |
+| 30 days | 0.49 | Moderate penalty |
+| 45 days (decay constant) | 0.63 | Getting fresh |
+| 60 days | 0.74 | Very fresh |
+| 90+ days | 0.86+ | Almost "never used" |
+
+**Key benefits:**
+- ✅ Considers **all history**, not just last 3 performances
+- ✅ Time-aware: 21 days ≠ 49 days (old system treated both as "beyond 3 services")
+- ✅ Smooth, continuous scoring (no sharp cutoffs)
+- ✅ Songs gradually become candidates again as time passes
+
+**Configuration:**
+- **30 days**: Faster cycling (small libraries, frequent services)
+- **45 days**: Balanced (default - most churches)
+- **60-90 days**: Slower cycling (larger libraries, maximum variety)
+
+For detailed documentation, see: [`RECENCY_SYSTEM.md`](./RECENCY_SYSTEM.md)
 
 ## Modifying Song Selection Behavior
 
 ### Change moment counts
 Edit `MOMENTS_CONFIG` in `setlist/config.py`
 
-### Change recency window
-Edit `RECENCY_PENALTY_PERFORMANCES` in `setlist/config.py` (default: 3)
+### Change recency decay rate
+Edit `RECENCY_DECAY_DAYS` in `setlist/config.py` (default: 45)
+- Lower values (30) = faster cycling
+- Higher values (60-90) = slower cycling, more variety
 
 ### Change default weight
 Edit `DEFAULT_WEIGHT` in `setlist/config.py` (default: 3)

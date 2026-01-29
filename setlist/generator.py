@@ -32,7 +32,7 @@ class SetlistGenerator:
         """
         self.songs = songs
         self.history = history
-        self._recency_scores = calculate_recency_scores(songs, history)
+        self._recency_scores = {}  # Calculated per generation, not at init
         self._already_selected = set()
         self._moments = {}
 
@@ -51,6 +51,14 @@ class SetlistGenerator:
         Returns:
             Setlist object with selected songs
         """
+        # Calculate recency scores using the target date
+        # This ensures scores are relative to the setlist date, not "today"
+        self._recency_scores = calculate_recency_scores(
+            self.songs,
+            self.history,
+            current_date=date
+        )
+
         # Reset state for new generation
         self._already_selected = set()
         self._moments = {}
