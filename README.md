@@ -1064,6 +1064,150 @@ New Song;1;louvor(5)  # Energy still 1, weight now 5 (frequent selection)
 
 **Key principle**: Energy (column 2) defines the song's character and rarely changes. Weight (in tags) controls selection frequency and can be adjusted based on congregation familiarity.
 
+## Data Maintenance
+
+The project includes utility scripts to help maintain data quality and import external data.
+
+### Checking Data Quality
+
+Run the cleanup script to verify all history files match your song database:
+
+```bash
+python cleanup_history.py
+```
+
+**What it checks:**
+- ✓ Song names match exactly between history and tags.csv
+- ✓ Capitalization is consistent
+- ✓ No missing songs in the database
+
+**What it fixes automatically:**
+- Capitalization mismatches (e.g., "deus grandão" → "Deus Grandão")
+- Creates backups before making changes
+
+**Example output:**
+```
+Step 1: Analyzing history files...
+  ✓ Loaded 57 songs from tags.csv
+  ✓ Found 0 issue(s)
+
+CLEANUP COMPLETE
+✅ All songs in history match tags.csv perfectly!
+```
+
+**When to run:**
+- After importing external data
+- Monthly as a health check
+- When songs seem to be repeating unexpectedly
+- Before making major changes to tags.csv
+
+### Fixing Punctuation Issues
+
+If cleanup_history.py finds punctuation differences:
+
+```bash
+python fix_punctuation.py
+```
+
+This normalizes variations like:
+- "Em Espírito, Em Verdade" → "Em Espírito Em Verdade"
+- "Espírito, Enche a Minha Vida" → "Espírito Enche a Minha Vida"
+
+### Importing External History Data
+
+If you're migrating from another system or have historical setlist data:
+
+1. **Edit** `import_real_history.py` with your data
+2. **Run the import:**
+   ```bash
+   python import_real_history.py
+   ```
+3. **Check data quality:**
+   ```bash
+   python cleanup_history.py
+   ```
+4. **Fix any issues found:**
+   ```bash
+   python fix_punctuation.py  # If needed
+   ```
+
+**Data format required:**
+```python
+{
+  "2025-12-28": {
+    "format": "setlist_with_moments",
+    "service_moments": {
+      "Prelúdio": [{"title": "Song Name", "key": "D"}],
+      "Louvor": [
+        {"title": "Song 1", "key": "G"},
+        {"title": "Song 2", "key": "C"}
+      ]
+      # ... other moments
+    }
+  }
+}
+```
+
+**Moment name mapping:**
+The import script automatically converts external names to internal format:
+- "Oferta" → "ofertório"
+- "Comunhão" → "saudação"
+- "Prelúdio" → "prelúdio" (no change)
+- "Louvor" → "louvor" (no change)
+- "Crianças" → "crianças" (no change)
+- "Poslúdio" → "poslúdio" (no change)
+
+Unsupported moments (like "Ceia", "Intercessão") are skipped with a warning.
+
+### Complete Data Import Workflow
+
+When importing historical data from another system:
+
+```bash
+# Step 1: Edit import_real_history.py with your data
+# (Add your JSON data to the raw_data dictionary)
+
+# Step 2: Run the import
+python import_real_history.py
+
+# Step 3: Verify data quality
+python cleanup_history.py
+
+# Step 4: Fix punctuation if needed
+python fix_punctuation.py
+
+# Step 5: Final verification
+python cleanup_history.py
+# Should show: "✅ All songs in history match tags.csv perfectly!"
+
+# Step 6: Test generation with real data
+python generate_setlist.py --date 2026-03-01 --no-save
+```
+
+### Data Quality Best Practices
+
+**Regular Maintenance:**
+- Run `cleanup_history.py` monthly to catch issues early
+- Keep backup directories until you verify changes are correct
+- Document any custom moment name mappings you use
+
+**When Adding Songs:**
+- Match capitalization exactly in tags.csv and chords/ filenames
+- Include accents and special characters properly
+- Run cleanup script after bulk additions
+
+**Troubleshooting Data Issues:**
+
+If songs aren't being avoided properly (recency not working):
+1. Run `cleanup_history.py` to check for name mismatches
+2. Look for capitalization or punctuation differences
+3. Fix issues found, then regenerate setlists
+
+If the cleanup script reports missing songs:
+- Either add them to tags.csv with proper energy and tags
+- Or fix the history files to use existing song names
+- See the script output for specific suggestions
+
 ## Support
 
 For issues or questions:

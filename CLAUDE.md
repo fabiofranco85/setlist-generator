@@ -347,6 +347,141 @@ Edit `ENERGY_ORDERING_ENABLED` or `ENERGY_ORDERING_RULES` in `setlist/config.py`
 - **Energy 3**: Slower tempo, reflective, thoughtful (e.g., Perfeito Amor)
 - **Energy 4**: Very slow, intimate, deep worship (e.g., Lugar Secreto)
 
+## Data Maintenance Utilities
+
+The project includes several utility scripts for maintaining data quality and importing external data.
+
+### cleanup_history.py
+
+**Purpose:** Automated data quality checker and fixer for history files.
+
+**What it does:**
+- Analyzes all history files for inconsistencies with tags.csv
+- Automatically fixes capitalization mismatches (e.g., "deus grandão" → "Deus Grandão")
+- Identifies songs in history that don't exist in tags.csv
+- Provides fuzzy matching suggestions for similar song names
+- Creates timestamped backups before making changes
+
+**When to use:**
+- After importing external data
+- When you suspect data quality issues
+- As a periodic health check (monthly/quarterly)
+- Before major changes to tags.csv
+
+**Usage:**
+```bash
+python cleanup_history.py
+```
+
+**Output:**
+- Shows capitalization fixes applied
+- Lists missing songs with suggestions
+- Creates backup directory (e.g., `history_backup_20260129_105330`)
+
+**Example output:**
+```
+Step 1: Analyzing history files...
+  ✓ Loaded 57 songs from tags.csv
+  ✓ Found 11 issue(s)
+
+Step 2: Applying capitalization fixes...
+  📝 2025-08-31.json
+     • 'Reina em mim' → 'Reina em Mim'
+
+Step 3: Songs that need to be added to tags.csv
+  ❌ 'New Song Title'
+      → Not found in tags.csv
+      → Suggested action: Add to tags.csv with energy and moment tags
+```
+
+### fix_punctuation.py
+
+**Purpose:** Normalize punctuation differences in history files to match canonical song names.
+
+**What it does:**
+- Fixes punctuation variants (commas, hyphens) to match tags.csv
+- Handles common variations like "Em Espírito, Em Verdade" → "Em Espírito Em Verdade"
+- Updates history files in place
+
+**When to use:**
+- After running cleanup_history.py and finding punctuation mismatches
+- When importing data with inconsistent punctuation
+- As a follow-up to manual history edits
+
+**Usage:**
+```bash
+python fix_punctuation.py
+```
+
+**Note:** This script has a predefined mapping of punctuation variants. Edit the `PUNCTUATION_FIXES` dictionary to add new mappings.
+
+### import_real_history.py
+
+**Purpose:** Import external setlist data and convert it to the internal history format.
+
+**What it does:**
+- Parses setlist data from external JSON format
+- Maps moment names (e.g., "Oferta" → "ofertório", "Comunhão" → "saudação")
+- Filters for supported formats (setlist_with_moments)
+- Deletes existing fake/example history files
+- Creates properly formatted history/*.json files
+
+**When to use:**
+- Initial project setup with existing service history
+- Migrating from another system
+- Importing bulk historical data
+
+**Usage:**
+1. Edit the `raw_data` dictionary in the script with your data
+2. Run: `python import_real_history.py`
+
+**Data format expected:**
+```python
+{
+  "2025-12-28": {
+    "format": "setlist_with_moments",
+    "service_moments": {
+      "Prelúdio": [{"title": "Song Name", "key": "D"}],
+      "Louvor": [
+        {"title": "Song 1", "key": "G"},
+        {"title": "Song 2", "key": "C"}
+      ]
+      # ... other moments
+    }
+  }
+}
+```
+
+**Note:** Only processes entries with `format: "setlist_with_moments"`. Other formats are ignored.
+
+### Data Quality Best Practices
+
+1. **Run cleanup_history.py regularly** - Catches issues early
+2. **Verify after imports** - Always run cleanup after importing external data
+3. **Keep backups** - The cleanup script creates backups automatically
+4. **Fix root causes** - If punctuation issues recur, update data entry processes
+5. **Document moment mappings** - Keep track of external → internal moment name mappings
+
+### Workflow: Importing External Data
+
+```bash
+# 1. Prepare your data in import_real_history.py
+# 2. Run import
+python import_real_history.py
+
+# 3. Check for data quality issues
+python cleanup_history.py
+
+# 4. Fix punctuation if needed
+python fix_punctuation.py
+
+# 5. Verify final state
+python cleanup_history.py  # Should show 0 issues
+
+# 6. Test generation
+python generate_setlist.py --date 2026-03-01 --no-save
+```
+
 ## Dependencies
 
 - Python 3.12+
