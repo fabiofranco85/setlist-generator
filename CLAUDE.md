@@ -71,6 +71,26 @@ Displays a formatted view of generated setlists without opening files. Shows:
 - Optional: Song keys (with `--keys` flag)
 - File paths and existence status (markdown, PDF, history JSON)
 
+### View Song
+```bash
+# View a specific song's lyrics and chords
+python view_song.py "Oceanos"
+
+# List all available songs
+python view_song.py --list
+
+# View without metadata (tags, energy)
+python view_song.py "Hosana" --no-metadata
+```
+
+Displays a specific song's content with:
+- Song title and key
+- Tags (moment assignments with weights)
+- Energy level and description
+- Full chord notation and lyrics
+
+Includes smart search: if song not found, suggests similar songs based on partial name match.
+
 ### Replace Songs
 ```bash
 # Auto-select replacement for position 2 in louvor

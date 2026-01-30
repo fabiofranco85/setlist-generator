@@ -324,6 +324,64 @@ FILES:
 - `--date YYYY-MM-DD`: View specific date (default: latest)
 - `--history-dir`: Custom history directory
 
+### View Individual Songs
+
+View a specific song's lyrics and chords without opening files:
+
+```bash
+# View a specific song
+python view_song.py "Oceanos"
+
+# List all available songs
+python view_song.py --list
+
+# View without metadata (tags, energy)
+python view_song.py "Hosana" --no-metadata
+```
+
+**Example output:**
+```
+======================================================================
+Oceanos (Bm)
+======================================================================
+
+Tags:   louvor(2)
+Energy: 3.0 - Moderate-low, reflective, slower
+
+----------------------------------------------------------------------
+
+Bm                   A/C#    D
+   Tua voz me chama sobre as águas
+         A              G
+Onde os meus pés podem falhar
+Bm                    A/C#  D
+   E ali Te encontro no mistério
+        A            G
+Em meio ao mar, confiarei
+
+[Refrão]
+
+G         D       A
+  Ao Teu nome clamarei
+...
+```
+
+**Features:**
+- Displays full chord notation and lyrics
+- Shows song metadata (tags, energy level)
+- Smart search: suggests similar songs if name not found
+- List all songs with `--list` flag
+
+**Use cases:**
+- Quickly reference chords during practice
+- Check song key before rehearsal
+- Review lyrics without opening files
+- Find songs by partial name match
+
+**Options:**
+- `--list` or `-l`: List all available songs with their keys and tags
+- `--no-metadata`: Hide tags and energy information
+
 ## Replacing Songs
 
 After generating a setlist, you can replace individual songs without regenerating the entire setlist. This is useful when you want to adjust a few songs while keeping the rest of the selection.
