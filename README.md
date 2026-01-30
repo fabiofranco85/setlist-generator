@@ -200,6 +200,23 @@ python generate_setlist.py --help
 
 After generating a setlist, you can replace individual songs without regenerating the entire setlist. This is useful when you want to adjust a few songs while keeping the rest of the selection.
 
+### Simplified Usage (Position Defaults to 1)
+
+For single-song moments (prelúdio, ofertório, saudação, crianças, poslúdio), you can omit the position:
+
+```bash
+# Replace prelúdio song (defaults to position 1)
+python replace_song.py --moment prelúdio
+
+# Same as:
+python replace_song.py --moment prelúdio --position 1
+```
+
+**When to omit position:**
+- ✅ Single-song moments (5 out of 6 moments)
+- ✅ When replacing the first song in louvor
+- ❌ Don't omit for louvor positions 2-4 (be explicit)
+
 ### Basic Replacement (Auto Mode)
 
 Let the system pick the best replacement:

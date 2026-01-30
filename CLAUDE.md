@@ -391,17 +391,20 @@ After generating a setlist, users can replace songs using `replace_song.py`.
 ### Command Structure
 
 ```bash
-python replace_song.py --moment MOMENT --position N [--with SONG] [--date DATE]
+python replace_song.py --moment MOMENT [--position N] [--with SONG] [--date DATE]
 ```
 
 **Required:**
 - `--moment`: Service moment (prelúdio, ofertório, saudação, crianças, louvor, poslúdio)
-- `--position` or `--positions`: Position(s) to replace (1-indexed)
 
 **Optional:**
+- `--position N`: Position to replace (1-indexed). Default: 1
+- `--positions N,N`: Multiple positions (comma-separated). Cannot be used with --position.
 - `--with SONG`: Manual replacement (auto-select if omitted)
 - `--date YYYY-MM-DD`: Target date (default: latest)
 - `--output-dir`, `--history-dir`: Custom paths
+
+**Note:** When neither `--position` nor `--positions` is specified, defaults to position 1.
 
 ### Implementation Details
 
@@ -495,7 +498,10 @@ Validates and raises `ValueError` with descriptive messages for:
 ### Usage Examples
 
 ```bash
-# Auto replacement - system picks best song
+# Replace first song (defaults to position 1)
+python replace_song.py --moment prelúdio
+
+# Auto replacement - system picks best song for specific position
 python replace_song.py --moment louvor --position 2
 
 # Manual replacement - user specifies song

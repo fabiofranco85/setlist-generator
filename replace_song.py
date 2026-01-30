@@ -3,7 +3,10 @@
 Replace songs in a generated setlist.
 
 Usage:
-    # Auto-select replacement
+    # Replace first song (position defaults to 1)
+    python replace_song.py --moment prelúdio
+
+    # Auto-select replacement for specific position
     python replace_song.py --moment louvor --position 2
 
     # Manual replacement
@@ -43,6 +46,9 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  # Replace first song (defaults to position 1)
+  python replace_song.py --moment prelúdio
+
   # Auto-select replacement for louvor position 2
   python replace_song.py --moment louvor --position 2
 
@@ -64,11 +70,11 @@ Examples:
     )
 
     # Single or multiple positions (mutually exclusive)
-    position_group = parser.add_mutually_exclusive_group(required=True)
+    position_group = parser.add_mutually_exclusive_group(required=False)
     position_group.add_argument(
         "--position",
         type=int,
-        help="Position to replace (1-indexed, e.g., 1-4 for louvor)"
+        help="Position to replace (1-indexed, e.g., 1-4 for louvor). Default: 1"
     )
     position_group.add_argument(
         "--positions",
@@ -137,13 +143,16 @@ def main():
     if args.position is not None:
         # Single replacement
         positions = [args.position]
-    else:
+    elif args.positions is not None:
         # Multiple replacements
         try:
             positions = [int(p.strip()) for p in args.positions.split(",")]
         except ValueError:
             print("ERROR: Invalid positions format. Use comma-separated integers (e.g., '1,3')", file=sys.stderr)
             sys.exit(1)
+    else:
+        # Default to position 1 when neither is specified
+        positions = [1]
 
     # Convert from 1-indexed (user) to 0-indexed (internal)
     positions_zero_indexed = [p - 1 for p in positions]
