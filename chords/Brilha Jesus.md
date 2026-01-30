@@ -1,4 +1,4 @@
-# Brilha Jesus (A)
+###Brilha Jesus (A)
 
 A      A4     A           E
 Vejo a luz do Senhor que brilha

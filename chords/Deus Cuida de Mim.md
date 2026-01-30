@@ -1,4 +1,4 @@
-# Deus Cuida de Mim (E)
+###Deus Cuida de Mim (E)
 
 [Intro] E  B/D#  C#m A
         E/G# A  B  A  A/B  E

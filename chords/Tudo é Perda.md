@@ -1,4 +1,4 @@
-# Tudo é Perda (E)
+###Tudo é Perda (E)
 
 [Intro] E  C#m7 B  A7M
 

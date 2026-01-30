@@ -368,7 +368,7 @@ Edit `ENERGY_ORDERING_ENABLED` or `ENERGY_ORDERING_RULES` in `setlist/config.py`
 
 2. Create `chords/New Song Title.md`:
    ```markdown
-   # New Song Title (G)
+   ### New Song Title (G)
 
    G               D
    Verse lyrics...

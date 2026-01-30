@@ -1,4 +1,4 @@
-# A Alegria Está No Coração (G)
+###A Alegria Está No Coração (G)
 
 G           G       G/B
 A alegria está no coração

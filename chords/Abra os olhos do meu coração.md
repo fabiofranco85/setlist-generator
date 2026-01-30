@@ -1,4 +1,4 @@
-# Abra os olhos do meu coração (E)
+###Abra os olhos do meu coração (E)
 
  E2
 Santo, Santo, Santo

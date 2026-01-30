@@ -1,4 +1,4 @@
-# Vou Seguir Com Fé (A)
+###Vou Seguir Com Fé (A)
 
 [Intro] F7M  Em  Em7  A7M
         F7M  Em  Em7  C7M  D7M

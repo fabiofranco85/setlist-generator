@@ -1,4 +1,4 @@
-# Deus de Promessas (G)
+###Deus de Promessas (G)
 
 Am7                 D/F#
     Sei que os Teus olhos

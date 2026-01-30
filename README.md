@@ -458,7 +458,7 @@ Each song has a markdown file with chords and lyrics.
 **Format**:
 
 ```markdown
-# Song Title (Key)
+### Song Title (Key)
 
 [Chord notation with lyrics]
 ```
@@ -466,7 +466,7 @@ Each song has a markdown file with chords and lyrics.
 **Example** (`chords/Oceanos.md`):
 
 ```markdown
-# Oceanos (Bm)
+### Oceanos (Bm)
 
 Bm                   A/C#    D
    Tua voz me chama sobre as águas
@@ -498,7 +498,7 @@ G            D        A
 
 3. **Create chord file** `chords/Nova Canção.md`:
    ```markdown
-   # Nova Canção (G)
+   ### Nova Canção (G)
 
    G              D
    Letra da música...
@@ -822,7 +822,7 @@ Human-readable setlist with full chords and lyrics for musicians.
 
 ## Prelúdio
 
-# Estamos de Pé (G)
+### Estamos de Pé (G)
 
 G              D
 Estamos de pé...

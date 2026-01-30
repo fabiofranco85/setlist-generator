@@ -1,4 +1,4 @@
-# Santo Pra Sempre (G)
+###Santo Pra Sempre (G)
 
 [Intro] C9  Em7  D
         Bm7  Em7  D
