@@ -15,6 +15,7 @@ from .generator import SetlistGenerator, generate_setlist
 from .loader import load_history, load_songs
 from .models import Setlist, Song
 from .paths import PathConfig, get_output_paths
+from .pdf_formatter import generate_setlist_pdf
 from .replacer import (
     find_target_setlist,
     replace_song_in_setlist,
@@ -42,6 +43,7 @@ __all__ = [
     "generate_setlist",
     "format_setlist_markdown",
     "save_setlist_history",
+    "generate_setlist_pdf",
     # Classes
     "SetlistGenerator",
     # Path utilities

@@ -25,6 +25,7 @@ from setlist import (
     MOMENTS_CONFIG,
     format_setlist_markdown,
     generate_setlist,
+    generate_setlist_pdf,
     get_output_paths,
     load_history,
     load_songs,
@@ -115,6 +116,12 @@ Moments: prelúdio, ofertório, saudação, crianças, louvor (4 songs), poslúd
         help="Directory for JSON history (default: history/)"
     )
 
+    parser.add_argument(
+        "--pdf",
+        action="store_true",
+        help="Generate PDF output in addition to markdown"
+    )
+
     args = parser.parse_args()
 
     # Paths
@@ -166,6 +173,18 @@ Moments: prelúdio, ofertório, saudação, crianças, louvor (4 songs), poslúd
         print(f"History saved to: {history_dir / f'{args.date}.json'}")
     else:
         print("(Dry run - history not saved)")
+
+    # Generate PDF if requested
+    if args.pdf:
+        pdf_path = output_dir / f"{args.date}.pdf"
+        print(f"\nGenerating PDF...")
+        try:
+            generate_setlist_pdf(setlist, songs, pdf_path)
+            print(f"PDF saved to: {pdf_path}")
+        except ImportError as e:
+            print(f"Error: ReportLab library not installed. Install with: pip install reportlab")
+        except Exception as e:
+            print(f"Error generating PDF: {e}")
 
 
 if __name__ == "__main__":

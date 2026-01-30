@@ -21,6 +21,10 @@ python generate_setlist.py
 # Generate for specific date
 python generate_setlist.py --date 2026-02-15
 
+# Generate with PDF output
+python generate_setlist.py --pdf
+python generate_setlist.py --date 2026-02-15 --pdf
+
 # Override specific moments
 python generate_setlist.py --override "louvor:Oceanos,Santo Pra Sempre"
 python generate_setlist.py --override "prelúdio:Estamos de Pé" --override "louvor:Oceanos"
@@ -52,6 +56,59 @@ python replace_song.py --moment louvor --positions 1,3
 python replace_song.py --date 2026-03-15 --moment louvor --position 2
 ```
 
+### PDF Generation
+
+Generate professional PDF setlists for church services:
+
+```bash
+# Generate markdown + PDF for today
+python generate_setlist.py --pdf
+
+# Generate for specific date
+python generate_setlist.py --date 2026-02-15 --pdf
+
+# Dry run (preview without saving to history)
+python generate_setlist.py --no-save --pdf
+```
+
+**PDF Format:**
+- **Page 1**: Table of contents with song list and page numbers
+- **Page 2+**: Each moment on separate page with full chord notation
+- **Typography**: Professional fonts, monospace chords
+- **Date Format**: Portuguese (e.g., "Domingo, 25 de Janeiro de 2026")
+- **Moment Names**: Mapped to church terminology
+  - `prelúdio` → **Prelúdio**
+  - `ofertório` → **Oferta**
+  - `saudação` → **Comunhão**
+  - `crianças` → **Crianças**
+  - `louvor` → **Louvor**
+  - `poslúdio` → **Poslúdio**
+
+**Dependencies:**
+```bash
+# Install PDF generation library
+pip install reportlab
+# OR
+uv pip install reportlab
+```
+
+**Programmatic Usage:**
+```python
+from setlist import load_songs, load_history, generate_setlist_pdf, Setlist
+from pathlib import Path
+
+songs = load_songs(Path("."))
+history = load_history(Path("./history"))
+
+# Load existing setlist from history
+setlist_dict = history[0]  # Latest setlist
+setlist = Setlist(date=setlist_dict["date"], moments=setlist_dict["moments"])
+
+# Generate PDF
+pdf_path = Path("output/2026-02-15.pdf")
+generate_setlist_pdf(setlist, songs, pdf_path)
+```
+
 ## Architecture
 
 ### Core Algorithm
@@ -77,6 +134,7 @@ Where:
 6. **Output**:
    - Terminal summary (song titles only)
    - `output/YYYY-MM-DD.md` (full markdown with chords)
+   - `output/YYYY-MM-DD.pdf` (optional, with `--pdf` flag)
    - `history/YYYY-MM-DD.json` (history tracking)
 
 ### File Structure
@@ -100,7 +158,8 @@ Where:
     ├── paths.py             # Path resolution utilities
     ├── ordering.py          # Energy-based ordering
     ├── generator.py         # Core setlist generation
-    └── formatter.py         # Output formatting (markdown, JSON)
+    ├── formatter.py         # Output formatting (markdown, JSON)
+    └── pdf_formatter.py     # PDF generation (ReportLab)
 ```
 
 ### Modular Architecture
@@ -121,6 +180,7 @@ The codebase is organized into focused modules for better maintainability and re
 - `ordering.py` - Energy-based ordering for emotional arcs
 - `generator.py` - Orchestrates the complete setlist generation (includes SetlistGenerator class)
 - `formatter.py` - Output formatting (markdown, JSON)
+- `pdf_formatter.py` - PDF generation using ReportLab
 
 ### Hybrid Architecture (Functional + Object-Oriented)
 
