@@ -270,6 +270,60 @@ This is helpful when you need to know:
 - What moments to use with `--override` in `generate_setlist.py`
 - How many songs each moment requires
 
+### View Generated Setlist
+
+Quickly view generated setlists without opening files:
+
+```bash
+# View the latest setlist
+python view_setlist.py
+
+# View a specific date
+python view_setlist.py --date 2026-02-15
+
+# Include song keys in the output
+python view_setlist.py --keys
+python view_setlist.py --date 2026-02-15 --keys
+```
+
+**Example output:**
+```
+============================================================
+SETLIST FOR 2026-02-08
+Sunday, February 08, 2026
+============================================================
+
+PRELÚDIO:
+  - Abra os olhos do meu coração (E)
+
+OFERTÓRIO:
+  - Venho Senhor Minha Vida Oferecer (G)
+
+LOUVOR:
+  - Tudo é Perda (E)
+  - Deus Cuida de Mim (E)
+  - Me Derramar (G)
+  - Livre Acesso (G)
+
+...
+
+FILES:
+  Markdown: output/2026-02-08.md ✓
+  PDF:      output/2026-02-08.pdf ✓
+  History:  history/2026-02-08.json ✓
+```
+
+**Useful for:**
+- Quickly checking what was generated without opening files
+- Reviewing past setlists
+- Verifying output files exist
+- Getting song keys at a glance
+
+**Options:**
+- `--keys` or `-k`: Show song keys alongside titles
+- `--date YYYY-MM-DD`: View specific date (default: latest)
+- `--history-dir`: Custom history directory
+
 ## Replacing Songs
 
 After generating a setlist, you can replace individual songs without regenerating the entire setlist. This is useful when you want to adjust a few songs while keeping the rest of the selection.

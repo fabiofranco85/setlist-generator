@@ -49,6 +49,28 @@ python list_moments.py
 
 Shows all available moments with their song counts and descriptions. Useful for knowing what values to use with `--moment` arguments in other commands.
 
+### View Setlist
+```bash
+# View the latest generated setlist
+python view_setlist.py
+
+# View a specific date
+python view_setlist.py --date 2026-02-15
+
+# View with song keys
+python view_setlist.py --keys
+python view_setlist.py --date 2026-02-15 --keys
+
+# Custom history directory
+python view_setlist.py --history-dir custom/history
+```
+
+Displays a formatted view of generated setlists without opening files. Shows:
+- Service date (formatted in English)
+- All songs organized by moment
+- Optional: Song keys (with `--keys` flag)
+- File paths and existence status (markdown, PDF, history JSON)
+
 ### Replace Songs
 ```bash
 # Auto-select replacement for position 2 in louvor
