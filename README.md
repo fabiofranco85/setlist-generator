@@ -241,6 +241,35 @@ python generate_setlist.py --output-dir custom/output --history-dir custom/histo
 python generate_setlist.py --help
 ```
 
+### List Available Moments
+
+To see all available service moments and their descriptions:
+
+```bash
+python list_moments.py
+```
+
+**Output:**
+```
+============================================================
+AVAILABLE SERVICE MOMENTS
+============================================================
+
+Moment          Songs    Description
+------------------------------------------------------------
+prelúdio        1        Opening/introductory worship
+ofertório       1        During offering collection
+saudação        1        Greeting/welcome
+crianças        1        Children's ministry
+louvor          4        Main worship block
+poslúdio        1        Closing/sending song
+```
+
+This is helpful when you need to know:
+- What moment names to use with `--moment` in `replace_song.py`
+- What moments to use with `--override` in `generate_setlist.py`
+- How many songs each moment requires
+
 ## Replacing Songs
 
 After generating a setlist, you can replace individual songs without regenerating the entire setlist. This is useful when you want to adjust a few songs while keeping the rest of the selection.

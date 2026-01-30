@@ -41,6 +41,14 @@ python generate_setlist.py --output-dir custom/output --history-dir custom/histo
 uv run generate_setlist.py [options]
 ```
 
+### List Moments
+```bash
+# Display all available service moments
+python list_moments.py
+```
+
+Shows all available moments with their song counts and descriptions. Useful for knowing what values to use with `--moment` arguments in other commands.
+
 ### Replace Songs
 ```bash
 # Auto-select replacement for position 2 in louvor
