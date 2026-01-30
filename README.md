@@ -18,6 +18,7 @@ An intelligent setlist generator for church worship services that automatically 
 - [Quick Start](#quick-start)
 - [How It Works](#how-it-works)
 - [Usage Guide](#usage-guide)
+- [Replacing Songs](#replacing-songs)
 - [Managing Songs](#managing-songs)
 - [Configuration](#configuration)
 - [Programmatic Usage](#programmatic-usage)
@@ -194,6 +195,120 @@ python generate_setlist.py --output-dir custom/output --history-dir custom/histo
 ```bash
 python generate_setlist.py --help
 ```
+
+## Replacing Songs
+
+After generating a setlist, you can replace individual songs without regenerating the entire setlist. This is useful when you want to adjust a few songs while keeping the rest of the selection.
+
+### Basic Replacement (Auto Mode)
+
+Let the system pick the best replacement:
+
+```bash
+# Replace song at position 2 in louvor
+python replace_song.py --moment louvor --position 2
+```
+
+The system will:
+- Apply all selection rules (weights, recency, energy)
+- Exclude songs already in the setlist
+- Choose the next best candidate
+- Reorder by energy to maintain emotional arc
+
+### Manual Replacement
+
+Specify exactly which song to use:
+
+```bash
+# Replace with "Oceanos"
+python replace_song.py --moment louvor --position 2 --with "Oceanos"
+```
+
+**Requirements for manual replacement:**
+- Song must exist in `tags.csv`
+- Song must be tagged for the target moment
+- Song must not already be in the setlist
+
+### Replace Multiple Songs
+
+```bash
+# Replace positions 1 and 3 (both auto-selected)
+python replace_song.py --moment louvor --positions 1,3
+```
+
+**Note:** When replacing multiple positions, all replacements use auto-selection mode (you cannot use `--with` for batch replacements).
+
+### Replace for Specific Date
+
+By default, replaces in the most recent setlist. To target a specific date:
+
+```bash
+python replace_song.py --date 2026-03-15 --moment louvor --position 2
+```
+
+### Position Indexing
+
+Positions are **1-indexed** for user convenience:
+- Prelúdio, Ofertório, Saudação, Crianças, Poslúdio: Position 1 only
+- Louvor: Positions 1-4
+
+### Examples
+
+```bash
+# View current setlist
+cat output/2026-03-15.md
+
+# Replace prelúdio song (auto mode)
+python replace_song.py --moment prelúdio --position 1
+
+# Replace louvor position 3 with specific song
+python replace_song.py --moment louvor --position 3 --with "Grande É o Senhor"
+
+# Replace multiple louvor positions
+python replace_song.py --moment louvor --positions 2,4
+
+# Replace for a past service
+python replace_song.py --date 2025-12-25 --moment louvor --position 1
+```
+
+### How It Works
+
+**Auto Mode:**
+1. Calculates recency scores for all songs (same date as original setlist)
+2. Builds exclusion set (all songs currently in setlist EXCEPT the one being replaced)
+3. Uses same selection algorithm as generation (weight × recency + randomization)
+4. Reorders moment by energy to maintain emotional arc
+
+**Manual Mode:**
+1. Validates song exists and has required moment tag
+2. Validates song not already in setlist
+3. Replaces song at specified position
+4. Reorders by energy
+
+**Files Updated:**
+- `output/YYYY-MM-DD.md` (markdown with chords)
+- `history/YYYY-MM-DD.json` (history tracking)
+
+Both files are completely regenerated to reflect the updated setlist.
+
+### Troubleshooting Replacements
+
+**"No available replacement songs"**
+- All eligible songs for that moment are already in the setlist
+- Solution: Use manual mode to specify a song, or remove one of the existing songs first
+
+**"Song not tagged for moment"**
+- The song doesn't have the required moment tag in `tags.csv`
+- Solution: Add the moment tag to the song, or choose a different song
+
+**"Position out of range"**
+- Position must be within valid range for that moment
+- Louvor: 1-4, Others: usually 1
+- Solution: Check the setlist to see valid positions
+
+**"Setlist for date not found"**
+- The specified date doesn't exist in history
+- Solution: Check `history/` directory for available dates
 
 ## Managing Songs
 

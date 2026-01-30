@@ -15,6 +15,13 @@ from .generator import SetlistGenerator, generate_setlist
 from .loader import load_history, load_songs
 from .models import Setlist, Song
 from .paths import PathConfig, get_output_paths
+from .replacer import (
+    find_target_setlist,
+    replace_song_in_setlist,
+    replace_songs_batch,
+    select_replacement_song,
+    validate_replacement_request,
+)
 
 __all__ = [
     # Configuration
@@ -40,4 +47,10 @@ __all__ = [
     # Path utilities
     "PathConfig",
     "get_output_paths",
+    # Replacement functions
+    "find_target_setlist",
+    "select_replacement_song",
+    "replace_song_in_setlist",
+    "replace_songs_batch",
+    "validate_replacement_request",
 ]

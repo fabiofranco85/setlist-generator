@@ -37,6 +37,21 @@ python generate_setlist.py --output-dir custom/output --history-dir custom/histo
 uv run generate_setlist.py [options]
 ```
 
+### Replace Songs
+```bash
+# Auto-select replacement for position 2 in louvor
+python replace_song.py --moment louvor --position 2
+
+# Manual replacement with specific song
+python replace_song.py --moment louvor --position 2 --with "Oceanos"
+
+# Replace multiple positions (auto mode)
+python replace_song.py --moment louvor --positions 1,3
+
+# Replace for specific date
+python replace_song.py --date 2026-03-15 --moment louvor --position 2
+```
+
 ## Architecture
 
 ### Core Algorithm
@@ -368,6 +383,178 @@ Edit `ENERGY_ORDERING_ENABLED` or `ENERGY_ORDERING_RULES` in `setlist/config.py`
 - **Energy 2**: Moderate tempo, engaging, rhythmic (e.g., Oceanos)
 - **Energy 3**: Slower tempo, reflective, thoughtful (e.g., Perfeito Amor)
 - **Energy 4**: Very slow, intimate, deep worship (e.g., Lugar Secreto)
+
+## Replacing Songs in Generated Setlists
+
+After generating a setlist, users can replace songs using `replace_song.py`.
+
+### Command Structure
+
+```bash
+python replace_song.py --moment MOMENT --position N [--with SONG] [--date DATE]
+```
+
+**Required:**
+- `--moment`: Service moment (prelúdio, ofertório, saudação, crianças, louvor, poslúdio)
+- `--position` or `--positions`: Position(s) to replace (1-indexed)
+
+**Optional:**
+- `--with SONG`: Manual replacement (auto-select if omitted)
+- `--date YYYY-MM-DD`: Target date (default: latest)
+- `--output-dir`, `--history-dir`: Custom paths
+
+### Implementation Details
+
+**Core Module:** `setlist/replacer.py`
+
+**Key Functions:**
+
+1. **`find_target_setlist(history, target_date=None)`**
+   - Locates setlist by date (latest or specific)
+   - Returns: Setlist dict `{"date": "...", "moments": {...}}`
+   - Raises: `ValueError` if date not found or no history exists
+
+2. **`validate_replacement_request(setlist, moment, position, replacement_song, songs)`**
+   - Validates moment exists in `MOMENTS_CONFIG`
+   - Validates position in range (0-indexed internally)
+   - Validates manual song exists and has required moment tag
+   - Raises: `ValueError` with descriptive message on failure
+
+3. **`select_replacement_song(moment, setlist, position, songs, history, manual_replacement=None)`**
+   - Auto mode: Uses `select_songs_for_moment()` with exclusion set
+   - Manual mode: Validates and returns user-specified song
+   - Returns: Song title (str)
+   - Raises: `ValueError` if no suitable replacement found
+
+4. **`replace_song_in_setlist(setlist_dict, moment, position, replacement_song, songs, reorder_energy=True)`**
+   - Single replacement with energy reordering
+   - Creates new setlist dict (immutable pattern)
+   - Calls `apply_energy_ordering()` if enabled
+   - Returns: Updated setlist dict
+
+5. **`replace_songs_batch(setlist_dict, replacements, songs, history)`**
+   - Multiple replacements at once
+   - Validates all replacements first
+   - Prevents duplicate selections in batch
+   - Reorders each affected moment by energy
+   - Returns: Updated setlist dict
+
+### Algorithm Details
+
+**Auto-Selection Process:**
+
+1. Build exclusion set: all songs in setlist EXCEPT the one being replaced
+2. Calculate recency scores for target date (same date as original setlist)
+3. Call `select_songs_for_moment()` with:
+   - `count=1`
+   - `already_selected=exclusion_set`
+   - `overrides=None`
+4. Apply energy ordering to the moment (all songs treated as auto-selected)
+
+**Key Insight:** By excluding all songs EXCEPT the replacement target, the selection algorithm can "re-pick" for that position while avoiding duplicates.
+
+**Recency Consistency:**
+- Uses SAME date as original setlist for recency calculation
+- Ensures consistent scoring with original generation
+- Replacement candidates scored as if generated on that date
+
+**Energy Reordering:**
+- Always reapplied after replacement (if `ENERGY_ORDERING_ENABLED`)
+- Maintains emotional arc (1→4 for louvor)
+- All songs treated as auto-selected (no override preservation)
+- Override count set to 0 when calling `apply_energy_ordering()`
+
+**Position Indexing:**
+- User-facing: 1-indexed (1, 2, 3, 4)
+- Internal: 0-indexed (0, 1, 2, 3)
+- Conversion: `internal_pos = user_pos - 1`
+
+### Reusable Components
+
+The replacement feature reuses existing modules:
+- `selector.calculate_recency_scores()` - Time-based decay scoring
+- `selector.select_songs_for_moment()` - Weighted selection algorithm
+- `ordering.apply_energy_ordering()` - Energy-based song ordering
+- `formatter.format_setlist_markdown()` - Markdown generation
+- `formatter.save_setlist_history()` - JSON history saving
+- `loader.load_songs()` - Load songs from CSV and chords
+- `loader.load_history()` - Load historical setlists
+
+### Error Handling
+
+Validates and raises `ValueError` with descriptive messages for:
+- Moment doesn't exist in `MOMENTS_CONFIG`
+- Position out of valid range (0 to N-1 internally)
+- Manual song doesn't exist in database
+- Manual song not tagged for target moment
+- Manual song already in setlist
+- History directory empty
+- Target date doesn't exist in history
+- No available replacement songs (all eligible songs already used)
+
+### Usage Examples
+
+```bash
+# Auto replacement - system picks best song
+python replace_song.py --moment louvor --position 2
+
+# Manual replacement - user specifies song
+python replace_song.py --moment louvor --position 2 --with "Oceanos"
+
+# Replace for specific date
+python replace_song.py --date 2026-03-01 --moment louvor --position 2
+
+# Batch replacement (all auto-selected)
+python replace_song.py --moment louvor --positions 1,3
+```
+
+### Programmatic Usage
+
+```python
+from setlist import (
+    load_songs,
+    load_history,
+    find_target_setlist,
+    select_replacement_song,
+    replace_song_in_setlist,
+)
+from pathlib import Path
+
+# Load data
+songs = load_songs(Path("."))
+history = load_history(Path("./history"))
+
+# Find latest setlist
+setlist_dict = find_target_setlist(history)
+
+# Auto-select replacement
+replacement = select_replacement_song(
+    moment="louvor",
+    setlist=setlist_dict,
+    position=1,  # 0-indexed internally
+    songs=songs,
+    history=history,
+    manual_replacement=None  # Auto mode
+)
+
+# Apply replacement
+new_setlist = replace_song_in_setlist(
+    setlist_dict=setlist_dict,
+    moment="louvor",
+    position=1,
+    replacement_song=replacement,
+    songs=songs,
+    reorder_energy=True
+)
+
+# Save results using formatter functions
+from setlist import format_setlist_markdown, save_setlist_history
+from setlist.models import Setlist
+
+setlist_obj = Setlist(date=new_setlist["date"], moments=new_setlist["moments"])
+markdown = format_setlist_markdown(setlist_obj, songs)
+save_setlist_history(setlist_obj, Path("./history"))
+```
 
 ## Data Maintenance Utilities
 

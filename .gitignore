@@ -12,3 +12,5 @@ wheels/
 .DS_Store
 .idea
 uv.lock
+IMPLEMENTATION_SUMMARY.md
+MIGRATION_COMPLETE.md
