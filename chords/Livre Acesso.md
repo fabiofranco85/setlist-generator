@@ -1,6 +1,5 @@
 # Livre Acesso (G)
 
-```
 G                 D/G            C/G
 Senhor eu não sou nada diante do Teu poder
 G       D/G          C/G
@@ -37,4 +36,3 @@ C         Am
 Toca em minh'alma
     C/G      D             G
 Faz em mim o Teu querer, Senhor
-```

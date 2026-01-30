@@ -1,6 +1,5 @@
 # Estamos de Pé (D)
 
-```
 [Intro] D  Bm  G  D
 
 D
@@ -41,4 +40,3 @@ Vamos avançar, não vamos parar de crescer
 Ninguém pode parar a igreja do Senhor
 
 ( D  Am  C  G )
-```

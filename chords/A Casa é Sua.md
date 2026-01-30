@@ -1,6 +1,5 @@
 # A Casa é Sua (A)
 
-```
 [Intro] A  D/A  F#m7 A/C# D9
 
 [Primeira Parte]
@@ -52,4 +51,3 @@ Que o Teu nome cresça
 Vem me incendiar
               C#m7
 Vem me incendiar
-```

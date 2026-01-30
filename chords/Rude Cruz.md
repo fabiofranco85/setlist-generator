@@ -1,6 +1,5 @@
 # Rude Cruz (A)
 
-```
       A                      D
 Rude cruz se erigiu, dela o dia fugiu
           E              A
@@ -36,4 +35,3 @@ Meu Jesus, para dar-me perdão
 Mas me alegro na cruz, Dela vem graça e luz
         E         A
 Para minha santificação
-```

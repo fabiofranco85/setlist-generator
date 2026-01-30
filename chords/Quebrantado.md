@@ -1,6 +1,5 @@
 # Quebrantado (Bb)
 
-```
 [Intro] Bb  F  Gm  Eb
         Bb  F  Gm  Eb
 
@@ -114,4 +113,3 @@ Gm                        F
 Sem palavras me aproximo
 Eb
   Quebrantado por seu amor
-```

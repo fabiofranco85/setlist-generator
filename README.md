@@ -824,10 +824,8 @@ Human-readable setlist with full chords and lyrics for musicians.
 
 # Estamos de Pé (G)
 
-```
 G              D
 Estamos de pé...
-```
 
 ---
 
@@ -1099,7 +1097,7 @@ Ensure your editor/terminal supports UTF-8:
 ### Song Naming Conventions
 
 - Use exact titles as they appear on official recordings
-- Include accents: "Tributo a Jehovah" not "Tributo a Jehovah"
+- Include accents: "Te agradeço" not "Te agradeco"
 - Be consistent: Once you name a song, use that exact spelling everywhere
 
 ### Energy & Weight Strategy
@@ -1266,7 +1264,7 @@ If you're migrating from another system or have historical setlist data:
    ```
 
 **Data format required:**
-```python
+```
 {
   "2025-12-28": {
     "format": "setlist_with_moments",

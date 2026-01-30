@@ -1,6 +1,5 @@
 # Tudo é Perda (E)
 
-```
 [Intro] E  C#m7 B  A7M
 
 [Primeira Parte]
@@ -161,4 +160,3 @@ Nada eu serei sem Ti, Senhor
 Só Tua presença é o que me basta
            E/G#            A7M
 Eu Te levarei por onde eu for
-```

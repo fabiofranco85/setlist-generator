@@ -1,6 +1,5 @@
 # Autoridade e Poder (G)
 
-```
          G
 Os que confiam no Senhor , são como os
 Em
@@ -28,4 +27,3 @@ joelhos ergam as mãos
 Pois o Senhor é Deus o Senhor é Rei dos
    D
 povos
-```

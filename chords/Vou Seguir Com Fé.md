@@ -1,6 +1,5 @@
 # Vou Seguir Com Fé (A)
 
-```
 [Intro] F7M  Em  Em7  A7M
         F7M  Em  Em7  C7M  D7M
         F7M  Em  Em7  A7M
@@ -78,4 +77,3 @@ Para a rocha mais alta que eu
 Eu sei pra onde vou, como águia vou
        D/E               A7M
 Nas alturas sou filho de Deus
-```

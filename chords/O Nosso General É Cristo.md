@@ -1,6 +1,5 @@
 # O Nosso General É Cristo (Am)
 
-```
        ( Am  Am7(9) )
 Pelo Senhor marchamos sim
         ( F7M  G/F )
@@ -43,4 +42,3 @@ Com o Messias marchamos sim
 Em suas mãos a chave da vitória
          Dm7              G         Am7
 Que nos leva a possuir a terra prometida
-```

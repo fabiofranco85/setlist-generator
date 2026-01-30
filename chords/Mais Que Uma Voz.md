@@ -1,6 +1,5 @@
 # Mais Que Uma Voz (A)
 
-```
 A      E/G#F#m       E
 Eu queria ter mais que uma voz
  D       A/C# Bm7
@@ -31,4 +30,3 @@ Minha vida  é pra Teu louvor
 Meu Deus, meu Senhor
  D     A/C#Bm7    D/E    E  A
 Minha vida é pra Teu louvor
-```

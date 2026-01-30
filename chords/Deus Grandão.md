@@ -1,6 +1,5 @@
 # Deus Grandão (D)
 
-```
 D             G
 Meu Deus é um Deus grandão
 D             A
@@ -26,4 +25,3 @@ Desde sempre foi assim
 Como é bom saber
     D/F#         G         A
 Que Ele tem um plano para mim
-```

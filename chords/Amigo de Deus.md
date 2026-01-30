@@ -1,6 +1,5 @@
 # Amigo de Deus (D)
 
-```
 [Intro]  D  A/C#  Bm  Em  D  A
          D  A/C#  Bm  D/F#  G  A  D
 
@@ -57,4 +56,3 @@ A grandeza do  poder
 De Jesus, meu Bom Pastor
       D/A      A      G
 De Jesus, meu Bom Pastor
-```

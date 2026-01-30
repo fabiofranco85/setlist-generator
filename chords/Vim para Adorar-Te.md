@@ -1,6 +1,5 @@
 # Vim para Adorar-Te (G)
 
-```
 G5     D4
 Luz do mundo
   Am7(11)/E  C9
@@ -124,4 +123,3 @@ Vim para dizer que és meu Deus
 Totalmente digno
             G/B      C9
 Tão maravilhoso para mim
-```

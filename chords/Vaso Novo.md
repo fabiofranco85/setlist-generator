@@ -1,6 +1,5 @@
 # Vaso Novo (D)
 
-```
         D             Em
 Eu quero ser, Senhor amado
          G                D
@@ -18,4 +17,3 @@ Tu és o oleiro e eu o vaso
 Quebra minha vida e faze-a de novo
          D  Bm         Em A         D
 Eu quero ser, eu quero ser um vaso novo
-```

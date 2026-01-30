@@ -1,6 +1,5 @@
 # Jesus Em Tua Presença (C)
 
-```
 F      G      C          Em
 Só pra te adorar
      F              G      Am7
@@ -58,4 +57,3 @@ Estamos nós aqui
 Estamos nós aqui
   Dm        G      C7+
 Estamos nós aqui
-```

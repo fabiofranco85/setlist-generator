@@ -1,6 +1,5 @@
 # Em Espírito Em Verdade (G)
 
-```
           C                D
 Pra Te adorar, oh rei dos reis
               Am G/B C  Em D
@@ -44,4 +43,3 @@ Meu prazer é estar nos átrios do Senhor
 Meu prazer é vi_ver
     Bm      C           D      G
 Na casa de Deus, onde flui o amor
-```

@@ -1,6 +1,5 @@
 # Venho Senhor Minha Vida Oferecer (G)
 
-```
 [Intro] Am  D/C  Bm  Em
         Am  Bm  C  C/D
         G  C/D
@@ -50,4 +49,3 @@ E que a cada dia eu queira mais e mais
 Estar  ao  teu  lado
    Am  Bm7  C7M  D7(4/9)  G
 Estar  ao  teu  lado, senhor
-```

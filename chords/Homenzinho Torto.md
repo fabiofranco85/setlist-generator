@@ -1,6 +1,5 @@
 # Homenzinho Torto (A)
 
-```
    A
 Havia um homenzinho torto
                   D/A
@@ -34,4 +33,3 @@ A bíblia encontrou
 E tudo que era torto
               A
 Jesus endireitou
-```

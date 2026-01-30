@@ -1,6 +1,5 @@
 # Tributo a Jehovah (E)
 
-```
       C#m      G#m       A
 Eu sou grato por tudo que tenho
     C#m    G#m         B
@@ -34,4 +33,3 @@ E/G#        A
 Ye, Ye, Yehovah
 C#m   A    B
 Ye, Ye, Yehovah
-```

@@ -1,6 +1,5 @@
 # Há Uma Unção (G)
 
-```
  G        C  D D#°      Em
 Há uma unção, já posso sentir
            C  D           G
@@ -41,4 +40,3 @@ Verdadeiramente Deus está aqui
 Há uma unção, já posso sentir
            C  D           G
 Verdadeiramente Deus está aqui
-```

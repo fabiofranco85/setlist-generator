@@ -1,6 +1,5 @@
 # Perfeito Amor (C)
 
-```
 [Intro] C7M  F7M  C7M  F7M  C7M
 
                   F7M             F/G
@@ -59,4 +58,3 @@ Jesus tu és a nossa esperança
 
              C7M  F7M  C7M  F7M  A7M
 O perfeito amor
-```

@@ -370,10 +370,8 @@ Edit `ENERGY_ORDERING_ENABLED` or `ENERGY_ORDERING_RULES` in `setlist/config.py`
    ```markdown
    # New Song Title (G)
 
-   ```
    G               D
    Verse lyrics...
-   ```
    ```
 
 3. Run generator - new song will be automatically included in selection pool
@@ -651,7 +649,7 @@ python fix_punctuation.py
 2. Run: `python import_real_history.py`
 
 **Data format expected:**
-```python
+```
 {
   "2025-12-28": {
     "format": "setlist_with_moments",

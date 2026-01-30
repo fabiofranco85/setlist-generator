@@ -1,6 +1,5 @@
 # Rio de Vida (G)
 
-```
  G              D/F#          C9             D9
 Deus eu ouço a tua voz chamando o meu nome
  G              D/F#            C9              D9
@@ -37,4 +36,3 @@ A tua presença me basta, a tua presença me basta
 A tua presença me basta
           G
 Te quero Deus
-```

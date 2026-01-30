@@ -1,6 +1,5 @@
 # Aos Pés da Cruz (E)
 
-```
 [Intro] E9  B/D#  C#m7
         A7M  B7(4/9)
         E9  B/D#  C#m7
@@ -75,4 +74,3 @@ Tua graça é o meu refúgio
 Descanso no Teu poder
  Gm7    A#7M     C7(4/9)  C           F2
 Maravilhoso és, maravi__lhoso és pra mim
-```

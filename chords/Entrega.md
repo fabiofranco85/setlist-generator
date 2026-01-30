@@ -1,6 +1,5 @@
 # Entrega (G)
 
-```
 G                 D
   Te dou meu coração
                   C
@@ -39,4 +38,3 @@ A teu nome dar louvor
 Sentir tua alegria
              D/F#  G
 Partilhando tua   dor
-```

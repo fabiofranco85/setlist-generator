@@ -1,6 +1,5 @@
 # Deus de Promessas (G)
 
-```
 Am7                 D/F#
     Sei que os Teus olhos
          G/B                  C  G/B
@@ -60,4 +59,3 @@ Deus que não é homem pra mentir
 Tudo pode passar, tudo pode mudar
            Am7              F  C/E
 Mas Tua palavra vai se cumprir
-```

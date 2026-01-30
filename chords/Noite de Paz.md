@@ -1,6 +1,5 @@
 # Noite de Paz (A)
 
-```
  A        E7(#9)  A
 Tudo é paz        tudo amor!
  E           A        A7 G/B A/C#
@@ -27,4 +26,3 @@ Vinde todos Lhe pedir,
 Que nos venha conduzir,
 Deste mundo a luz,
 É o Senhor Jesus.
-```

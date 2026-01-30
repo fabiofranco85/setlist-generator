@@ -1,6 +1,5 @@
 # A Alegria Está No Coração (G)
 
-```
 G           G       G/B
 A alegria está no coração
     C                 G  C/G
@@ -17,4 +16,3 @@ Que vem do nosso Senhor
 É o amor que só tem
             D        G  (F F# G F F# G F F# G F F F G)
 Quem já conhece a Jesus
-```

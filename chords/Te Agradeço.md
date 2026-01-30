@@ -1,6 +1,5 @@
 # Te Agradeço (C)
 
-```
 C                   G
   Eu Te agradeço, Deus
                    Am7
@@ -132,4 +131,3 @@ C              G             Am7
   E o levantar   das minhas mãos
               F9             C
 É pra dizer que Te pertenço, Deus
-```

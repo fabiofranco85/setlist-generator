@@ -1,6 +1,5 @@
 # Santo Pra Sempre (G)
 
-```
 [Intro] C9  Em7  D
         Bm7  Em7  D
 
@@ -125,4 +124,3 @@ Santo pra sempre
 Tu sempre serás Santo
            G   G4  G
 Santo pra sempre
-```

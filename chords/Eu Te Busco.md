@@ -1,6 +1,5 @@
 # Eu Te Busco (G)
 
-```
 G
 Eu te busco
                         C9
@@ -37,4 +36,3 @@ Vou lutando, nada pode me impedir
 Eu vou te seguir
 Em              D/F#       C9
 Conhecer-te eu quero mais
-```

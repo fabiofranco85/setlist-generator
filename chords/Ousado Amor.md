@@ -1,6 +1,5 @@
 # Ousado Amor (D)
 
-```
 [Intro] Bm  A4  G  D
         Bm  A4  G  D
 
@@ -121,4 +120,3 @@ Oh, impressionante, infinito, e ousado amor de Deus
 
 [Solo] Bm7  A4  G9  D
        Bm7  A4  G9  D
-```

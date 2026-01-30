@@ -1,6 +1,5 @@
 # Grande É o Senhor (G)
 
-```
   G9        C9
 Grande é o Senhor
                    G9
@@ -39,4 +38,3 @@ Confiamos em Teu infinito amor
 Pois só Tu és o Deus eterno
  Am11       D       C9   D  G9
 Sobre toda terra e Céus
-```

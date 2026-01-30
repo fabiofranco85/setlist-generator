@@ -1,6 +1,5 @@
 # Fico Feliz (C)
 
-```
 C             F
 Fico feliz em vir em tua casa
   C                   G
@@ -16,4 +15,3 @@ Bendito é o nome do Senhor
 Bendito é o nome do Senhor
    C                  F        G    C
 Bendito é o nome do Senhor pra sempre
-```

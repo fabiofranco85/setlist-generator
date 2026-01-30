@@ -1,6 +1,5 @@
 # Me Derramar (G)
 
-```
 [Intro] G  D/F#  Em7  C9
         G  D/F#  Em7  C9
 
@@ -100,4 +99,3 @@ Me derramar, dizer Te preciso
 Me derramar, dizer que sou grato
  Em7            C9
 Me derramar, dizer que És formoso
-```

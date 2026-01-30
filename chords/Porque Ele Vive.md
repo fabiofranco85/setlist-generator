@@ -1,6 +1,5 @@
 # Porque Ele Vive (G)
 
-```
        G         C/G          G
 Deus enviou seu Filho amado
      D/F#         Em7
@@ -81,4 +80,3 @@ Eu bem sei, eu bem sei
 Que a minha vida está nas mãos
     Am7    C/D   G
 Do meu Salvador
-```

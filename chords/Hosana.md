@@ -1,6 +1,5 @@
 # Hosana (E)
 
-```
 [Intro] C#m  G#  A  G#m
         C#m  G#  A  G#m
 
@@ -63,4 +62,3 @@ Hosana nas Alturas
 
 A            B   E
 Hosana nas Alturas
-```

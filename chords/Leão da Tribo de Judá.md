@@ -1,6 +1,5 @@
 # Leão da Tribo de Judá (Em)
 
-```
           Em
 Ele é o Leão da tribo de Judá
          Am
@@ -38,4 +37,3 @@ F#m7(11)  F7(5-)      Em
 Ó    esperança de Israel
 F#m7(11)  F7(5-)  B     Em
 Ó    esperança   de Israel
-```

@@ -1,6 +1,5 @@
 # Rei Davi (Em)
 
-```
         Em
 Se o Espírito de Deus se move em mim
     B                  Em
@@ -18,4 +17,3 @@ Eu danço como o rei Davi
 Eu danço, eu danço
     B                  Em
 Eu danço como o rei Davi
-```

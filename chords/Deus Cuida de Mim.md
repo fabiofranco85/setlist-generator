@@ -1,6 +1,5 @@
 # Deus Cuida de Mim (E)
 
-```
 [Intro] E  B/D#  C#m A
         E/G# A  B  A  A/B  E
 
@@ -67,4 +66,3 @@ Eu preciso aprender mais de Deus
 Porque Ele é quem cuida de mim
   A   A/B      E
 Deus cuida de mim
-```

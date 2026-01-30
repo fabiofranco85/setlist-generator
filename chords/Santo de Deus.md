@@ -1,6 +1,5 @@
 # Santo de Deus (G)
 
-```
 [Intro] G C D C G C D (2x)
 
 G         C            D         C
@@ -87,4 +86,3 @@ F             C        D
 
 F             C        D        Em
   E os anjos louvam ao Santo de Deus 8x
-```

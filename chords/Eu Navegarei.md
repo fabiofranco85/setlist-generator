@@ -1,6 +1,5 @@
 # Eu Navegarei (Am)
 
-```
           Am7
 Eu navegarei
                 G6
@@ -38,4 +37,3 @@ Que desce como fogo
 Vem como em pentecostes
                E  E4  E
 E enche-me de novo
-```

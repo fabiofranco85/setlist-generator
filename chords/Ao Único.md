@@ -1,6 +1,5 @@
 # Ao Único (C)
 
-```
    C            G/B      Am7    Am7/G
 Ao único que é digno de receber
    F          C/E
@@ -84,4 +83,3 @@ Adoramos o Teu nome
 Nos rendemos aos Teus pés
        Dm7        G     G7    C
 Consagramos todo nosso ser a Ti
-```

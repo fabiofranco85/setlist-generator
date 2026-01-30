@@ -1,6 +1,5 @@
 # Precioso (Gm7)
 
-```
 [Intro] Gm7  F/A  Bb9
         Gm7  F/A  Bb9
         Gm7  F/A  Bb9
@@ -28,4 +27,3 @@ Bb/D (Cm9 Bb/D D#9)  Gm  F9
 Jesus,                Santo
   D#9 (D#9 Bb/D Gm)       Cm9 Cm/Bb   F9/A
 Jesus,                meu do..........no
-```

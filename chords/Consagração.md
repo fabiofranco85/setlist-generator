@@ -1,6 +1,5 @@
 # Consagração (G)
 
-```
 [Intro] G2  G4  G2  G4
         G2  G4  G2  G4
 
@@ -87,4 +86,3 @@ Ao rei Jesus
 E o louvor,   ao rei,      Jesus
 
 3x
-```

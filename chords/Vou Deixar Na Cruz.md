@@ -1,6 +1,5 @@
 # Vou Deixar Na Cruz (G)
 
-```
 [Intro] Em  C9  G/B  D
         Em7  C9  G
 
@@ -44,4 +43,3 @@ Eu confio
 Que esse amor tem poder
            G
 Pra curar dores
-```

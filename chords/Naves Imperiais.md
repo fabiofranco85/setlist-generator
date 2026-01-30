@@ -1,6 +1,5 @@
 # Naves Imperiais (Am)
 
-```
 Am
 Somos como naves imperiais
   F                G
@@ -25,4 +24,3 @@ Nosso comandante é Jesus Cristo,
 Filho de Deus  (2x)
 
 Intro 2x: Am Dm F7+ G
-```

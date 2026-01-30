@@ -1,6 +1,5 @@
 # Agradeço (D)
 
-```
 [Intro] ( D  Em7 ) D/F# G
         ( D  Em7 ) D/F# G  C
 
@@ -63,4 +62,3 @@ D             G#m              E7
 E por todo o bem que o Senhor faz
         A
 Só ele faz
-```

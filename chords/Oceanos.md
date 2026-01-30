@@ -1,6 +1,5 @@
 # Oceanos (Bm)
 
-```
 Bm                   A/C#    D
    Tua voz me chama sobre as águas
          A              G
@@ -61,4 +60,3 @@ G                     D
 E minha fé será mais firme
     Em
 Senhor, em Tua presença
-```

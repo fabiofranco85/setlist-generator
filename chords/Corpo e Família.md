@@ -1,6 +1,5 @@
 # Corpo e Família (G)
 
-```
      G         C/G         G  D/F#
 Recebi um novo coração do Pai
     Em7      Bm7
@@ -83,4 +82,3 @@ Eu preci-so de ti, querido irmão
 Preci-oso és para mim
 F4    F      A#
   Querido irmão
-```

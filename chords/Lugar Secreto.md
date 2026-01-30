@@ -1,6 +1,5 @@
 # Lugar Secreto (C)
 
-```
 [Intro] F7M(9)  Am  G4(6)
         F7M(9)  Am  G4(6)
 
@@ -52,4 +51,3 @@ Me envolva com Tua glória e poder
 Tua majestade é real
           Em7
 Tua voz ecoa em meu ser
-```

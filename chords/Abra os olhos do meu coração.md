@@ -1,6 +1,5 @@
 # Abra os olhos do meu coração (E)
 
-```
  E2
 Santo, Santo, Santo
  E7M(9)
@@ -113,4 +112,3 @@ Derrame Seu amor e poder
 Pois Tu és Santo, Santo, Santo
           E2
 Quero Te ver
-```

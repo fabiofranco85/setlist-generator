@@ -1,6 +1,5 @@
 # Creio que Tu És a Cura (E)
 
-```
      E
 Me escutas quando clamo
     A9      B4     E
@@ -95,4 +94,3 @@ Jesus, eu preciso de Ti
 Não há outro igual a ti
    A9         B4      A9  E
 Jesus, eu preciso de Ti
-```

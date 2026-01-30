@@ -1,6 +1,5 @@
 # Espírito, Enche a Minha Vida (C)
 
-```
 [Intro] F2  Dm  F2  Dm
         F2  Dm  F2  Dm
 
@@ -34,4 +33,3 @@ E em louvor Te adorar
 Meu coração eu quero derramar
   F2      G     F2   Dm (intro)
 Diante do Teu altar
-```

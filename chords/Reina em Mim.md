@@ -1,6 +1,5 @@
 # Reina em Mim (Bb)
 
-```
 C        G      F        G    C
    Sobre toda a terra Tu és o Rei
       G     F          G      C
@@ -33,4 +32,3 @@ Tu és para mim mais que tudo aqui
 Vem reinar de novo em mim
 
 [Solo] Dm  Em  F  Am
-```

@@ -1,6 +1,5 @@
 # Brilha Jesus (A)
 
-```
 A      A4     A           E
 Vejo a luz do Senhor que brilha
 A      A4        A       E
@@ -48,4 +47,3 @@ D9          E     C#m    F#m
 Mostrem sempre a tua historia
 G           E   G          E
 Brilha em mim, brilha em mim
-```
