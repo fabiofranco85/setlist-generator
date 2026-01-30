@@ -31,7 +31,8 @@ An intelligent setlist generator for church worship services that automatically 
 ### Requirements
 
 - Python 3.12 or higher
-- No external dependencies needed (uses Python standard library only)
+- No external dependencies needed for basic usage (uses Python standard library only)
+- Optional: ReportLab library for PDF generation (`pip install reportlab`)
 
 ### Setup
 
@@ -50,6 +51,15 @@ If you have [uv](https://github.com/astral-sh/uv) installed:
 uv run generate_setlist.py
 ```
 
+### Optional: PDF Generation
+
+To enable PDF output, install ReportLab:
+```bash
+pip install reportlab
+# OR
+uv pip install reportlab
+```
+
 ## Quick Start
 
 Generate a setlist for today:
@@ -64,6 +74,37 @@ This will:
 3. Generate a new setlist with songs for each service moment
 4. Save the output to `output/YYYY-MM-DD.md` (markdown with chords)
 5. Save history to `history/YYYY-MM-DD.json` (for tracking)
+
+### Generate PDF Setlists
+
+Create professional PDF setlists for print or digital distribution:
+
+```bash
+# Generate markdown + PDF
+python generate_setlist.py --pdf
+
+# Generate for specific date
+python generate_setlist.py --date 2026-02-15 --pdf
+```
+
+**PDF Features**:
+- 📄 **Page 1**: Table of contents with all songs, keys, and page numbers
+- 📖 **Page 2+**: Each service moment on a separate page with full chord notation
+- 🎼 **Monospace chords**: Perfect alignment for guitar/piano notation
+- 🇧🇷 **Portuguese formatting**: "Domingo, 25 de Janeiro de 2026"
+- 🏛️ **Church terminology**: Uses "Oferta" and "Comunhão" instead of internal names
+
+**Regenerate PDF from existing setlist**:
+
+```bash
+# Generate PDF for the latest setlist
+python generate_pdf.py
+
+# Generate PDF for specific date
+python generate_pdf.py --date 2026-01-25
+```
+
+This is useful when you've already generated a setlist but want to create a PDF later.
 
 ## How It Works
 
@@ -134,14 +175,18 @@ The generator will likely pick: Oceanos, A Casa é Sua, and two other high-scori
 ### Basic Usage
 
 ```bash
-# Generate setlist for today
+# Generate setlist for today (markdown only)
 python generate_setlist.py
 
 # Generate for a specific date
 python generate_setlist.py --date 2026-02-15
 
-# Generate for next Sunday
-python generate_setlist.py --date 2026-02-02
+# Generate with PDF output
+python generate_setlist.py --pdf
+python generate_setlist.py --date 2026-02-15 --pdf
+
+# Generate PDF from existing setlist
+python generate_pdf.py --date 2026-01-25
 ```
 
 ### Using Overrides
@@ -816,6 +861,34 @@ if __name__ == '__main__':
 
 Human-readable setlist with full chords and lyrics for musicians.
 
+### PDF Setlist (`output/YYYY-MM-DD.pdf`)
+
+Professional PDF setlist for print or digital use (generated with `--pdf` flag).
+
+**Page 1 - Table of Contents:**
+- Large "Setlist" title
+- Portuguese date (e.g., "Domingo, 25 de Janeiro de 2026")
+- Complete song list organized by service moments
+- Song keys and page numbers for quick navigation
+
+**Content Pages:**
+- Each service moment starts on a new page
+- Moment name as header (Prelúdio, Oferta, Comunhão, etc.)
+- Song title with musical key
+- Full chord notation in monospace font (Courier)
+- Clean, professional typography
+
+**Moment Name Mapping:**
+The PDF uses church-specific terminology:
+- `prelúdio` → "Prelúdio"
+- `ofertório` → "Oferta"
+- `saudação` → "Comunhão"
+- `crianças` → "Crianças"
+- `louvor` → "Louvor"
+- `poslúdio` → "Poslúdio"
+
+### Markdown Setlist (Detailed)
+
 **Structure**:
 ```markdown
 # Setlist - 2026-02-15
@@ -866,7 +939,11 @@ Machine-readable format for tracking which songs were used.
 ### Example 1: Regular Sunday Service
 
 ```bash
+# Generate markdown only
 python generate_setlist.py --date 2026-02-15
+
+# Generate markdown + PDF
+python generate_setlist.py --date 2026-02-15 --pdf
 ```
 
 **Output**:
