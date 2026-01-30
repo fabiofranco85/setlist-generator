@@ -32,6 +32,7 @@ class TOCEntry:
     song_key: str
     page_number: int
     is_moment_header: bool  # True for moment headers, False for songs
+    anchor_id: str  # Unique ID for internal links
 
 
 # Portuguese locale mappings
@@ -98,6 +99,30 @@ def get_moment_display_name(moment: str) -> str:
         Display name for PDF (e.g., "Oferta")
     """
     return MOMENT_DISPLAY_NAMES.get(moment, moment.capitalize())
+
+
+def generate_anchor_id(moment: str, song_index: int = -1) -> str:
+    """Generate unique anchor ID for PDF internal links.
+
+    Args:
+        moment: Internal moment name (e.g., "prelúdio")
+        song_index: Song index within moment (-1 for moment header)
+
+    Returns:
+        Anchor ID (e.g., "preludio_header" or "preludio_0")
+    """
+    # Remove accents for anchor IDs (ASCII-safe)
+    clean_moment = (
+        moment.replace("ú", "u")
+        .replace("ó", "o")
+        .replace("í", "i")
+        .replace("á", "a")
+        .replace("é", "e")
+    )
+
+    if song_index == -1:
+        return f"{clean_moment}_header"
+    return f"{clean_moment}_{song_index}"
 
 
 def parse_song_title_and_key(song_title: str, song: Song) -> Tuple[str, str]:
@@ -171,7 +196,7 @@ class PageTracker:
 def build_toc_entries(
     setlist: Setlist, songs: Dict[str, Song], page_map: Dict[str, int]
 ) -> List[TOCEntry]:
-    """Build table of contents entries.
+    """Build table of contents entries with anchor IDs.
 
     Args:
         setlist: Setlist object
@@ -195,7 +220,7 @@ def build_toc_entries(
         display_name = get_moment_display_name(moment)
         page_num = page_map.get(moment, 2)
 
-        # Add moment header
+        # Add moment header with anchor
         entries.append(
             TOCEntry(
                 moment=display_name,
@@ -203,11 +228,12 @@ def build_toc_entries(
                 song_key="",
                 page_number=page_num,
                 is_moment_header=True,
+                anchor_id=generate_anchor_id(moment, -1),
             )
         )
 
-        # Add songs for this moment
-        for song_title in song_list:
+        # Add songs with anchors
+        for idx, song_title in enumerate(song_list):
             song = songs.get(song_title)
             if song:
                 title, key = parse_song_title_and_key(song_title, song)
@@ -218,6 +244,7 @@ def build_toc_entries(
                         song_key=key,
                         page_number=page_num,
                         is_moment_header=False,
+                        anchor_id=generate_anchor_id(moment, idx),
                     )
                 )
 
@@ -236,7 +263,7 @@ def create_styles():
         textColor=colors.black,
         alignment=TA_CENTER,
         spaceAfter=12,
-        fontName="Helvetica-Bold",
+        fontName="Courier-Bold",
     )
 
     # Subtitle style (date)
@@ -246,14 +273,14 @@ def create_styles():
         textColor=colors.grey,
         alignment=TA_CENTER,
         spaceAfter=30,
-        fontName="Helvetica",
+        fontName="Courier",
     )
 
     # TOC moment header style
     toc_moment_style = ParagraphStyle(
         "TOCMoment",
         fontSize=12,
-        fontName="Helvetica-Bold",
+        fontName="Courier-Bold",
         spaceAfter=0,
         leftIndent=0,
     )
@@ -262,16 +289,25 @@ def create_styles():
     toc_song_style = ParagraphStyle(
         "TOCSong",
         fontSize=11,
-        fontName="Helvetica",
+        fontName="Courier",
         spaceAfter=0,
         leftIndent=20,
+    )
+
+    # TOC page number style (no indent, for page number column)
+    toc_page_style = ParagraphStyle(
+        "TOCPage",
+        fontSize=11,
+        fontName="Courier",
+        spaceAfter=0,
+        leftIndent=0,
     )
 
     # Moment header style (content pages)
     moment_header_style = ParagraphStyle(
         "MomentHeader",
         fontSize=18,
-        fontName="Helvetica-Bold",
+        fontName="Courier-Bold",
         spaceAfter=12,
         spaceBefore=0,
     )
@@ -280,7 +316,7 @@ def create_styles():
     song_title_style = ParagraphStyle(
         "SongTitle",
         fontSize=14,
-        fontName="Helvetica",
+        fontName="Courier-Bold",
         spaceAfter=12,
     )
 
@@ -299,6 +335,7 @@ def create_styles():
         "subtitle": subtitle_style,
         "toc_moment": toc_moment_style,
         "toc_song": toc_song_style,
+        "toc_page": toc_page_style,
         "moment_header": moment_header_style,
         "song_title": song_title_style,
         "chord": chord_style,
@@ -331,35 +368,45 @@ def build_pdf_content(
     story.append(Paragraph(formatted_date, styles["subtitle"]))
     story.append(Spacer(1, 0.5 * cm))
 
-    # Build TOC table
+    # Build TOC with 2-column layout (text | page number) - simple, clean
     toc_data = []
+
     for entry in toc_entries:
+        page_num_str = str(entry.page_number)
+
         if entry.is_moment_header:
-            # Moment header row
+            # Moment header row - clickable link with page number
             row = [
-                Paragraph(entry.moment, styles["toc_moment"]),
-                Paragraph(str(entry.page_number), styles["toc_moment"]),
+                Paragraph(
+                    f'<link href="#{entry.anchor_id}" color="black">{entry.moment}</link>',
+                    styles["toc_moment"],
+                ),
+                Paragraph(page_num_str, styles["toc_moment"]),
             ]
         else:
-            # Song row (indented)
+            # Song row - clickable link with page number
             song_with_key = (
                 f"{entry.song_title} ({entry.song_key})"
                 if entry.song_key
                 else entry.song_title
             )
+
             row = [
-                Paragraph(f"  {song_with_key}", styles["toc_song"]),
-                Paragraph(str(entry.page_number), styles["toc_song"]),
+                Paragraph(
+                    f'<link href="#{entry.anchor_id}" color="black">{song_with_key}</link>',
+                    styles["toc_song"],
+                ),
+                Paragraph(page_num_str, styles["toc_page"]),
             ]
         toc_data.append(row)
 
-    # Create TOC table
+    # Create 2-column TOC table (second column only used for moment headers)
     toc_table = Table(toc_data, colWidths=[14 * cm, 2 * cm])
     toc_table.setStyle(
         TableStyle(
             [
-                ("ALIGN", (0, 0), (0, -1), "LEFT"),
-                ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                ("ALIGN", (0, 0), (0, -1), "LEFT"),  # Text + dots left
+                ("ALIGN", (1, 0), (1, -1), "RIGHT"),  # Page numbers right
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ("TOPPADDING", (0, 0), (-1, -1), 0),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
@@ -380,21 +427,32 @@ def build_pdf_content(
         # Page break before each moment
         story.append(PageBreak())
 
-        # Moment header
+        # Moment header WITH ANCHOR
         display_name = get_moment_display_name(moment)
-        story.append(Paragraph(display_name, styles["moment_header"]))
+        anchor_id = generate_anchor_id(moment, -1)
+        story.append(
+            Paragraph(
+                f'<a name="{anchor_id}"/>{display_name}', styles["moment_header"]
+            )
+        )
         story.append(Spacer(1, 0.3 * cm))
 
         # Songs for this moment
-        for song_title in song_list:
+        for idx, song_title in enumerate(song_list):
             song = songs.get(song_title)
             if not song:
                 continue
 
-            # Song title with key
+            # Song title with key AND ANCHOR
             title, key = parse_song_title_and_key(song_title, song)
             title_with_key = f"{title} ({key})" if key else title
-            story.append(Paragraph(title_with_key, styles["song_title"]))
+            song_anchor_id = generate_anchor_id(moment, idx)
+            story.append(
+                Paragraph(
+                    f'<a name="{song_anchor_id}"/>{title_with_key}',
+                    styles["song_title"],
+                )
+            )
 
             # Chord content (monospace)
             chord_content = extract_chord_content(song)
