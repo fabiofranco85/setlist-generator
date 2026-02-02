@@ -147,9 +147,9 @@ def cleanup(history_dir):
     """Run data quality checks on history files.
 
     \b
-    Analyzes all history files for inconsistencies with tags.csv:
+    Analyzes all history files for inconsistencies with database.csv:
     - Automatically fixes capitalization mismatches
-    - Identifies songs in history that don't exist in tags.csv
+    - Identifies songs in history that don't exist in database.csv
     - Provides fuzzy matching suggestions for similar song names
     - Creates timestamped backups before making changes
     """
@@ -164,7 +164,7 @@ def fix_punctuation(history_dir):
 
     \b
     Fixes punctuation differences in history files to match canonical
-    song names from tags.csv (e.g., commas, hyphens).
+    song names from database.csv (e.g., commas, hyphens).
     """
     from songbook.commands.maintenance import run_fix_punctuation
     run_fix_punctuation(history_dir)

@@ -201,13 +201,13 @@ score = weight × (recency + 0.1) + random(0, 0.5)
 ```
 
 Where:
-- **weight**: From tags.csv (e.g., `louvor(5)` → weight=5)
+- **weight**: From database.csv (e.g., `louvor(5)` → weight=5)
 - **recency**: Time-based decay score (0.0 = just used, 1.0 = never used / very long ago)
 - **random factor**: Adds variety to avoid deterministic selection
 
 ### Data Flow
 
-1. **Load songs** from `tags.csv` + `chords/*.md` files (includes energy metadata)
+1. **Load songs** from `database.csv` + `chords/*.md` files (includes energy metadata)
 2. **Load history** from `history/*.json` (sorted by date, most recent first)
 3. **Calculate recency scores** for all songs using time-based exponential decay (considers full history)
 4. **Generate setlist** by selecting songs for each moment using score-based algorithm
@@ -222,7 +222,7 @@ Where:
 
 ```
 .
-├── tags.csv                 # Song database: "song;energy;tags"
+├── database.csv                 # Song database: "song;energy;tags"
 ├── chords/                  # Individual song files with chords
 │   └── <Song Name>.md       # Format: "# Song (Key)\n```\nchords...\n```"
 ├── output/                  # Generated markdown setlists
@@ -398,7 +398,7 @@ Defined in `MOMENTS_CONFIG` (setlist/config.py):
 
 ### Tags Format
 
-In `tags.csv`:
+In `database.csv`:
 - Format: `song;energy;tags`
 - Energy: 1-4 scale (intrinsic property of the song)
 - Tags: Moment assignments with optional weights
@@ -499,7 +499,7 @@ Edit `ENERGY_ORDERING_ENABLED` or `ENERGY_ORDERING_RULES` in `setlist/config.py`
 
 ## Adding New Songs
 
-1. Add entry to `tags.csv` with energy and tags:
+1. Add entry to `database.csv` with energy and tags:
    ```csv
    New Song Title;2;louvor(4),prelúdio
    ```
@@ -709,9 +709,9 @@ The project includes several utility scripts for maintaining data quality and im
 **Purpose:** Automated data quality checker and fixer for history files.
 
 **What it does:**
-- Analyzes all history files for inconsistencies with tags.csv
+- Analyzes all history files for inconsistencies with database.csv
 - Automatically fixes capitalization mismatches (e.g., "deus grandão" → "Deus Grandão")
-- Identifies songs in history that don't exist in tags.csv
+- Identifies songs in history that don't exist in database.csv
 - Provides fuzzy matching suggestions for similar song names
 - Creates timestamped backups before making changes
 
@@ -719,7 +719,7 @@ The project includes several utility scripts for maintaining data quality and im
 - After importing external data
 - When you suspect data quality issues
 - As a periodic health check (monthly/quarterly)
-- Before major changes to tags.csv
+- Before major changes to database.csv
 
 **Usage:**
 ```bash
@@ -735,17 +735,17 @@ songbook cleanup
 **Example output:**
 ```
 Step 1: Analyzing history files...
-  ✓ Loaded 57 songs from tags.csv
+  ✓ Loaded 57 songs from database.csv
   ✓ Found 11 issue(s)
 
 Step 2: Applying capitalization fixes...
   📝 2025-08-31.json
      • 'Reina em mim' → 'Reina em Mim'
 
-Step 3: Songs that need to be added to tags.csv
+Step 3: Songs that need to be added to database.csv
   ❌ 'New Song Title'
-      → Not found in tags.csv
-      → Suggested action: Add to tags.csv with energy and moment tags
+      → Not found in database.csv
+      → Suggested action: Add to database.csv with energy and moment tags
 ```
 
 ### fix-punctuation
@@ -753,7 +753,7 @@ Step 3: Songs that need to be added to tags.csv
 **Purpose:** Normalize punctuation differences in history files to match canonical song names.
 
 **What it does:**
-- Fixes punctuation variants (commas, hyphens) to match tags.csv
+- Fixes punctuation variants (commas, hyphens) to match database.csv
 - Handles common variations like "Em Espírito, Em Verdade" → "Em Espírito Em Verdade"
 - Updates history files in place
 

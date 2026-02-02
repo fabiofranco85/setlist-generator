@@ -40,11 +40,11 @@ def parse_tags(tags_str: str) -> dict[str, int]:
 
 def load_songs(base_path: Path) -> dict[str, Song]:
     """
-    Load songs from tags.csv and their content from chords/*.md files.
+    Load songs from database.csv and their content from chords/*.md files.
     Returns: {song_title: Song}
     """
     songs = {}
-    tags_file = base_path / "tags.csv"
+    tags_file = base_path / "database.csv"
     chords_path = base_path / "chords"
 
     with open(tags_file, "r", encoding="utf-8") as f:

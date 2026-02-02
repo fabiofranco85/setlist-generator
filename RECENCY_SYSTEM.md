@@ -69,7 +69,7 @@ Setlist 4+: score 1.0 (all treated equally)
 No sharp cutoffs. Songs gradually become better candidates as time passes.
 
 ### 4. **No Configuration Pollution**
-Uses existing `history/*.json` files as source of truth. No need to modify `tags.csv` or maintain separate state files.
+Uses existing `history/*.json` files as source of truth. No need to modify `database.csv` or maintain separate state files.
 
 ## Configuration
 
@@ -109,7 +109,7 @@ selection_score = weight × (recency + 0.1) + random(0, 0.5)
 ```
 
 Where:
-- `weight` = from tags.csv (e.g., `louvor(5)` → weight 5, default 3)
+- `weight` = from database.csv (e.g., `louvor(5)` → weight 5, default 3)
 - `recency` = time-based decay score (0.0-1.0)
 - `random` = small randomness to add variety
 
@@ -167,7 +167,7 @@ Verify good variety without excessive repetition.
 3. **Observe patterns:**
    - Songs repeating too quickly? → Increase to 60-90 days
    - Songs taking too long to reappear? → Decrease to 30 days
-   - Some songs never appearing? → Check their weights in tags.csv
+   - Some songs never appearing? → Check their weights in database.csv
 4. **Monitor congregation feedback** after real services
 5. **Adjust gradually** (e.g., 45 → 60, not 45 → 90)
 
@@ -184,7 +184,7 @@ Verify good variety without excessive repetition.
 
 - ✅ No data migration required
 - ✅ Uses existing `history/*.json` files unchanged
-- ✅ `tags.csv` format unchanged
+- ✅ `database.csv` format unchanged
 - ✅ Functional API (`generate_setlist()`) still works
 - ✅ `RECENCY_PENALTY_PERFORMANCES` kept for backward compatibility (unused)
 
@@ -234,7 +234,7 @@ Verify good variety without excessive repetition.
 **Solutions:**
 1. Increase `RECENCY_DECAY_DAYS` to 60-90 days
 2. Check song weights - reduce weights of over-represented songs
-3. Add more songs to tags.csv
+3. Add more songs to database.csv
 
 ### Songs Taking Too Long to Reappear
 
@@ -242,7 +242,7 @@ Verify good variety without excessive repetition.
 
 **Solutions:**
 1. Decrease `RECENCY_DECAY_DAYS` to 30 days
-2. Increase weights of desired songs in tags.csv
+2. Increase weights of desired songs in database.csv
 3. Check if song has appropriate moment tags
 
 ### Some Songs Never Selected

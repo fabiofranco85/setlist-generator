@@ -67,7 +67,7 @@ songbook generate
 ```
 
 This will:
-1. Load all songs from `tags.csv` and `chords/` directory
+1. Load all songs from `database.csv` and `chords/` directory
 2. Analyze **all historical setlists** to calculate time-based recency scores
 3. Generate a new setlist with songs for each service moment
 4. Save the output to `output/YYYY-MM-DD.md` (markdown with chords)
@@ -430,7 +430,7 @@ songbook replace --moment louvor --position 2 --with "Oceanos"
 ```
 
 **Requirements for manual replacement:**
-- Song must exist in `tags.csv`
+- Song must exist in `database.csv`
 - Song must be tagged for the target moment
 - Song must not already be in the setlist
 
@@ -503,7 +503,7 @@ Both files are completely regenerated to reflect the updated setlist.
 - Solution: Use manual mode to specify a song, or remove one of the existing songs first
 
 **"Song not tagged for moment"**
-- The song doesn't have the required moment tag in `tags.csv`
+- The song doesn't have the required moment tag in `database.csv`
 - Solution: Add the moment tag to the song, or choose a different song
 
 **"Position out of range"**
@@ -517,7 +517,7 @@ Both files are completely regenerated to reflect the updated setlist.
 
 ## Managing Songs
 
-### Song Database: `tags.csv`
+### Song Database: `database.csv`
 
 This file maps songs to service moments with energy levels and optional weights.
 
@@ -639,8 +639,8 @@ When adding new songs, classify them by these characteristics:
 
 Each song has a markdown file with chords and lyrics.
 
-**File naming**: Must exactly match the song name in `tags.csv`
-- `tags.csv`: `Oceanos;louvor`
+**File naming**: Must exactly match the song name in `database.csv`
+- `database.csv`: `Oceanos;louvor`
 - File: `chords/Oceanos.md`
 
 **Format**:
@@ -676,7 +676,7 @@ G            D        A
    - Use the energy scale guide above
    - When in doubt, use 2 or 3 (moderate energy)
 
-2. **Add to `tags.csv`** with energy and tags:
+2. **Add to `database.csv`** with energy and tags:
    ```csv
    Nova Canção;2;louvor(3),prelúdio
    ```
@@ -712,7 +712,7 @@ Intimidade;4;louvor(5)
 
 ### Removing a Song
 
-1. Delete or comment out the line in `tags.csv`:
+1. Delete or comment out the line in `database.csv`:
    ```csv
    # Old Song;louvor  ← This song won't be selected anymore
    ```
@@ -721,7 +721,7 @@ Intimidade;4;louvor(5)
 
 ### Updating Song Tags/Weights
 
-Edit `tags.csv`:
+Edit `database.csv`:
 
 ```csv
 # Before
@@ -853,7 +853,7 @@ DEFAULT_WEIGHT = 3  # Default weight when not specified in tags
    }
    ```
 
-2. Add songs with the new tag in `tags.csv`:
+2. Add songs with the new tag in `database.csv`:
    ```csv
    Lugar Secreto;meditação
    ```
@@ -1207,22 +1207,22 @@ Each service will automatically avoid songs used in previous services.
    - Use `--override` to force it if needed
 
 2. **Tag/weight issue**
-   - Verify song is in `tags.csv`
+   - Verify song is in `database.csv`
    - Check if weight is too low (try increasing to 4-5)
 
 3. **Wrong moment tag**
    - Ensure the moment tag matches: `prelúdio`, `ofertório`, `saudação`, `crianças`, `louvor`, `poslúdio`
 
 4. **Not enough songs in that moment**
-   - Check if you have enough songs tagged for that moment in `tags.csv`
+   - Check if you have enough songs tagged for that moment in `database.csv`
 
 ### Problem: Error "File not found: chords/Song.md"
 
-The song is in `tags.csv` but the chord file is missing or misnamed.
+The song is in `database.csv` but the chord file is missing or misnamed.
 
 **Solution:**
 - Create `chords/Song Name.md` with exact spelling
-- Check for typos in file name vs. `tags.csv` entry
+- Check for typos in file name vs. `database.csv` entry
 - Ensure file extension is `.md` not `.txt`
 
 ### Problem: Same songs appearing repeatedly
@@ -1235,7 +1235,7 @@ The song is in `tags.csv` but the chord file is missing or misnamed.
    # Or even 90 for maximum variety
    ```
 
-2. **Add more songs** to `tags.csv` for variety
+2. **Add more songs** to `database.csv` for variety
 
 3. **Adjust weights** - lower weights on overused songs:
    ```csv
@@ -1270,7 +1270,7 @@ Edit `setlist/config.py`:
 ENERGY_ORDERING_ENABLED = False
 ```
 
-Or if energy classifications seem wrong, update individual songs in `tags.csv`:
+Or if energy classifications seem wrong, update individual songs in `database.csv`:
 ```csv
 # Before
 Hosana;3;louvor  # Classified as reflective (wrong!)
@@ -1429,7 +1429,7 @@ songbook cleanup
 ```
 
 **What it checks:**
-- ✓ Song names match exactly between history and tags.csv
+- ✓ Song names match exactly between history and database.csv
 - ✓ Capitalization is consistent
 - ✓ No missing songs in the database
 
@@ -1440,18 +1440,18 @@ songbook cleanup
 **Example output:**
 ```
 Step 1: Analyzing history files...
-  ✓ Loaded 57 songs from tags.csv
+  ✓ Loaded 57 songs from database.csv
   ✓ Found 0 issue(s)
 
 CLEANUP COMPLETE
-✅ All songs in history match tags.csv perfectly!
+✅ All songs in history match database.csv perfectly!
 ```
 
 **When to run:**
 - After importing external data
 - Monthly as a health check
 - When songs seem to be repeating unexpectedly
-- Before making major changes to tags.csv
+- Before making major changes to database.csv
 
 ### Fixing Punctuation Issues
 
@@ -1530,7 +1530,7 @@ songbook fix-punctuation
 
 # Step 5: Final verification
 songbook cleanup
-# Should show: "✅ All songs in history match tags.csv perfectly!"
+# Should show: "✅ All songs in history match database.csv perfectly!"
 
 # Step 6: Test generation with real data
 songbook generate --date 2026-03-01 --no-save
@@ -1544,7 +1544,7 @@ songbook generate --date 2026-03-01 --no-save
 - Document any custom moment name mappings you use
 
 **When Adding Songs:**
-- Match capitalization exactly in tags.csv and chords/ filenames
+- Match capitalization exactly in database.csv and chords/ filenames
 - Include accents and special characters properly
 - Run cleanup script after bulk additions
 
@@ -1556,7 +1556,7 @@ If songs aren't being avoided properly (recency not working):
 3. Fix issues found, then regenerate setlists
 
 If the cleanup script reports missing songs:
-- Either add them to tags.csv with proper energy and tags
+- Either add them to database.csv with proper energy and tags
 - Or fix the history files to use existing song names
 - See the script output for specific suggestions
 
