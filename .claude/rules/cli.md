@@ -435,3 +435,49 @@ Uses `setlist/paths.py` module for consistent path handling across all commands.
 - Progress indicators for long-running operations
 - Clear success/error messages
 - Helpful suggestions when commands fail
+
+---
+
+## Shell Completion
+
+Enable tab completion for commands, song names, moments, and dates:
+
+```bash
+# Auto-install (detects your shell)
+songbook install-completion
+
+# Or manually specify shell
+songbook install-completion --shell bash
+songbook install-completion --shell zsh
+songbook install-completion --shell fish
+```
+
+Then restart your shell or run `source ~/.bashrc` (bash) / `source ~/.zshrc` (zsh).
+
+**What gets completed:**
+- Command names (generate, view-song, replace, etc.)
+- Song names (from database.csv)
+- Moment names (prelúdio, louvor, ofertório, etc.)
+- Dates (from history directory)
+- Option names (--date, --moment, --with, etc.)
+
+**Completion points:**
+- `view-song SONG_NAME` - autocomplete song names
+- `replace --moment` - autocomplete moment names
+- `replace --with` - autocomplete song names
+- All `--date` options - autocomplete available dates from history
+
+**Features:**
+- Case-insensitive song name matching
+- Dates sorted by most recent first
+- Graceful error handling (no crashes on missing files)
+- Respects --history-dir and SETLIST_HISTORY_DIR
+
+**Examples:**
+```bash
+songbook view-song Oce<TAB>              # Completes to "Oceanos"
+songbook replace --moment lou<TAB>       # Completes to "louvor"
+songbook view-setlist --date 2025-<TAB>  # Shows all 2025 dates
+```
+
+See `.claude/SHELL_COMPLETION.md` for detailed documentation and troubleshooting.

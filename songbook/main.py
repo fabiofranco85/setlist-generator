@@ -5,6 +5,11 @@ Provides a unified command-line interface for all songbook operations.
 """
 
 import click
+from songbook.completions import (
+    complete_song_names,
+    complete_moment_names,
+    complete_history_dates,
+)
 
 
 @click.group()
@@ -35,7 +40,7 @@ def cli():
 
 
 @cli.command()
-@click.option("--date", help="Target date (YYYY-MM-DD, default: today)")
+@click.option("--date", shell_complete=complete_history_dates, help="Target date (YYYY-MM-DD, default: today)")
 @click.option("--override", multiple=True, help="Force songs: MOMENT:SONG1,SONG2")
 @click.option("--pdf", is_flag=True, help="Generate PDF output")
 @click.option("--no-save", is_flag=True, help="Dry run (don't save to history)")
@@ -57,7 +62,7 @@ def generate(date, override, pdf, no_save, output_dir, history_dir, output):
 
 
 @cli.command("view-setlist")
-@click.option("--date", help="Target date (default: latest)")
+@click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
 @click.option("--keys", "-k", is_flag=True, help="Show song keys")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
@@ -75,7 +80,7 @@ def view_setlist(date, keys, output_dir, history_dir):
 
 
 @cli.command("view-song")
-@click.argument("song_name", required=False)
+@click.argument("song_name", required=False, shell_complete=complete_song_names)
 @click.option("--list", "-l", is_flag=True, help="List all songs")
 @click.option("--no-metadata", is_flag=True, help="Hide tags/energy")
 def view_song(song_name, list, no_metadata):
@@ -104,11 +109,11 @@ def list_moments():
 
 
 @cli.command()
-@click.option("--moment", required=True, help="Service moment (prelúdio, louvor, etc.)")
+@click.option("--moment", required=True, shell_complete=complete_moment_names, help="Service moment (prelúdio, louvor, etc.)")
 @click.option("--position", type=int, help="Position to replace (1-indexed)")
 @click.option("--positions", help="Multiple positions (comma-separated)")
-@click.option("--with", "replacement", help="Manual song selection")
-@click.option("--date", help="Target date (default: latest)")
+@click.option("--with", "replacement", shell_complete=complete_song_names, help="Manual song selection")
+@click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
 def replace(moment, position, positions, replacement, date, output_dir, history_dir):
@@ -126,7 +131,7 @@ def replace(moment, position, positions, replacement, date, output_dir, history_
 
 
 @cli.command()
-@click.option("--date", help="Target date (default: latest)")
+@click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
 def pdf(date, output_dir, history_dir):
@@ -181,6 +186,147 @@ def import_history():
     """
     from songbook.commands.maintenance import run_import
     run_import()
+
+
+@cli.command("install-completion")
+@click.option("--shell", type=click.Choice(['bash', 'zsh', 'fish']),
+              help="Shell type (auto-detected if not specified)")
+def install_completion(shell):
+    """Install shell completion for songbook.
+
+    \b
+    Enables tab completion for commands, song names, moments, and dates.
+    The shell type is auto-detected if not specified.
+
+    \b
+    Examples:
+      songbook install-completion           # Auto-detect shell
+      songbook install-completion --shell bash
+      songbook install-completion --shell zsh
+      songbook install-completion --shell fish
+
+    \b
+    After installation, restart your shell or run:
+      source ~/.bashrc   (bash)
+      source ~/.zshrc    (zsh)
+      fish: completions auto-load, just restart
+    """
+    import os
+    import subprocess
+    from pathlib import Path
+
+    # Auto-detect shell if not specified
+    if not shell:
+        shell_path = os.environ.get('SHELL', '')
+        if 'bash' in shell_path:
+            shell = 'bash'
+        elif 'zsh' in shell_path:
+            shell = 'zsh'
+        elif 'fish' in shell_path:
+            shell = 'fish'
+        else:
+            click.secho("Could not detect shell. Please specify with --shell", fg="red", err=True)
+            click.echo("Example: songbook install-completion --shell bash")
+            raise SystemExit(1)
+
+    click.echo(f"Installing completion for {shell}...")
+
+    # Generate completion script
+    env = os.environ.copy()
+    if shell == 'bash':
+        env['_SONGBOOK_COMPLETE'] = 'bash_source'
+    elif shell == 'zsh':
+        env['_SONGBOOK_COMPLETE'] = 'zsh_source'
+    elif shell == 'fish':
+        env['_SONGBOOK_COMPLETE'] = 'fish_source'
+
+    try:
+        result = subprocess.run(
+            ['songbook'],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        completion_script = result.stdout
+
+        # Install based on shell type
+        if shell == 'bash':
+            # Save to ~/.songbook-complete.bash
+            completion_path = Path.home() / '.songbook-complete.bash'
+            completion_path.write_text(completion_script)
+            click.secho(f"✓ Completion script saved to {completion_path}", fg="green")
+
+            # Add source line to ~/.bashrc if not present
+            bashrc_path = Path.home() / '.bashrc'
+            source_line = f'source {completion_path}\n'
+
+            if bashrc_path.exists():
+                bashrc_content = bashrc_path.read_text()
+                if str(completion_path) not in bashrc_content:
+                    with bashrc_path.open('a') as f:
+                        f.write(f'\n# Songbook completion\n{source_line}')
+                    click.secho(f"✓ Added source line to {bashrc_path}", fg="green")
+                else:
+                    click.secho(f"✓ Source line already in {bashrc_path}", fg="yellow")
+            else:
+                click.secho(f"⚠ {bashrc_path} not found. Add this line manually:", fg="yellow")
+                click.echo(f"  {source_line}")
+
+            click.echo()
+            click.secho("To activate completion, run:", fg="cyan")
+            click.echo(f"  source ~/.bashrc")
+
+        elif shell == 'zsh':
+            # Save to ~/.songbook-complete.zsh
+            completion_path = Path.home() / '.songbook-complete.zsh'
+            completion_path.write_text(completion_script)
+            click.secho(f"✓ Completion script saved to {completion_path}", fg="green")
+
+            # Add source line to ~/.zshrc if not present
+            zshrc_path = Path.home() / '.zshrc'
+            source_line = f'source {completion_path}\n'
+
+            if zshrc_path.exists():
+                zshrc_content = zshrc_path.read_text()
+                if str(completion_path) not in zshrc_content:
+                    with zshrc_path.open('a') as f:
+                        f.write(f'\n# Songbook completion\n{source_line}')
+                    click.secho(f"✓ Added source line to {zshrc_path}", fg="green")
+                else:
+                    click.secho(f"✓ Source line already in {zshrc_path}", fg="yellow")
+            else:
+                click.secho(f"⚠ {zshrc_path} not found. Add this line manually:", fg="yellow")
+                click.echo(f"  {source_line}")
+
+            click.echo()
+            click.secho("To activate completion, run:", fg="cyan")
+            click.echo(f"  source ~/.zshrc")
+
+        elif shell == 'fish':
+            # Save to ~/.config/fish/completions/songbook.fish
+            fish_dir = Path.home() / '.config' / 'fish' / 'completions'
+            fish_dir.mkdir(parents=True, exist_ok=True)
+            completion_path = fish_dir / 'songbook.fish'
+            completion_path.write_text(completion_script)
+            click.secho(f"✓ Completion script saved to {completion_path}", fg="green")
+
+            click.echo()
+            click.secho("Fish automatically loads completions. Just restart your shell:", fg="cyan")
+            click.echo("  exec fish")
+
+        click.echo()
+        click.secho("✓ Installation complete!", fg="green", bold=True)
+        click.echo()
+        click.echo("For detailed documentation, see:")
+        click.echo("  .claude/SHELL_COMPLETION.md")
+
+    except subprocess.CalledProcessError as e:
+        click.secho(f"Error generating completion script: {e.stderr}", fg="red", err=True)
+        raise SystemExit(1)
+    except Exception as e:
+        click.secho(f"Installation failed: {e}", fg="red", err=True)
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

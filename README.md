@@ -142,6 +142,30 @@ songbook pdf --date 2026-01-25
 
 This is useful when you've already generated a setlist but want to create a PDF later.
 
+### Shell Completion
+
+Enable tab completion for faster command entry:
+
+```bash
+# Quick install (auto-detects your shell)
+songbook install-completion
+
+# Or specify shell manually
+songbook install-completion --shell bash
+songbook install-completion --shell zsh
+songbook install-completion --shell fish
+```
+
+Then restart your shell or run `source ~/.bashrc` (bash) / `source ~/.zshrc` (zsh).
+
+**Features:**
+- Tab-complete commands: `songbook gen<TAB>` → `songbook generate`
+- Tab-complete song names: `songbook view-song Oce<TAB>` → `songbook view-song Oceanos`
+- Tab-complete moments: `songbook replace --moment lou<TAB>` → `songbook replace --moment louvor`
+- Tab-complete dates: `songbook view-setlist --date 2025-<TAB>` → shows available dates
+
+See [Shell Completion Guide](./.claude/SHELL_COMPLETION.md) for detailed documentation.
+
 ## How It Works
 
 ### Service Moments
