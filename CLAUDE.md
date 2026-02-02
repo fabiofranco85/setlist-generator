@@ -15,11 +15,20 @@ This project uses **path-scoped documentation** to keep context focused. Differe
 
 ### Installation
 ```bash
-# Install dependencies
-uv pip install click reportlab
+# Install with uv (recommended)
+uv sync
 
-# Install in editable mode
-uv pip install -e .
+# Alternative: Using pip
+pip install -e .
+```
+
+### Adding New Dependencies (Developers)
+```bash
+# Add a new dependency
+uv add package-name
+
+# Add a development dependency
+uv add --dev package-name
 ```
 
 ### Basic Usage

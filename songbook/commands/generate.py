@@ -125,6 +125,9 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output):
             generate_setlist_pdf(setlist, songs, pdf_path)
             print(f"PDF saved to: {pdf_path}")
         except ImportError:
-            print("Error: ReportLab library not installed. Install with: pip install reportlab")
+            print("Error: ReportLab library not installed.")
+            print("Install with: uv sync            (installs all dependencies)")
+            print("         or: uv add reportlab    (adds to pyproject.toml)")
+            print("         or: pip install reportlab")
         except Exception as e:
             print(f"Error generating PDF: {e}")

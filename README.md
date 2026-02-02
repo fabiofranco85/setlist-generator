@@ -31,32 +31,70 @@ An intelligent setlist generator for church worship services that automatically 
 ### Requirements
 
 - Python 3.12 or higher
-- Click library for CLI (`pip install click` or `uv pip install click`)
-- Optional: ReportLab library for PDF generation (`pip install reportlab`)
+- Package manager: [uv](https://docs.astral.sh/uv/) (recommended) or pip
 
-### Setup
+### Quick Setup (Recommended - Using uv)
 
-1. Clone or download this repository
-2. Ensure Python 3.12+ is installed:
+1. **Clone or download this repository**
+
+2. **Ensure Python 3.12+ is installed:**
    ```bash
    python --version  # Should show 3.12 or higher
    ```
-3. Install dependencies:
-   ```bash
-   # Using uv (recommended)
-   uv pip install click reportlab
 
-   # OR using pip
-   pip install click reportlab
-   ```
-4. Install the songbook package:
+3. **Install everything in one command:**
    ```bash
-   uv pip install -e .
-   # OR
-   pip install -e .
+   uv sync
    ```
+
+   This single command:
+   - ✓ Reads dependencies from `pyproject.toml`
+   - ✓ Creates/updates `uv.lock` for reproducible installs
+   - ✓ Installs all dependencies (click, reportlab)
+   - ✓ Installs the songbook package in editable mode
+   - ✓ Creates an isolated virtual environment
 
 That's it! The `songbook` command is now available.
+
+### Alternative Setup (Using pip)
+
+If you prefer pip or don't have uv installed:
+
+```bash
+# Install the package and its dependencies
+pip install -e .
+```
+
+This reads `pyproject.toml` and installs everything needed.
+
+### Installing uv (Optional)
+
+If you don't have uv yet and want to use it:
+
+```bash
+# On macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# On Windows
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# Or using pip
+pip install uv
+```
+
+### For Developers: Adding New Dependencies
+
+If you're contributing to the project and need to add dependencies:
+
+```bash
+# Add a runtime dependency
+uv add package-name
+
+# Add a development dependency
+uv add --dev pytest black ruff
+```
+
+This automatically updates both `pyproject.toml` and `uv.lock`.
 
 ## Quick Start
 

@@ -77,8 +77,9 @@ def run(date, output_dir, history_dir):
         print(f"\n✓ PDF saved to: {pdf_path}")
     except ImportError:
         print("\nError: ReportLab library not installed.")
-        print("Install with: pip install reportlab")
-        print("         or: uv pip install reportlab")
+        print("Install with: uv sync            (installs all dependencies)")
+        print("         or: uv add reportlab    (adds to pyproject.toml)")
+        print("         or: pip install reportlab")
         raise SystemExit(1)
     except Exception as e:
         handle_error(f"Generating PDF: {e}")

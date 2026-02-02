@@ -14,11 +14,11 @@ The project uses a unified `songbook` command for all operations. All commands a
 
 **Installation:**
 ```bash
-# Install dependencies
-uv pip install click reportlab
+# Install everything with uv (recommended)
+uv sync
 
-# Install in editable mode
-uv pip install -e .
+# Alternative: Using pip
+pip install -e .
 ```
 
 **Quick reference:**
@@ -216,11 +216,17 @@ songbook pdf --date 2026-02-15
   - `poslúdio` → **Poslúdio**
 
 **Dependencies:**
-Requires `reportlab`:
+Requires `reportlab` (included in `pyproject.toml`):
+
 ```bash
+# Install all dependencies with uv
+uv sync
+
+# Or add reportlab specifically
+uv add reportlab
+
+# Or using pip
 pip install reportlab
-# OR
-uv pip install reportlab
 ```
 
 ---
