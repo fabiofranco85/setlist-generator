@@ -2,8 +2,8 @@
 """Compare old position-based vs new time-based recency scoring."""
 
 from pathlib import Path
-from setlist import load_songs, load_history
-from setlist.selector import calculate_recency_scores
+from library import load_songs, load_history
+from library.selector import calculate_recency_scores
 
 def main():
     # Load actual data

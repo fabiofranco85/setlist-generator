@@ -41,7 +41,7 @@ def resolve_paths(output_dir, history_dir):
     Returns:
         OutputPaths object with resolved paths
     """
-    from setlist import get_output_paths
+    from library import get_output_paths
     return get_output_paths(
         Path("."),
         cli_output_dir=output_dir,

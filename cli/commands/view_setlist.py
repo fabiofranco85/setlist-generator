@@ -5,8 +5,8 @@ View setlist command - display generated setlists.
 from datetime import datetime
 from pathlib import Path
 
-from setlist import load_history, load_songs
-from setlist.config import MOMENTS_CONFIG
+from library import load_history, load_songs
+from library.config import MOMENTS_CONFIG
 
 
 def format_date_display(date_str: str) -> str:
@@ -95,7 +95,7 @@ def run(date, keys, output_dir, history_dir):
         output_dir: Custom output directory
         history_dir: Custom history directory
     """
-    from songbook.cli_utils import resolve_paths, handle_error
+    from cli.cli_utils import resolve_paths, handle_error
 
     # Resolve paths
     paths = resolve_paths(output_dir, history_dir)

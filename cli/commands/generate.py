@@ -5,7 +5,7 @@ Generate command - create new setlists.
 from datetime import datetime
 from pathlib import Path
 
-from setlist import (
+from library import (
     MOMENTS_CONFIG,
     format_setlist_markdown,
     generate_setlist,
@@ -61,7 +61,7 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output):
         history_dir: Custom history directory
         output: Custom output filename
     """
-    from songbook.cli_utils import resolve_paths
+    from cli.cli_utils import resolve_paths
 
     # Use today if no date specified
     if not date:

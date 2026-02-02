@@ -7,9 +7,9 @@ This file provides guidance to Claude Code when working with code in this reposi
 This project uses **path-scoped documentation** to keep context focused. Different documentation files load based on which code you're working on:
 
 - **Core Architecture** (`.claude/rules/core-architecture.md`) - Always loaded. Contains project overview, algorithms, data structures, and configuration.
-- **CLI Commands** (`.claude/rules/cli.md`) - Loads when working on `songbook/**/*.py`. Contains all command documentation and usage examples.
+- **CLI Commands** (`.claude/rules/cli.md`) - Loads when working on `cli/**/*.py`. Contains all command documentation and usage examples.
 - **Data Maintenance** (`.claude/rules/data-maintenance.md`) - Loads when working on maintenance scripts. Contains cleanup and import utilities.
-- **Development Guide** (`.claude/rules/development.md`) - Loads when working on `setlist/**/*.py`. Contains module details and implementation patterns.
+- **Development Guide** (`.claude/rules/development.md`) - Loads when working on `library/**/*.py`. Contains module details and implementation patterns.
 
 ## Quick Start
 
@@ -64,7 +64,7 @@ This is a **setlist generator** for church worship services. It intelligently se
 │   └── YYYY-MM-DD.md
 ├── history/                     # JSON history tracking
 │   └── YYYY-MM-DD.json
-├── setlist/                     # Core package (modular architecture)
+├── library/                     # Core package (modular architecture)
 │   ├── config.py               # Configuration constants
 │   ├── models.py               # Song and Setlist data structures
 │   ├── loader.py               # Data loading
@@ -73,7 +73,7 @@ This is a **setlist generator** for church worship services. It intelligently se
 │   ├── generator.py            # Core setlist generation
 │   ├── formatter.py            # Output formatting
 │   └── pdf_formatter.py        # PDF generation
-└── songbook/                    # CLI interface
+└── cli/                         # CLI interface
     ├── main.py                 # Entry point
     └── commands/               # Command implementations
 ```
@@ -139,7 +139,7 @@ songbook cleanup  # Check and fix data issues
 ## Programmatic Usage
 
 ```python
-from setlist import SetlistGenerator, load_songs, load_history
+from library import SetlistGenerator, load_songs, load_history
 from pathlib import Path
 
 # Load data
@@ -160,7 +160,7 @@ for moment, song_list in setlist.moments.items():
 
 ## Configuration
 
-Key settings in `setlist/config.py`:
+Key settings in `library/config.py`:
 
 - `MOMENTS_CONFIG` - Service moments and counts (louvor: 4 songs, others: 1 song)
 - `RECENCY_DECAY_DAYS` - Recency calculation (default: 45 days)

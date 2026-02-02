@@ -5,7 +5,7 @@ Provides a unified command-line interface for all songbook operations.
 """
 
 import click
-from songbook.completions import (
+from cli.completions import (
     complete_song_names,
     complete_moment_names,
     complete_history_dates,
@@ -57,7 +57,7 @@ def generate(date, override, pdf, no_save, output_dir, history_dir, output):
       songbook generate --override "louvor:Oceanos,Santo Pra Sempre"
       songbook generate --override "prelúdio:Estamos de Pé" --override "louvor:Oceanos"
     """
-    from songbook.commands.generate import run
+    from cli.commands.generate import run
     run(date, override, pdf, no_save, output_dir, history_dir, output)
 
 
@@ -75,7 +75,7 @@ def view_setlist(date, keys, output_dir, history_dir):
       songbook view-setlist --keys
       songbook view-setlist --date 2026-02-15
     """
-    from songbook.commands.view_setlist import run
+    from cli.commands.view_setlist import run
     run(date, keys, output_dir, history_dir)
 
 
@@ -92,7 +92,7 @@ def view_song(song_name, list, no_metadata):
       songbook view-song --list
       songbook view-song "Hosana" --no-metadata
     """
-    from songbook.commands.view_song import run
+    from cli.commands.view_song import run
     run(song_name, list, no_metadata)
 
 
@@ -104,7 +104,7 @@ def list_moments():
     Shows all available moments with their song counts and descriptions.
     Useful for knowing what values to use with --moment arguments.
     """
-    from songbook.commands.list_moments import run
+    from cli.commands.list_moments import run
     run()
 
 
@@ -126,7 +126,7 @@ def replace(moment, position, positions, replacement, date, output_dir, history_
       songbook replace --moment louvor --position 2 --with "Oceanos"
       songbook replace --moment louvor --positions 1,3
     """
-    from songbook.commands.replace import run
+    from cli.commands.replace import run
     run(moment, position, positions, replacement, date, output_dir, history_dir)
 
 
@@ -142,7 +142,7 @@ def pdf(date, output_dir, history_dir):
       songbook pdf
       songbook pdf --date 2026-02-15
     """
-    from songbook.commands.pdf import run
+    from cli.commands.pdf import run
     run(date, output_dir, history_dir)
 
 
@@ -158,7 +158,7 @@ def cleanup(history_dir):
     - Provides fuzzy matching suggestions for similar song names
     - Creates timestamped backups before making changes
     """
-    from songbook.commands.maintenance import run_cleanup
+    from cli.commands.maintenance import run_cleanup
     run_cleanup(history_dir)
 
 
@@ -171,7 +171,7 @@ def fix_punctuation(history_dir):
     Fixes punctuation differences in history files to match canonical
     song names from database.csv (e.g., commas, hyphens).
     """
-    from songbook.commands.maintenance import run_fix_punctuation
+    from cli.commands.maintenance import run_fix_punctuation
     run_fix_punctuation(history_dir)
 
 
@@ -184,7 +184,7 @@ def import_history():
     the internal history format. Requires editing the script first
     to add your data.
     """
-    from songbook.commands.maintenance import run_import
+    from cli.commands.maintenance import run_import
     run_import()
 
 

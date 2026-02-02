@@ -48,7 +48,7 @@ Where:
 │   └── YYYY-MM-DD.md        # Human-readable setlist with full chords
 ├── history/                 # JSON history tracking
 │   └── YYYY-MM-DD.json      # History tracking (moments → song lists)
-└── setlist/                 # Core package (modular architecture)
+└── library/                 # Core package (modular architecture)
     ├── __init__.py          # Public API exports
     ├── config.py            # Configuration constants
     ├── models.py            # Song and Setlist data structures
@@ -102,7 +102,7 @@ The codebase uses a **hybrid approach** that combines functional and object-orie
 
 ## Moments Configuration
 
-Defined in `MOMENTS_CONFIG` (setlist/config.py):
+Defined in `MOMENTS_CONFIG` (library/config.py):
 
 | Moment      | Count | Description                 |
 |-------------|-------|-----------------------------|
@@ -146,11 +146,11 @@ Songs have an intrinsic **energy level** (1-4) that defines their musical charac
 | **4** | Deep worship, contemplative, intimate | Tudo é Perda, Lugar Secreto, Aos Pés da Cruz |
 
 **Energy Ordering:**
-- Configured per moment in `ENERGY_ORDERING_RULES` (setlist/config.py)
+- Configured per moment in `ENERGY_ORDERING_RULES` (library/config.py)
 - **Louvor**: Ascending order (1→4) creates an emotional arc from upbeat to worship
 - **Override preservation**: Manually specified songs maintain user's exact order
 - **Auto-selected songs**: Sorted by energy level according to moment rules
-- Can be disabled: Set `ENERGY_ORDERING_ENABLED = False` (setlist/config.py)
+- Can be disabled: Set `ENERGY_ORDERING_ENABLED = False` (library/config.py)
 
 **Example louvor progression:**
 ```
@@ -162,7 +162,7 @@ Songs have an intrinsic **energy level** (1-4) that defines their musical charac
 
 ## Time-Based Recency System
 
-`RECENCY_DECAY_DAYS = 45` (setlist/config.py:16)
+`RECENCY_DECAY_DAYS = 45` (library/config.py:16)
 
 The system uses **time-based exponential decay** to calculate recency scores, considering the **full history** of all services (not just the last 3).
 
@@ -208,7 +208,7 @@ export SETLIST_HISTORY_DIR=/data/history
 songbook generate
 ```
 
-**3. Configuration File (setlist/config.py):**
+**3. Configuration File (library/config.py):**
 ```python
 DEFAULT_OUTPUT_DIR = "output"    # Markdown files
 DEFAULT_HISTORY_DIR = "history"  # JSON tracking
@@ -219,7 +219,7 @@ If no configuration is provided, uses `output/` for markdown files and `history/
 
 **Programmatic Usage:**
 ```python
-from setlist import get_output_paths
+from library import get_output_paths
 from pathlib import Path
 
 # Use defaults
@@ -238,24 +238,24 @@ paths = get_output_paths(
 ## Modifying Song Selection Behavior
 
 ### Change moment counts
-Edit `MOMENTS_CONFIG` in `setlist/config.py`
+Edit `MOMENTS_CONFIG` in `library/config.py`
 
 ### Change recency decay rate
-Edit `RECENCY_DECAY_DAYS` in `setlist/config.py` (default: 45)
+Edit `RECENCY_DECAY_DAYS` in `library/config.py` (default: 45)
 - Lower values (30) = faster cycling
 - Higher values (60-90) = slower cycling, more variety
 
 ### Change default weight
-Edit `DEFAULT_WEIGHT` in `setlist/config.py` (default: 3)
+Edit `DEFAULT_WEIGHT` in `library/config.py` (default: 3)
 
 ### Adjust randomization
-Edit the random factor in `setlist/selector.py` (line ~87):
+Edit the random factor in `library/selector.py` (line ~87):
 ```python
 candidates.sort(key=lambda x: x[1] + random.uniform(0, 0.5), reverse=True)
 ```
 
 ### Disable or modify energy ordering
-Edit `ENERGY_ORDERING_ENABLED` or `ENERGY_ORDERING_RULES` in `setlist/config.py`
+Edit `ENERGY_ORDERING_ENABLED` or `ENERGY_ORDERING_RULES` in `library/config.py`
 
 ## Adding New Songs
 
@@ -289,7 +289,7 @@ Edit `ENERGY_ORDERING_ENABLED` or `ENERGY_ORDERING_RULES` in `setlist/config.py`
 The `SetlistGenerator` class encapsulates the stateful operations of setlist generation:
 
 ```python
-from setlist import SetlistGenerator, load_songs, load_history
+from library import SetlistGenerator, load_songs, load_history
 from pathlib import Path
 
 # Load data
@@ -321,7 +321,7 @@ for moment, song_list in setlist.moments.items():
 For backward compatibility, the functional API is still available:
 
 ```python
-from setlist import load_songs, load_history, generate_setlist
+from library import load_songs, load_history, generate_setlist
 from pathlib import Path
 
 # Load data

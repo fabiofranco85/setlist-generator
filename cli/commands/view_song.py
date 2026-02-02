@@ -4,7 +4,7 @@ View song command - display song lyrics, chords, and metadata.
 
 from pathlib import Path
 
-from setlist import load_songs
+from library import load_songs
 
 
 def list_all_songs(songs: dict):
@@ -155,7 +155,7 @@ def run(song_name, list_songs, no_metadata):
         list_songs: Whether to list all available songs
         no_metadata: Whether to hide metadata (tags, energy)
     """
-    from songbook.cli_utils import handle_error
+    from cli.cli_utils import handle_error
 
     # Load songs
     try:

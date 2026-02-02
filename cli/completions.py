@@ -32,7 +32,7 @@ def complete_song_names(ctx, param, incomplete: str) -> List[CompletionItem]:
         Input: "OU" -> Returns: ["Ousado Amor"]
     """
     try:
-        from setlist import load_songs
+        from library import load_songs
 
         # Load songs from database.csv
         base_path = Path.cwd()
@@ -75,7 +75,7 @@ def complete_moment_names(ctx, param, incomplete: str) -> List[CompletionItem]:
         Input: "pre" -> Returns: ["prelúdio"]
     """
     try:
-        from setlist.config import MOMENTS_CONFIG
+        from library.config import MOMENTS_CONFIG
 
         # Get all moment names from config
         all_moments = list(MOMENTS_CONFIG.keys())
@@ -121,7 +121,7 @@ def complete_history_dates(ctx, param, incomplete: str) -> List[CompletionItem]:
             output_dir = ctx.params.get('output_dir')
 
         # Resolve using CLI utilities (respects --history-dir and env vars)
-        from songbook.cli_utils import resolve_paths
+        from cli.cli_utils import resolve_paths
         paths = resolve_paths(output_dir, history_dir)
         history_path = paths.history_dir
 

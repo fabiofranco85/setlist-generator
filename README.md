@@ -816,7 +816,7 @@ songbook generate
 ```
 
 **3. Configuration File:**
-Edit `setlist/config.py`:
+Edit `library/config.py`:
 ```python
 DEFAULT_OUTPUT_DIR = "output"    # Markdown files
 DEFAULT_HISTORY_DIR = "history"  # JSON tracking
@@ -883,7 +883,7 @@ DEFAULT_ENERGY = 2.5  # Neutral/middle energy
 
 ### Change Recency Decay Rate
 
-Edit `RECENCY_DECAY_DAYS` in `setlist/config.py`:
+Edit `RECENCY_DECAY_DAYS` in `library/config.py`:
 
 ```python
 RECENCY_DECAY_DAYS = 45  # Days for a song to feel "fresh" again
@@ -929,7 +929,7 @@ The setlist generator can be used as a Python library in your own scripts, allow
 The object-oriented API provides better state management and is recommended for new code:
 
 ```python
-from setlist import SetlistGenerator, load_songs, load_history
+from library import SetlistGenerator, load_songs, load_history
 from pathlib import Path
 
 # Load songs and history
@@ -967,7 +967,7 @@ setlist3 = generator.generate("2026-03-29")
 The functional API is still available and works identically:
 
 ```python
-from setlist import load_songs, load_history, generate_setlist
+from library import load_songs, load_history, generate_setlist
 from pathlib import Path
 
 songs = load_songs(Path("."))
@@ -988,8 +988,8 @@ Both APIs produce identical results. Choose based on your needs:
 ### Custom Formatting and Saving
 
 ```python
-from setlist import SetlistGenerator, load_songs, load_history
-from setlist import format_setlist_markdown, save_setlist_history
+from library import SetlistGenerator, load_songs, load_history
+from library import format_setlist_markdown, save_setlist_history
 from pathlib import Path
 
 # Generate setlist
@@ -1015,7 +1015,7 @@ save_setlist_history(setlist, Path("./history"))
 Generate multiple setlists programmatically:
 
 ```python
-from setlist import SetlistGenerator, load_songs, load_history
+from library import SetlistGenerator, load_songs, load_history
 from pathlib import Path
 from datetime import datetime, timedelta
 
@@ -1037,7 +1037,7 @@ for i in range(4):
 
 ```python
 from flask import Flask, jsonify
-from setlist import SetlistGenerator, load_songs, load_history
+from library import SetlistGenerator, load_songs, load_history
 from pathlib import Path
 
 app = Flask(__name__)
@@ -1291,7 +1291,7 @@ The song is in `database.csv` but the chord file is missing or misnamed.
 
 **Solutions:**
 
-1. **Increase recency decay period** in `setlist/config.py`:
+1. **Increase recency decay period** in `library/config.py`:
    ```python
    RECENCY_DECAY_DAYS = 60  # Instead of 45 (slower cycling)
    # Or even 90 for maximum variety
@@ -1310,7 +1310,7 @@ The song is in `database.csv` but the chord file is missing or misnamed.
 
 ### Problem: Too many/few songs for a moment
 
-Edit `MOMENTS_CONFIG` in `setlist/config.py`:
+Edit `MOMENTS_CONFIG` in `library/config.py`:
 
 ```python
 MOMENTS_CONFIG = {
@@ -1327,7 +1327,7 @@ MOMENTS_CONFIG = {
 
 If you want to disable energy ordering and use score-based order only:
 
-Edit `setlist/config.py`:
+Edit `library/config.py`:
 ```python
 ENERGY_ORDERING_ENABLED = False
 ```

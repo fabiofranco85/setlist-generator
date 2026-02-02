@@ -14,7 +14,7 @@ recency_score = 1.0 - exp(-days_since_last_use / DECAY_CONSTANT)
 
 Where:
 - `days_since_last_use` = actual days between current date and last performance
-- `DECAY_CONSTANT` = 45 days (configurable in `setlist/config.py`)
+- `DECAY_CONSTANT` = 45 days (configurable in `library/config.py`)
 - `recency_score` = 0.0 (just used) to 1.0 (never used)
 
 ### Score Interpretation
@@ -75,7 +75,7 @@ Uses existing `history/*.json` files as source of truth. No need to modify `data
 
 ### RECENCY_DECAY_DAYS
 
-**Location:** `setlist/config.py`
+**Location:** `library/config.py`
 
 ```python
 RECENCY_DECAY_DAYS = 45  # Days for a song to feel "fresh" again
@@ -175,10 +175,10 @@ Verify good variety without excessive repetition.
 
 ### Files Modified
 
-1. **`setlist/config.py`** - Added `RECENCY_DECAY_DAYS = 45`
-2. **`setlist/selector.py`** - Replaced position-based with time-based algorithm
-3. **`setlist/generator.py`** - Moved recency calculation to `generate()` method
-4. **`setlist/__init__.py`** - Exported new config constant
+1. **`library/config.py`** - Added `RECENCY_DECAY_DAYS = 45`
+2. **`library/selector.py`** - Replaced position-based with time-based algorithm
+3. **`library/generator.py`** - Moved recency calculation to `generate()` method
+4. **`library/__init__.py`** - Exported new config constant
 
 ### Backward Compatibility
 
@@ -273,5 +273,5 @@ Possible improvements (not currently implemented):
 
 - **Algorithm:** Exponential decay: `1.0 - exp(-x/k)`
 - **Inspiration:** Similar to cache eviction algorithms (LRU with time decay)
-- **Implementation:** `setlist/selector.py` (lines 10-70)
-- **Configuration:** `setlist/config.py` (line 16)
+- **Implementation:** `library/selector.py` (lines 10-70)
+- **Configuration:** `library/config.py` (line 16)

@@ -10,7 +10,7 @@ dependencies = [
 ]
 
 [project.scripts]
-songbook = "songbook:main"
+songbook = "cli:main"
 
 [build-system]
 requires = ["hatchling"]

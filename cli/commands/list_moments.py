@@ -2,7 +2,7 @@
 List moments command - display available service moments.
 """
 
-from setlist.config import MOMENTS_CONFIG
+from library.config import MOMENTS_CONFIG
 
 
 def run():

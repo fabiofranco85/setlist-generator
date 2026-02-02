@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 from click.shell_completion import CompletionItem
 
-from songbook.completions import (
+from cli.completions import (
     complete_song_names,
     complete_moment_names,
     complete_history_dates,
@@ -158,7 +158,7 @@ class TestCompleteHistoryDates:
         (history_dir / "2024-01-01.json").write_text("{}")
 
         # Mock resolve_paths to return our test directory
-        from setlist.paths import PathConfig
+        from library.paths import PathConfig
 
         def mock_resolve_paths(output_dir, history_dir):
             return PathConfig(
@@ -196,7 +196,7 @@ class TestCompleteHistoryDates:
         (history_dir / "2024-01-01.json").write_text("{}")
 
         # Mock resolve_paths
-        from setlist.paths import PathConfig
+        from library.paths import PathConfig
 
         def mock_resolve_paths(output_dir, history_dir):
             return PathConfig(
@@ -231,7 +231,7 @@ class TestCompleteHistoryDates:
         (history_dir / "2025-06-15.json").write_text("{}")
 
         # Mock resolve_paths
-        from setlist.paths import PathConfig
+        from library.paths import PathConfig
 
         def mock_resolve_paths(output_dir, history_dir):
             return PathConfig(
@@ -254,7 +254,7 @@ class TestCompleteHistoryDates:
     def test_complete_missing_history_dir(self, tmp_path, monkeypatch):
         """Test completion gracefully handles missing history directory."""
         # Mock resolve_paths to return non-existent directory
-        from setlist.paths import PathConfig
+        from library.paths import PathConfig
 
         def mock_resolve_paths(output_dir, history_dir):
             return PathConfig(
@@ -283,7 +283,7 @@ class TestCompleteHistoryDates:
         (history_dir / "2025-12-25.json").write_text("{}")
 
         # Mock resolve_paths
-        from setlist.paths import PathConfig
+        from library.paths import PathConfig
 
         def mock_resolve_paths(output_dir, history_dir):
             return PathConfig(

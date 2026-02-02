@@ -1,6 +1,6 @@
 ---
 paths:
-  - "setlist/**/*.py"
+  - "library/**/*.py"
 ---
 
 # Development Guide
@@ -9,7 +9,7 @@ This document provides guidance for developers working on the core setlist libra
 
 ## Module Responsibilities
 
-The `setlist/` package is organized into focused modules:
+The `library/` package is organized into focused modules:
 
 ### config.py
 **Purpose:** Configuration constants and settings
@@ -216,19 +216,19 @@ setlist = generator.generate(
 
 **Examples:**
 ```python
-# Pure transformation (setlist/ordering.py)
+# Pure transformation (library/ordering.py)
 def apply_energy_ordering(songs_in_moment, moment, songs, override_count):
     """Sort songs by energy level."""
     # No state, just transforms input to output
     pass
 
-# Pure calculation (setlist/selector.py)
+# Pure calculation (library/selector.py)
 def calculate_recency_scores(songs, history, target_date):
     """Calculate time-based recency scores."""
     # Deterministic based on inputs
     pass
 
-# Simple utility (setlist/formatter.py)
+# Simple utility (library/formatter.py)
 def format_date(date_str):
     """Format date for display."""
     # Stateless formatting
@@ -244,7 +244,7 @@ def format_date(date_str):
 
 **Examples:**
 ```python
-# Stateful generator (setlist/generator.py)
+# Stateful generator (library/generator.py)
 class SetlistGenerator:
     """Manages setlist generation with internal state."""
 
@@ -271,7 +271,7 @@ class SetlistGenerator:
 
 ### Song Selection Scoring
 
-**Location:** `setlist/selector.py:select_songs_for_moment()`
+**Location:** `library/selector.py:select_songs_for_moment()`
 
 **Algorithm:**
 ```python
@@ -311,7 +311,7 @@ def select_songs_for_moment(moment, count, songs, recency_scores, already_select
 
 ### Energy Ordering Algorithm
 
-**Location:** `setlist/ordering.py:apply_energy_ordering()`
+**Location:** `library/ordering.py:apply_energy_ordering()`
 
 **Algorithm:**
 ```python
@@ -348,7 +348,7 @@ def apply_energy_ordering(songs_in_moment, moment, songs, override_count):
 
 ### Recency Calculation
 
-**Location:** `setlist/selector.py:calculate_recency_scores()`
+**Location:** `library/selector.py:calculate_recency_scores()`
 
 **Algorithm:**
 ```python
@@ -393,7 +393,7 @@ def calculate_recency_scores(songs, history, target_date):
 
 ### Replacement Logic
 
-**Location:** `setlist/replacer.py`
+**Location:** `library/replacer.py`
 
 **Key functions:**
 
@@ -447,7 +447,7 @@ replacement = select_songs_for_moment(
 
 ### Core Selection Components
 ```python
-from setlist import (
+from library import (
     load_songs,
     load_history,
     calculate_recency_scores,
@@ -478,20 +478,20 @@ ordered = apply_energy_ordering(selected, "louvor", songs, override_count=0)
 
 ### Generation Components
 ```python
-from setlist import SetlistGenerator
+from library import SetlistGenerator
 
 # Object-oriented API
 generator = SetlistGenerator(songs, history)
 setlist = generator.generate(date="2026-02-15")
 
 # OR functional API (backward compatible)
-from setlist import generate_setlist
+from library import generate_setlist
 setlist = generate_setlist(songs, history, date="2026-02-15")
 ```
 
 ### Formatting Components
 ```python
-from setlist import format_setlist_markdown, save_setlist_history
+from library import format_setlist_markdown, save_setlist_history
 
 # Generate markdown
 markdown = format_setlist_markdown(setlist, songs)
@@ -502,7 +502,7 @@ output_path.write_text(markdown)
 save_setlist_history(setlist, Path("./history"))
 
 # Generate PDF
-from setlist import generate_setlist_pdf
+from library import generate_setlist_pdf
 pdf_path = Path("output/2026-02-15.pdf")
 generate_setlist_pdf(setlist, songs, pdf_path)
 ```

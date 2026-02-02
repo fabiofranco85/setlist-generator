@@ -5,14 +5,14 @@ Replace command - replace songs in generated setlists.
 import sys
 from pathlib import Path
 
-from setlist import (
+from library import (
     load_songs,
     load_history,
     format_setlist_markdown,
     save_setlist_history,
 )
-from setlist.models import Setlist
-from setlist.replacer import (
+from library.models import Setlist
+from library.replacer import (
     find_target_setlist,
     select_replacement_song,
     replace_song_in_setlist,
@@ -33,7 +33,7 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir)
         output_dir: Custom output directory
         history_dir: Custom history directory
     """
-    from songbook.cli_utils import resolve_paths, handle_error
+    from cli.cli_utils import resolve_paths, handle_error
 
     # Setup paths
     base_path = Path.cwd()

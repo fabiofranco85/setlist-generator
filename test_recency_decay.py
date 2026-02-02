@@ -2,8 +2,8 @@
 """Test script to verify time-based recency decay behavior."""
 
 from datetime import date, timedelta
-from setlist.selector import calculate_recency_scores
-from setlist.models import Song
+from library.selector import calculate_recency_scores
+from library.models import Song
 
 def test_time_decay():
     """Test recency scoring at different time intervals."""

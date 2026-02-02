@@ -1,6 +1,6 @@
 ---
 paths:
-  - "songbook/**/*.py"
+  - "cli/**/*.py"
   - "pyproject.toml"
 ---
 
@@ -375,7 +375,7 @@ songbook import-history
 ### Path Configuration Priority
 1. CLI arguments (highest priority)
 2. Environment variables
-3. Configuration file (setlist/config.py)
+3. Configuration file (library/config.py)
 4. Hardcoded defaults
 
 ### Common Workflows
@@ -411,11 +411,11 @@ songbook generate --date 2026-03-01 --no-save
 
 ### CLI Framework
 - Uses Click library for command-line interface
-- Subcommands organized in `songbook/commands/`
-- Entry point: `songbook/main.py`
+- Subcommands organized in `cli/commands/`
+- Entry point: `cli/main.py`
 
 ### Command Registration
-All commands are registered in `songbook/main.py` using Click's group system:
+All commands are registered in `cli/main.py` using Click's group system:
 ```python
 @click.group()
 def cli():
@@ -428,7 +428,7 @@ cli.add_command(view_setlist)
 ```
 
 ### Path Resolution
-Uses `setlist/paths.py` module for consistent path handling across all commands.
+Uses `library/paths.py` module for consistent path handling across all commands.
 
 ### User Experience
 - Colored output for better readability (when terminal supports it)

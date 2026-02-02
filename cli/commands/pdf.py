@@ -4,7 +4,7 @@ PDF command - generate PDF from existing setlist.
 
 from pathlib import Path
 
-from setlist import (
+from library import (
     Setlist,
     generate_setlist_pdf,
     load_history,
@@ -21,7 +21,7 @@ def run(date, output_dir, history_dir):
         output_dir: Custom output directory
         history_dir: Custom history directory
     """
-    from songbook.cli_utils import resolve_paths, handle_error
+    from cli.cli_utils import resolve_paths, handle_error
 
     # Paths
     base_path = Path.cwd()

@@ -1,6 +1,6 @@
 ---
 paths:
-  - "songbook/commands/maintenance.py"
+  - "cli/commands/maintenance.py"
   - "migrate_folders.py"
   - "test_*.py"
 ---
@@ -17,7 +17,7 @@ The project includes several utility scripts for maintaining data quality and im
 
 **Purpose:** Automated data quality checker and fixer for history files.
 
-**Module:** `songbook/commands/maintenance.py` (cleanup command)
+**Module:** `cli/commands/maintenance.py` (cleanup command)
 
 **What it does:**
 - Analyzes all history files for inconsistencies with database.csv
@@ -139,7 +139,7 @@ for history_file in history_dir.glob("*.json"):
 
 **Purpose:** Import external setlist data and convert it to the internal history format.
 
-**Module:** `songbook/commands/maintenance.py` (import-history command)
+**Module:** `cli/commands/maintenance.py` (import-history command)
 
 **What it does:**
 - Parses setlist data from external JSON format
