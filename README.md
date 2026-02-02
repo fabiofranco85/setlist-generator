@@ -1248,7 +1248,7 @@ The song is in `tags.csv` but the chord file is missing or misnamed.
 
 ### Problem: Too many/few songs for a moment
 
-Edit `MOMENTS_CONFIG` in `generate_setlist.py` (line 31):
+Edit `MOMENTS_CONFIG` in `setlist/config.py`:
 
 ```python
 MOMENTS_CONFIG = {
@@ -1265,9 +1265,9 @@ MOMENTS_CONFIG = {
 
 If you want to disable energy ordering and use score-based order only:
 
-Edit `generate_setlist.py` (line 44):
+Edit `setlist/config.py`:
 ```python
-ENERGY_ORDERING_ENABLED = False  # Disable energy ordering
+ENERGY_ORDERING_ENABLED = False
 ```
 
 Or if energy classifications seem wrong, update individual songs in `tags.csv`:
@@ -1539,7 +1539,7 @@ songbook generate --date 2026-03-01 --no-save
 ### Data Quality Best Practices
 
 **Regular Maintenance:**
-- Run `cleanup_history.py` monthly to catch issues early
+- Run `songbook cleanup` monthly to catch issues early
 - Keep backup directories until you verify changes are correct
 - Document any custom moment name mappings you use
 
@@ -1551,7 +1551,7 @@ songbook generate --date 2026-03-01 --no-save
 **Troubleshooting Data Issues:**
 
 If songs aren't being avoided properly (recency not working):
-1. Run `cleanup_history.py` to check for name mismatches
+1. Run `songbook cleanup` to check for name mismatches
 2. Look for capitalization or punctuation differences
 3. Fix issues found, then regenerate setlists
 

@@ -229,7 +229,6 @@ Where:
 │   └── YYYY-MM-DD.md        # Human-readable setlist with full chords
 ├── history/                 # JSON history tracking
 │   └── YYYY-MM-DD.json      # History tracking (moments → song lists)
-├── generate_setlist.py      # CLI entry point
 └── setlist/                 # Core package (modular architecture)
     ├── __init__.py          # Public API exports
     ├── config.py            # Configuration constants
@@ -347,14 +346,14 @@ The generator supports configurable output paths through multiple methods with t
 
 **1. CLI Arguments (Highest Priority):**
 ```bash
-python generate_setlist.py --output-dir custom/output --history-dir custom/history
+songbook generate --output-dir custom/output --history-dir custom/history
 ```
 
 **2. Environment Variables:**
 ```bash
 export SETLIST_OUTPUT_DIR=/data/output
 export SETLIST_HISTORY_DIR=/data/history
-python generate_setlist.py
+songbook generate
 ```
 
 **3. Configuration File (setlist/config.py):**
@@ -430,11 +429,11 @@ Songs have an intrinsic **energy level** (1-4) that defines their musical charac
 | **4** | Deep worship, contemplative, intimate | Tudo é Perda, Lugar Secreto, Aos Pés da Cruz |
 
 **Energy Ordering:**
-- Configured per moment in `ENERGY_ORDERING_RULES` (generate_setlist.py:45-48)
+- Configured per moment in `ENERGY_ORDERING_RULES` (setlist/config.py)
 - **Louvor**: Ascending order (1→4) creates an emotional arc from upbeat to worship
 - **Override preservation**: Manually specified songs maintain user's exact order
 - **Auto-selected songs**: Sorted by energy level according to moment rules
-- Can be disabled: Set `ENERGY_ORDERING_ENABLED = False` (generate_setlist.py:44)
+- Can be disabled: Set `ENERGY_ORDERING_ENABLED = False` (setlist/config.py)
 
 **Example louvor progression:**
 ```
@@ -525,12 +524,12 @@ Edit `ENERGY_ORDERING_ENABLED` or `ENERGY_ORDERING_RULES` in `setlist/config.py`
 
 ## Replacing Songs in Generated Setlists
 
-After generating a setlist, users can replace songs using `replace_song.py`.
+After generating a setlist, users can replace songs using the `songbook replace` command.
 
 ### Command Structure
 
 ```bash
-python replace_song.py --moment MOMENT [--position N] [--with SONG] [--date DATE]
+songbook replace --moment MOMENT [--position N] [--with SONG] [--date DATE]
 ```
 
 **Required:**
@@ -638,19 +637,19 @@ Validates and raises `ValueError` with descriptive messages for:
 
 ```bash
 # Replace first song (defaults to position 1)
-python replace_song.py --moment prelúdio
+songbook replace --moment prelúdio
 
 # Auto replacement - system picks best song for specific position
-python replace_song.py --moment louvor --position 2
+songbook replace --moment louvor --position 2
 
 # Manual replacement - user specifies song
-python replace_song.py --moment louvor --position 2 --with "Oceanos"
+songbook replace --moment louvor --position 2 --with "Oceanos"
 
 # Replace for specific date
-python replace_song.py --date 2026-03-01 --moment louvor --position 2
+songbook replace --date 2026-03-01 --moment louvor --position 2
 
 # Batch replacement (all auto-selected)
-python replace_song.py --moment louvor --positions 1,3
+songbook replace --moment louvor --positions 1,3
 ```
 
 ### Programmatic Usage
@@ -705,7 +704,7 @@ save_setlist_history(setlist_obj, Path("./history"))
 
 The project includes several utility scripts for maintaining data quality and importing external data.
 
-### cleanup_history.py
+### songbook cleanup
 
 **Purpose:** Automated data quality checker and fixer for history files.
 
@@ -813,7 +812,7 @@ songbook fix-punctuation
 
 ### Data Quality Best Practices
 
-1. **Run cleanup_history.py regularly** - Catches issues early
+1. **Run songbook cleanup regularly** - Catches issues early
 2. **Verify after imports** - Always run cleanup after importing external data
 3. **Keep backups** - The cleanup script creates backups automatically
 4. **Fix root causes** - If punctuation issues recur, update data entry processes
