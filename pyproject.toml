@@ -1,14 +1,16 @@
 [project]
-name = "setlist-generator"
-version = "0.1.0"
-description = "Generate setlists for church services based on song tags, weights, and history"
+name = "songbook"
+version = "1.0.0"
+description = "Church worship setlist generator"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "click>=8.0",
     "reportlab>=4.4.9",
 ]
 
 [project.scripts]
+songbook = "songbook:main"
 setlist = "generate_setlist:main"
 
 [build-system]

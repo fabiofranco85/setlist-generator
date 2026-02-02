@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-DEPRECATED: This script is deprecated. Use 'songbook generate' instead.
+DEPRECATED: This script is deprecated. Use 'songbook view-setlist' instead.
 
 This wrapper is maintained for backward compatibility.
 Future versions may remove this file.
 
 Usage:
-    python generate_setlist.py [options]
+    python view_setlist.py [options]
 
 New usage:
-    songbook generate [options]
+    songbook view-setlist [options]
 
 Examples:
-    Old: python generate_setlist.py --date 2026-02-01
-    New: songbook generate --date 2026-02-01
+    Old: python view_setlist.py --keys
+    New: songbook view-setlist --keys
 """
 
 import sys
@@ -25,10 +25,10 @@ warnings.warn(
     "=" * 70 + "\n"
     "DEPRECATION WARNING\n"
     "=" * 70 + "\n"
-    "This script is deprecated. Please use 'songbook generate' instead.\n"
+    "This script is deprecated. Please use 'songbook view-setlist' instead.\n"
     "\n"
-    "Old: python generate_setlist.py [options]\n"
-    "New: songbook generate [options]\n"
+    "Old: python view_setlist.py [options]\n"
+    "New: songbook view-setlist [options]\n"
     "\n"
     "This wrapper will be removed in a future version.\n"
     "=" * 70,
@@ -40,6 +40,6 @@ warnings.warn(
 from songbook import cli
 
 if __name__ == "__main__":
-    # Prepend "generate" to arguments
-    sys.argv.insert(1, "generate")
+    # Prepend "view-setlist" to arguments
+    sys.argv.insert(1, "view-setlist")
     cli()

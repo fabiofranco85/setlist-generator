@@ -2,6 +2,31 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Unified CLI
+
+The project uses a unified `songbook` command for all operations. All commands are available through `songbook <command>`, similar to tools like `git`, `docker`, and `aws-cli`.
+
+**Installation:**
+```bash
+# Install dependencies
+uv pip install click reportlab
+
+# Install in editable mode
+uv pip install -e .
+```
+
+**Quick reference:**
+```bash
+songbook --help                      # Main help
+songbook generate --date 2026-02-15  # Generate setlist
+songbook view-setlist --keys         # View setlist with keys
+songbook view-song "Oceanos"         # View song details
+songbook replace --moment louvor --position 2  # Replace song
+songbook pdf --date 2026-02-15       # Generate PDF
+songbook list-moments                # List available moments
+songbook cleanup                     # Data quality checks
+```
+
 ## Project Overview
 
 This is a **setlist generator** for church worship services. It intelligently selects songs based on:
@@ -13,38 +38,36 @@ This is a **setlist generator** for church worship services. It intelligently se
 
 ## Key Commands
 
+**NEW: Unified CLI** - All commands are now available through the `songbook` command. See [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) for details.
+
 ### Generate Setlist
 ```bash
 # Generate for today
-python generate_setlist.py
+songbook generate
 
 # Generate for specific date
-python generate_setlist.py --date 2026-02-15
+songbook generate --date 2026-02-15
 
 # Generate with PDF output
-python generate_setlist.py --pdf
-python generate_setlist.py --date 2026-02-15 --pdf
+songbook generate --pdf
+songbook generate --date 2026-02-15 --pdf
 
 # Override specific moments
-python generate_setlist.py --override "louvor:Oceanos,Santo Pra Sempre"
-python generate_setlist.py --override "prelúdio:Estamos de Pé" --override "louvor:Oceanos"
+songbook generate --override "louvor:Oceanos,Santo Pra Sempre"
+songbook generate --override "prelúdio:Estamos de Pé" --override "louvor:Oceanos"
 
 # Dry run (don't save to history)
-python generate_setlist.py --no-save
+songbook generate --no-save
 
 # Custom output directories
-python generate_setlist.py --output-dir custom/output --history-dir custom/history
+songbook generate --output-dir custom/output --history-dir custom/history
 ```
 
-### Running with uv
-```bash
-uv run generate_setlist.py [options]
-```
 
 ### List Moments
 ```bash
 # Display all available service moments
-python list_moments.py
+songbook list-moments
 ```
 
 Shows all available moments with their song counts and descriptions. Useful for knowing what values to use with `--moment` arguments in other commands.
@@ -52,17 +75,17 @@ Shows all available moments with their song counts and descriptions. Useful for 
 ### View Setlist
 ```bash
 # View the latest generated setlist
-python view_setlist.py
+songbook view-setlist
 
 # View a specific date
-python view_setlist.py --date 2026-02-15
+songbook view-setlist --date 2026-02-15
 
 # View with song keys
-python view_setlist.py --keys
-python view_setlist.py --date 2026-02-15 --keys
+songbook view-setlist --keys
+songbook view-setlist --date 2026-02-15 --keys
 
 # Custom history directory
-python view_setlist.py --history-dir custom/history
+songbook view-setlist --history-dir custom/history
 ```
 
 Displays a formatted view of generated setlists without opening files. Shows:
@@ -71,16 +94,17 @@ Displays a formatted view of generated setlists without opening files. Shows:
 - Optional: Song keys (with `--keys` flag)
 - File paths and existence status (markdown, PDF, history JSON)
 
+
 ### View Song
 ```bash
 # View a specific song's lyrics and chords
-python view_song.py "Oceanos"
+songbook view-song "Oceanos"
 
 # List all available songs
-python view_song.py --list
+songbook view-song --list
 
 # View without metadata (tags, energy)
-python view_song.py "Hosana" --no-metadata
+songbook view-song "Hosana" --no-metadata
 ```
 
 Displays a specific song's content with:
@@ -91,20 +115,22 @@ Displays a specific song's content with:
 
 Includes smart search: if song not found, suggests similar songs based on partial name match.
 
+
 ### Replace Songs
 ```bash
 # Auto-select replacement for position 2 in louvor
-python replace_song.py --moment louvor --position 2
+songbook replace --moment louvor --position 2
 
 # Manual replacement with specific song
-python replace_song.py --moment louvor --position 2 --with "Oceanos"
+songbook replace --moment louvor --position 2 --with "Oceanos"
 
 # Replace multiple positions (auto mode)
-python replace_song.py --moment louvor --positions 1,3
+songbook replace --moment louvor --positions 1,3
 
 # Replace for specific date
-python replace_song.py --date 2026-03-15 --moment louvor --position 2
+songbook replace --date 2026-03-15 --moment louvor --position 2
 ```
+
 
 ### PDF Generation
 
@@ -112,14 +138,19 @@ Generate professional PDF setlists for church services:
 
 ```bash
 # Generate markdown + PDF for today
-python generate_setlist.py --pdf
+songbook generate --pdf
 
 # Generate for specific date
-python generate_setlist.py --date 2026-02-15 --pdf
+songbook generate --date 2026-02-15 --pdf
 
 # Dry run (preview without saving to history)
-python generate_setlist.py --no-save --pdf
+songbook generate --no-save --pdf
+
+# Generate PDF from existing setlist
+songbook pdf
+songbook pdf --date 2026-02-15
 ```
+
 
 **PDF Format:**
 - **Page 1**: Table of contents with song list and page numbers
@@ -693,8 +724,9 @@ The project includes several utility scripts for maintaining data quality and im
 
 **Usage:**
 ```bash
-python cleanup_history.py
+songbook cleanup
 ```
+
 
 **Output:**
 - Shows capitalization fixes applied
@@ -717,7 +749,7 @@ Step 3: Songs that need to be added to tags.csv
       → Suggested action: Add to tags.csv with energy and moment tags
 ```
 
-### fix_punctuation.py
+### fix-punctuation
 
 **Purpose:** Normalize punctuation differences in history files to match canonical song names.
 
@@ -727,18 +759,19 @@ Step 3: Songs that need to be added to tags.csv
 - Updates history files in place
 
 **When to use:**
-- After running cleanup_history.py and finding punctuation mismatches
+- After running `songbook cleanup` and finding punctuation mismatches
 - When importing data with inconsistent punctuation
 - As a follow-up to manual history edits
 
 **Usage:**
 ```bash
-python fix_punctuation.py
+songbook fix-punctuation
 ```
 
-**Note:** This script has a predefined mapping of punctuation variants. Edit the `PUNCTUATION_FIXES` dictionary to add new mappings.
 
-### import_real_history.py
+**Note:** This script has a predefined mapping of punctuation variants. Edit the `PUNCTUATION_FIXES` dictionary in `fix_punctuation.py` to add new mappings.
+
+### import-history
 
 **Purpose:** Import external setlist data and convert it to the internal history format.
 
@@ -755,8 +788,9 @@ python fix_punctuation.py
 - Importing bulk historical data
 
 **Usage:**
-1. Edit the `raw_data` dictionary in the script with your data
-2. Run: `python import_real_history.py`
+1. Edit the `raw_data` dictionary in `import_real_history.py` with your data
+2. Run: `songbook import-history`
+
 
 **Data format expected:**
 ```
@@ -790,19 +824,19 @@ python fix_punctuation.py
 ```bash
 # 1. Prepare your data in import_real_history.py
 # 2. Run import
-python import_real_history.py
+songbook import-history
 
 # 3. Check for data quality issues
-python cleanup_history.py
+songbook cleanup
 
 # 4. Fix punctuation if needed
-python fix_punctuation.py
+songbook fix-punctuation
 
 # 5. Verify final state
-python cleanup_history.py  # Should show 0 issues
+songbook cleanup  # Should show 0 issues
 
 # 6. Test generation
-python generate_setlist.py --date 2026-03-01 --no-save
+songbook generate --date 2026-03-01 --no-save
 ```
 
 ## Dependencies

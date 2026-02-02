@@ -31,7 +31,7 @@ An intelligent setlist generator for church worship services that automatically 
 ### Requirements
 
 - Python 3.12 or higher
-- No external dependencies needed for basic usage (uses Python standard library only)
+- Click library for CLI (`pip install click` or `uv pip install click`)
 - Optional: ReportLab library for PDF generation (`pip install reportlab`)
 
 ### Setup
@@ -41,31 +41,29 @@ An intelligent setlist generator for church worship services that automatically 
    ```bash
    python --version  # Should show 3.12 or higher
    ```
+3. Install dependencies:
+   ```bash
+   # Using uv (recommended)
+   uv pip install click reportlab
 
-That's it! The script is ready to use.
+   # OR using pip
+   pip install click reportlab
+   ```
+4. Install the songbook package:
+   ```bash
+   uv pip install -e .
+   # OR
+   pip install -e .
+   ```
 
-### Optional: Using uv
-
-If you have [uv](https://github.com/astral-sh/uv) installed:
-```bash
-uv run generate_setlist.py
-```
-
-### Optional: PDF Generation
-
-To enable PDF output, install ReportLab:
-```bash
-pip install reportlab
-# OR
-uv pip install reportlab
-```
+That's it! The `songbook` command is now available.
 
 ## Quick Start
 
 Generate a setlist for today:
 
 ```bash
-python generate_setlist.py
+songbook generate
 ```
 
 This will:
@@ -81,10 +79,10 @@ Create professional PDF setlists for print or digital distribution:
 
 ```bash
 # Generate markdown + PDF
-python generate_setlist.py --pdf
+songbook generate --pdf
 
 # Generate for specific date
-python generate_setlist.py --date 2026-02-15 --pdf
+songbook generate --date 2026-02-15 --pdf
 ```
 
 **PDF Features**:
@@ -98,10 +96,10 @@ python generate_setlist.py --date 2026-02-15 --pdf
 
 ```bash
 # Generate PDF for the latest setlist
-python generate_pdf.py
+songbook pdf
 
 # Generate PDF for specific date
-python generate_pdf.py --date 2026-01-25
+songbook pdf --date 2026-01-25
 ```
 
 This is useful when you've already generated a setlist but want to create a PDF later.
@@ -176,17 +174,17 @@ The generator will likely pick: Oceanos, A Casa é Sua, and two other high-scori
 
 ```bash
 # Generate setlist for today (markdown only)
-python generate_setlist.py
+songbook generate
 
 # Generate for a specific date
-python generate_setlist.py --date 2026-02-15
+songbook generate --date 2026-02-15
 
 # Generate with PDF output
-python generate_setlist.py --pdf
-python generate_setlist.py --date 2026-02-15 --pdf
+songbook generate --pdf
+songbook generate --date 2026-02-15 --pdf
 
 # Generate PDF from existing setlist
-python generate_pdf.py --date 2026-01-25
+songbook pdf --date 2026-01-25
 ```
 
 ### Using Overrides
@@ -195,13 +193,13 @@ Sometimes you want to force specific songs (e.g., themed service, special reques
 
 ```bash
 # Force "Oceanos" for one of the louvor songs
-python generate_setlist.py --override "louvor:Oceanos"
+songbook generate --override "louvor:Oceanos"
 
 # Force multiple songs for louvor
-python generate_setlist.py --override "louvor:Oceanos,Santo Pra Sempre,Hosana"
+songbook generate --override "louvor:Oceanos,Santo Pra Sempre,Hosana"
 
 # Override multiple moments
-python generate_setlist.py \
+songbook generate \
   --override "prelúdio:Estamos de Pé" \
   --override "louvor:Oceanos,Hosana" \
   --override "poslúdio:Autoridade e Poder"
@@ -217,7 +215,7 @@ python generate_setlist.py \
 Preview a setlist without saving to history:
 
 ```bash
-python generate_setlist.py --no-save
+songbook generate --no-save
 ```
 
 Useful for:
@@ -229,16 +227,20 @@ Useful for:
 
 ```bash
 # Custom file path for markdown output
-python generate_setlist.py --output ~/Desktop/next-sunday.md
+songbook generate --output ~/Desktop/next-sunday.md
 
 # Custom directories for all output
-python generate_setlist.py --output-dir custom/output --history-dir custom/history
+songbook generate --output-dir custom/output --history-dir custom/history
 ```
 
 ### Getting Help
 
 ```bash
-python generate_setlist.py --help
+# Main help
+songbook --help
+
+# Command-specific help
+songbook generate --help
 ```
 
 ### List Available Moments
@@ -246,7 +248,7 @@ python generate_setlist.py --help
 To see all available service moments and their descriptions:
 
 ```bash
-python list_moments.py
+songbook list-moments
 ```
 
 **Output:**
@@ -266,8 +268,8 @@ poslúdio        1        Closing/sending song
 ```
 
 This is helpful when you need to know:
-- What moment names to use with `--moment` in `replace_song.py`
-- What moments to use with `--override` in `generate_setlist.py`
+- What moment names to use with `--moment` in the replace command
+- What moments to use with `--override` in the generate command
 - How many songs each moment requires
 
 ### View Generated Setlist
@@ -276,14 +278,14 @@ Quickly view generated setlists without opening files:
 
 ```bash
 # View the latest setlist
-python view_setlist.py
+songbook view-setlist
 
 # View a specific date
-python view_setlist.py --date 2026-02-15
+songbook view-setlist --date 2026-02-15
 
 # Include song keys in the output
-python view_setlist.py --keys
-python view_setlist.py --date 2026-02-15 --keys
+songbook view-setlist --keys
+songbook view-setlist --date 2026-02-15 --keys
 ```
 
 **Example output:**
@@ -330,13 +332,13 @@ View a specific song's lyrics and chords without opening files:
 
 ```bash
 # View a specific song
-python view_song.py "Oceanos"
+songbook view-song "Oceanos"
 
 # List all available songs
-python view_song.py --list
+songbook view-song --list
 
 # View without metadata (tags, energy)
-python view_song.py "Hosana" --no-metadata
+songbook view-song "Hosana" --no-metadata
 ```
 
 **Example output:**
@@ -392,10 +394,10 @@ For single-song moments (prelúdio, ofertório, saudação, crianças, poslúdio
 
 ```bash
 # Replace prelúdio song (defaults to position 1)
-python replace_song.py --moment prelúdio
+songbook replace --moment prelúdio
 
 # Same as:
-python replace_song.py --moment prelúdio --position 1
+songbook replace --moment prelúdio --position 1
 ```
 
 **When to omit position:**
@@ -409,7 +411,7 @@ Let the system pick the best replacement:
 
 ```bash
 # Replace song at position 2 in louvor
-python replace_song.py --moment louvor --position 2
+songbook replace --moment louvor --position 2
 ```
 
 The system will:
@@ -424,7 +426,7 @@ Specify exactly which song to use:
 
 ```bash
 # Replace with "Oceanos"
-python replace_song.py --moment louvor --position 2 --with "Oceanos"
+songbook replace --moment louvor --position 2 --with "Oceanos"
 ```
 
 **Requirements for manual replacement:**
@@ -436,7 +438,7 @@ python replace_song.py --moment louvor --position 2 --with "Oceanos"
 
 ```bash
 # Replace positions 1 and 3 (both auto-selected)
-python replace_song.py --moment louvor --positions 1,3
+songbook replace --moment louvor --positions 1,3
 ```
 
 **Note:** When replacing multiple positions, all replacements use auto-selection mode (you cannot use `--with` for batch replacements).
@@ -446,7 +448,7 @@ python replace_song.py --moment louvor --positions 1,3
 By default, replaces in the most recent setlist. To target a specific date:
 
 ```bash
-python replace_song.py --date 2026-03-15 --moment louvor --position 2
+songbook replace --date 2026-03-15 --moment louvor --position 2
 ```
 
 ### Position Indexing
@@ -462,16 +464,16 @@ Positions are **1-indexed** for user convenience:
 cat output/2026-03-15.md
 
 # Replace prelúdio song (auto mode)
-python replace_song.py --moment prelúdio --position 1
+songbook replace --moment prelúdio --position 1
 
 # Replace louvor position 3 with specific song
-python replace_song.py --moment louvor --position 3 --with "Grande É o Senhor"
+songbook replace --moment louvor --position 3 --with "Grande É o Senhor"
 
 # Replace multiple louvor positions
-python replace_song.py --moment louvor --positions 2,4
+songbook replace --moment louvor --positions 2,4
 
 # Replace for a past service
-python replace_song.py --date 2025-12-25 --moment louvor --position 1
+songbook replace --date 2025-12-25 --moment louvor --position 1
 ```
 
 ### How It Works
@@ -741,14 +743,14 @@ The generator supports flexible output path configuration with the following pri
 
 **1. CLI Arguments (Highest Priority):**
 ```bash
-python generate_setlist.py --output-dir custom/output --history-dir custom/history
+songbook generate --output-dir custom/output --history-dir custom/history
 ```
 
 **2. Environment Variables:**
 ```bash
 export SETLIST_OUTPUT_DIR=/data/output
 export SETLIST_HISTORY_DIR=/data/history
-python generate_setlist.py
+songbook generate
 ```
 
 **3. Configuration File:**
@@ -766,15 +768,15 @@ If no configuration is provided:
 **Examples:**
 ```bash
 # Use defaults (output/ and history/)
-python generate_setlist.py
+songbook generate
 
 # Custom directories via CLI
-python generate_setlist.py --output-dir /mnt/setlists --history-dir /mnt/tracking
+songbook generate --output-dir /mnt/setlists --history-dir /mnt/tracking
 
 # Custom directories via environment
 export SETLIST_OUTPUT_DIR=$HOME/worship/output
 export SETLIST_HISTORY_DIR=$HOME/worship/history
-python generate_setlist.py
+songbook generate
 ```
 
 ### Change Songs Per Moment
@@ -1081,10 +1083,10 @@ Machine-readable format for tracking which songs were used.
 
 ```bash
 # Generate markdown only
-python generate_setlist.py --date 2026-02-15
+songbook generate --date 2026-02-15
 
 # Generate markdown + PDF
-python generate_setlist.py --date 2026-02-15 --pdf
+songbook generate --date 2026-02-15 --pdf
 ```
 
 **Output**:
@@ -1138,7 +1140,7 @@ This creates a natural emotional arc from high energy to intimate worship.
 Force prayer-focused songs:
 
 ```bash
-python generate_setlist.py \
+songbook generate \
   --date 2026-02-22 \
   --override "louvor:Lugar Secreto,Mais Que Uma Voz,Jesus Em Tua Presença"
 ```
@@ -1164,7 +1166,7 @@ LOUVOR:
 Someone requested "Oceanos" for their birthday:
 
 ```bash
-python generate_setlist.py \
+songbook generate \
   --date 2026-03-01 \
   --override "louvor:Oceanos"
 ```
@@ -1176,7 +1178,7 @@ The system ensures Oceanos is included while selecting 3 other louvor songs auto
 Plan ahead without affecting history:
 
 ```bash
-python generate_setlist.py --date 2026-03-15 --no-save
+songbook generate --date 2026-03-15 --no-save
 ```
 
 Review the output, and if you don't like it, run again for a different selection. When satisfied, run without `--no-save`.
@@ -1186,9 +1188,9 @@ Review the output, and if you don't like it, run again for a different selection
 Generate multiple services:
 
 ```bash
-python generate_setlist.py --date 2026-02-15
-python generate_setlist.py --date 2026-02-22
-python generate_setlist.py --date 2026-03-01
+songbook generate --date 2026-02-15
+songbook generate --date 2026-02-22
+songbook generate --date 2026-03-01
 ```
 
 Each service will automatically avoid songs used in previous services.
@@ -1299,7 +1301,7 @@ If you want complete control over order, override all songs for that moment:
 The script uses today's date by default. Always specify the date:
 
 ```bash
-python generate_setlist.py --date 2026-02-15
+songbook generate --date 2026-02-15
 ```
 
 ### Problem: Encoding errors (special characters)
@@ -1367,7 +1369,7 @@ rm history/*.json
 ```bash
 # Plan next 4 Sundays
 for date in 2026-02-01 2026-02-08 2026-02-15 2026-02-22; do
-  python generate_setlist.py --date $date
+  songbook generate --date $date
 done
 
 # Review all setlists
@@ -1423,7 +1425,7 @@ The project includes utility scripts to help maintain data quality and import ex
 Run the cleanup script to verify all history files match your song database:
 
 ```bash
-python cleanup_history.py
+songbook cleanup
 ```
 
 **What it checks:**
@@ -1453,10 +1455,10 @@ CLEANUP COMPLETE
 
 ### Fixing Punctuation Issues
 
-If cleanup_history.py finds punctuation differences:
+If the cleanup command finds punctuation differences:
 
 ```bash
-python fix_punctuation.py
+songbook fix-punctuation
 ```
 
 This normalizes variations like:
@@ -1470,15 +1472,15 @@ If you're migrating from another system or have historical setlist data:
 1. **Edit** `import_real_history.py` with your data
 2. **Run the import:**
    ```bash
-   python import_real_history.py
+   songbook import-history
    ```
 3. **Check data quality:**
    ```bash
-   python cleanup_history.py
+   songbook cleanup
    ```
 4. **Fix any issues found:**
    ```bash
-   python fix_punctuation.py  # If needed
+   songbook fix-punctuation  # If needed
    ```
 
 **Data format required:**
@@ -1518,20 +1520,20 @@ When importing historical data from another system:
 # (Add your JSON data to the raw_data dictionary)
 
 # Step 2: Run the import
-python import_real_history.py
+songbook import-history
 
 # Step 3: Verify data quality
-python cleanup_history.py
+songbook cleanup
 
 # Step 4: Fix punctuation if needed
-python fix_punctuation.py
+songbook fix-punctuation
 
 # Step 5: Final verification
-python cleanup_history.py
+songbook cleanup
 # Should show: "✅ All songs in history match tags.csv perfectly!"
 
 # Step 6: Test generation with real data
-python generate_setlist.py --date 2026-03-01 --no-save
+songbook generate --date 2026-03-01 --no-save
 ```
 
 ### Data Quality Best Practices
