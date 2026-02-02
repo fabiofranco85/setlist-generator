@@ -38,7 +38,7 @@ This is a **setlist generator** for church worship services. It intelligently se
 
 ## Key Commands
 
-**NEW: Unified CLI** - All commands are now available through the `songbook` command. See [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) for details.
+**NEW: Unified CLI** - All commands are now available through the `songbook` command.
 
 ### Generate Setlist
 ```bash
