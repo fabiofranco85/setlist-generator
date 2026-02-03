@@ -10,6 +10,7 @@ An intelligent setlist generator for church worship services that automatically 
 - **Service Structure**: Organizes songs into worship moments (prelúdio, louvor, ofertório, etc.)
 - **Manual Overrides**: Force specific songs when needed while letting the system fill the rest
 - **Full Chord Sheets**: Generates complete setlists with chords and lyrics for musicians
+- **Chord Transposition**: Transpose any song to a different key with preview and save modes
 - **History Tracking**: Maintains a database of past setlists for long-term variety
 
 ## 📋 Table of Contents
@@ -18,6 +19,7 @@ An intelligent setlist generator for church worship services that automatically 
 - [Quick Start](#quick-start)
 - [How It Works](#how-it-works)
 - [Usage Guide](#usage-guide)
+- [Transposing Songs](#transposing-songs)
 - [Replacing Songs](#replacing-songs)
 - [Managing Songs](#managing-songs)
 - [Configuration](#configuration)
@@ -401,6 +403,10 @@ songbook view-song --list
 
 # View without metadata (tags, energy)
 songbook view-song "Hosana" --no-metadata
+
+# View transposed to a different key (display-only)
+songbook view-song "Oceanos" --transpose G
+songbook view-song "Oceanos" -t D
 ```
 
 **Example output:**
@@ -435,16 +441,97 @@ G         D       A
 - Shows song metadata (tags, energy level)
 - Smart search: suggests similar songs if name not found
 - List all songs with `--list` flag
+- Transpose to any key with `--transpose` (display-only, never modifies files)
 
 **Use cases:**
 - Quickly reference chords during practice
 - Check song key before rehearsal
 - Review lyrics without opening files
 - Find songs by partial name match
+- Preview how a song looks in a different key
 
 **Options:**
 - `--list` or `-l`: List all available songs with their keys and tags
 - `--no-metadata`: Hide tags and energy information
+- `--transpose KEY` or `-t KEY`: Transpose chords to target key (display-only)
+
+## Transposing Songs
+
+Transpose any song's chords to a different key. This is useful when a vocalist needs a different key, or when adapting songs for different instruments.
+
+### Preview Transposition (Default)
+
+By default, transposition only displays the result without modifying any files:
+
+```bash
+# Preview "Oceanos" transposed from Bm to G
+songbook transpose "Oceanos" --to G
+```
+
+**Example output:**
+```
+======================================================================
+Oceanos (Gm)  [original: Bm]
+======================================================================
+
+Tags:   louvor(2)
+Energy: 3.0 - Moderate-low, reflective, slower
+
+----------------------------------------------------------------------
+
+Gm                   F/A     Bb
+   Tua voz me chama sobre as águas
+         F              Eb
+Onde os meus pés podem falhar
+...
+```
+
+You can also preview transpositions using the `view-song` command, which is always display-only:
+
+```bash
+songbook view-song "Oceanos" --transpose G
+songbook view-song "Oceanos" -t D
+```
+
+### Save Transposed Chords
+
+To permanently update the chord file with transposed chords, use `--save`:
+
+```bash
+songbook transpose "Oceanos" --to G --save
+```
+
+This overwrites `chords/Oceanos.md` with the transposed content. The heading key is updated too (`### Oceanos (Gm)`).
+
+**To undo:** simply transpose back to the original key with `--save`:
+```bash
+songbook transpose "Oceanos" --to B --save
+```
+
+### How It Works
+
+- **Chromatic transposition**: Uses modular arithmetic on the 12-semitone scale
+- **Sharp/flat conventions**: Automatically uses flats for flat keys (Bb, Eb, Gm, Dm, etc.) and sharps for sharp keys (A, E, F#m, etc.)
+- **Minor key inference**: If a song is in Bm and you type `--to G`, the system infers Gm (preserving the minor quality) and uses the correct accidentals
+- **Column alignment**: Chord positions are preserved relative to lyrics underneath. When a transposed chord is wider (e.g., `G` → `F#`), subsequent chords shift minimally to maintain readability
+- **All chord types supported**: Simple (`Am`), slash (`A/C#`), extended (`F7M(9)`, `Em7(11)/B`, `G4(6)`)
+
+### Examples
+
+```bash
+# Preview transposition to a flat key
+songbook transpose "Hosana" --to Bb
+
+# Complex chords (F7M(9), G4(6), etc.) are fully supported
+songbook transpose "Lugar Secreto" --to A
+
+# Same key detection
+songbook transpose "Oceanos" --to Bm
+# Output: "Already in Bm — showing original."
+
+# Save permanently
+songbook transpose "Hosana" --to C --save
+```
 
 ## Replacing Songs
 

@@ -56,6 +56,7 @@ Where:
     ├── selector.py          # Song selection algorithms
     ├── paths.py             # Path resolution utilities
     ├── ordering.py          # Energy-based ordering
+    ├── transposer.py        # Chord transposition (chromatic)
     ├── generator.py         # Core setlist generation
     ├── formatter.py         # Output formatting (markdown, JSON)
     └── pdf_formatter.py     # PDF generation (ReportLab)
@@ -77,6 +78,7 @@ The codebase is organized into focused modules for better maintainability and re
 - `loader.py` - Load songs from CSV and history from JSON
 - `selector.py` - Song selection algorithms (scoring, recency calculation)
 - `ordering.py` - Energy-based ordering for emotional arcs
+- `transposer.py` - Deterministic chromatic chord transposition (pure functions, `re` only)
 - `generator.py` - Orchestrates the complete setlist generation (includes SetlistGenerator class)
 - `formatter.py` - Output formatting (markdown, JSON)
 - `pdf_formatter.py` - PDF generation using ReportLab
@@ -96,7 +98,7 @@ The codebase uses a **hybrid approach** that combines functional and object-orie
 - Encapsulating complex workflows
 
 **When to Use Functions:**
-- Stateless transformations (energy ordering)
+- Stateless transformations (energy ordering, chord transposition)
 - Pure algorithms (score calculation)
 - Simple utilities (formatting)
 
@@ -338,6 +340,29 @@ setlist = generate_setlist(
 ```
 
 Both APIs produce identical results. New code should prefer `SetlistGenerator` for better state management.
+
+### Chord Transposition
+
+The `transposer` module provides deterministic chromatic transposition as pure functions:
+
+```python
+from library import transpose_content, calculate_semitones, should_use_flats, resolve_target_key
+
+# Transpose song content from Bm to G (resolves to Gm for minor keys)
+original_key = "Bm"
+target_input = "G"
+effective_key = resolve_target_key(original_key, target_input)  # "Gm"
+semitones = calculate_semitones(original_key, effective_key)     # 8
+use_flats = should_use_flats(effective_key)                     # True (Gm uses flats)
+
+transposed = transpose_content(song.content, semitones, use_flats)
+```
+
+**Key functions:**
+- `transpose_content(content, semitones, use_flats)` - Transpose full markdown content
+- `calculate_semitones(from_key, to_key)` - Interval between two keys
+- `should_use_flats(key)` - Whether a key conventionally uses flats
+- `resolve_target_key(from_key, to_key)` - Preserve minor/major quality from source key
 
 ## Dependencies
 

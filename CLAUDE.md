@@ -38,6 +38,9 @@ songbook generate --date 2026-02-15  # Generate setlist
 songbook view-setlist --keys         # View setlist with keys
 songbook view-song "Oceanos"         # View song details
 songbook replace --moment louvor --position 2  # Replace song
+songbook transpose "Oceanos" --to G  # Transpose chords (preview)
+songbook transpose "Oceanos" --to G --save  # Transpose and persist
+songbook view-song "Oceanos" -t G    # View song transposed
 songbook pdf --date 2026-02-15       # Generate PDF
 songbook list-moments                # List available moments
 songbook cleanup                     # Data quality checks
@@ -70,6 +73,7 @@ This is a **setlist generator** for church worship services. It intelligently se
 │   ├── loader.py               # Data loading
 │   ├── selector.py             # Song selection algorithms
 │   ├── ordering.py             # Energy-based ordering
+│   ├── transposer.py           # Chord transposition (chromatic)
 │   ├── generator.py            # Core setlist generation
 │   ├── formatter.py            # Output formatting
 │   └── pdf_formatter.py        # PDF generation
@@ -124,6 +128,13 @@ songbook generate --pdf  # Include PDF output
 ```bash
 songbook replace --moment louvor --position 2
 songbook replace --moment louvor --position 2 --with "Oceanos"  # Manual
+```
+
+**Transpose a song:**
+```bash
+songbook transpose "Oceanos" --to G          # Preview only
+songbook transpose "Oceanos" --to G --save   # Overwrite chord file
+songbook view-song "Oceanos" --transpose G   # View transposed (always dry)
 ```
 
 **View setlist:**

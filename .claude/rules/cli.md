@@ -28,6 +28,8 @@ songbook generate --date 2026-02-15  # Generate setlist
 songbook view-setlist --keys         # View setlist with keys
 songbook view-song "Oceanos"         # View song details
 songbook replace --moment louvor --position 2  # Replace song
+songbook transpose "Oceanos" --to G  # Transpose chords (preview)
+songbook view-song "Oceanos" -t G    # View transposed (display-only)
 songbook pdf --date 2026-02-15       # Generate PDF
 songbook list-moments                # List available moments
 songbook cleanup                     # Data quality checks
@@ -131,22 +133,68 @@ songbook view-song --list
 
 # View without metadata (tags, energy)
 songbook view-song "Hosana" --no-metadata
+
+# View transposed to a different key (display-only, never modifies files)
+songbook view-song "Oceanos" --transpose G
+songbook view-song "Oceanos" -t D
 ```
 
 **Options:**
-- `--list` - List all available songs
+- `--list` or `-l` - List all available songs
 - `--no-metadata` - Hide tags and energy information
+- `--transpose KEY` or `-t KEY` - Transpose to target key (display-only)
 
 **Output:**
 Displays:
-- Song title and key
+- Song title and key (shows `[original: Bm]` when transposed)
 - Tags (moment assignments with weights)
 - Energy level and description
 - Full chord notation and lyrics
+- When target key matches original: "Already in X — showing original."
 
 **Features:**
 - Smart search: If song not found, suggests similar songs based on partial name match
 - Fuzzy matching for typos and partial names
+- Transposition preserves chord-lyric column alignment
+- Minor/major quality inferred from original key (e.g., `--transpose G` on a Bm song transposes to Gm)
+
+---
+
+### songbook transpose
+
+Transpose a song's chords to a different key.
+
+**Usage:**
+```bash
+# Preview transposition (display-only, no files modified)
+songbook transpose "Oceanos" --to G
+
+# Persist transposed chords to the chord file
+songbook transpose "Oceanos" --to G --save
+
+# Flat key conventions are handled automatically
+songbook transpose "Hosana" --to Bb
+
+# Complex chords (F7M(9), Em7(11)/B, etc.) are fully supported
+songbook transpose "Lugar Secreto" --to A
+```
+
+**Options:**
+- `--to KEY` - Required: Target key (e.g. G, Bb, F#m)
+- `--save` - Overwrite `chords/<song>.md` with transposed content
+
+**Behavior:**
+- **Default (no `--save`)**: Preview mode — shows transposed output without modifying files
+- **With `--save`**: Overwrites the chord file in place with transposed content
+- **Same key**: Detects when song is already in target key, shows "Already in X" message
+- **Quality inference**: If original key is minor (Bm) and target is major (G), automatically transposes to the minor equivalent (Gm) to preserve sharp/flat conventions
+- **Column alignment**: Chord positions are preserved relative to lyrics; longer chords get minimum 1-space gap
+
+**Supported chord patterns:**
+- Simple: `G`, `Am`, `C#m`, `Bb`
+- Slash: `A/C#`, `E/G#`, `Em7(11)/B`
+- Extended: `F7M(9)`, `Dm7(9)`, `G4(6)`, `A7M`, `C#7(9+)`, `B7(13-)`
+- Section markers (`[Intro]`, `[Refrão]`, etc.) are preserved
 
 ---
 
@@ -400,6 +448,13 @@ songbook fix-punctuation     # Fix punctuation
 songbook cleanup             # Verify (should show 0 issues)
 ```
 
+**Transpose a song:**
+```bash
+songbook transpose "Oceanos" --to G          # Preview
+songbook transpose "Oceanos" --to G --save   # Persist to file
+songbook view-song "Oceanos" -t D            # Quick preview via view-song
+```
+
 **Preview without saving:**
 ```bash
 songbook generate --date 2026-03-01 --no-save
@@ -455,14 +510,18 @@ songbook install-completion --shell fish
 Then restart your shell or run `source ~/.bashrc` (bash) / `source ~/.zshrc` (zsh).
 
 **What gets completed:**
-- Command names (generate, view-song, replace, etc.)
+- Command names (generate, view-song, replace, transpose, etc.)
 - Song names (from database.csv)
 - Moment names (prelúdio, louvor, ofertório, etc.)
+- Musical key names (C, C#, Db, ..., Bm, F#m — for `--to` and `--transpose`)
 - Dates (from history directory)
-- Option names (--date, --moment, --with, etc.)
+- Option names (--date, --moment, --with, --to, etc.)
 
 **Completion points:**
 - `view-song SONG_NAME` - autocomplete song names
+- `view-song --transpose` - autocomplete key names
+- `transpose SONG_NAME` - autocomplete song names
+- `transpose --to` - autocomplete key names
 - `replace --moment` - autocomplete moment names
 - `replace --with` - autocomplete song names
 - All `--date` options - autocomplete available dates from history

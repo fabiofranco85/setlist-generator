@@ -121,6 +121,42 @@ ENERGY_ORDERING_RULES = {
 }
 ```
 
+### transposer.py
+**Purpose:** Deterministic chromatic chord transposition
+
+**Contents:**
+- `transpose_note(note, semitones, use_flats)` - Shift a single note by N semitones
+- `transpose_chord(chord, semitones, use_flats)` - Transpose full chord symbol (root + optional bass)
+- `is_chord_line(line)` - Classify a text line as chords vs lyrics
+- `transpose_line(line, semitones, use_flats)` - Transpose all chords in a line, preserving column alignment
+- `transpose_content(content, semitones, use_flats)` - Transpose entire song markdown (chord lines + heading key)
+- `calculate_semitones(from_key, to_key)` - Calculate interval between two keys
+- `should_use_flats(target_key)` - Determine sharp/flat convention for target key
+- `resolve_target_key(from_key, to_key)` - Preserve minor/major quality from source key
+
+**Key algorithm — column alignment:**
+1. Record each chord's start column in the original line
+2. Transpose all chords
+3. Place each transposed chord at the original column
+4. If a longer chord overflows, ensure minimum 1-space gap
+
+**Chord regex** handles all patterns in the codebase:
+- Simple: `G`, `Am`, `C#m`, `Bb`
+- Slash: `A/C#`, `E/G#`, `Em7(11)/B`
+- Extended: `F7M(9)`, `Dm7(9)`, `G4(6)`, `A7M`
+
+**When to modify:**
+- Supporting new chord notation patterns
+- Changing sharp/flat key conventions
+- Adjusting line classification heuristics
+- Adding new enharmonic spellings
+
+**Implementation notes:**
+- Pure functions only (no dependencies beyond `re`)
+- Follows the project convention for stateless algorithm modules (like `ordering.py`)
+- Transposition is modular arithmetic: `(note_index + semitones) % 12`
+- `resolve_target_key()` infers minor quality: `Bm` + `--to G` → `Gm`
+
 ### generator.py
 **Purpose:** Orchestrates setlist generation
 
@@ -226,6 +262,12 @@ def apply_energy_ordering(songs_in_moment, moment, songs, override_count):
 def calculate_recency_scores(songs, history, target_date):
     """Calculate time-based recency scores."""
     # Deterministic based on inputs
+    pass
+
+# Pure transformation (library/transposer.py)
+def transpose_content(content, semitones, use_flats):
+    """Transpose all chords in song content."""
+    # Stateless — same inputs always produce same output
     pass
 
 # Simple utility (library/formatter.py)
@@ -487,6 +529,18 @@ setlist = generator.generate(date="2026-02-15")
 # OR functional API (backward compatible)
 from library import generate_setlist
 setlist = generate_setlist(songs, history, date="2026-02-15")
+```
+
+### Transposition Components
+```python
+from library import transpose_content, calculate_semitones, should_use_flats, resolve_target_key
+
+# Transpose a song from Bm to G (auto-resolves to Gm)
+effective_key = resolve_target_key("Bm", "G")  # "Gm"
+semitones = calculate_semitones("Bm", effective_key)  # 8
+use_flats = should_use_flats(effective_key)  # True
+
+transposed = transpose_content(song.content, semitones, use_flats)
 ```
 
 ### Formatting Components
