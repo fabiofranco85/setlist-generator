@@ -27,6 +27,7 @@ songbook --help                      # Main help
 songbook generate --date 2026-02-15  # Generate setlist
 songbook view-setlist --keys         # View setlist with keys
 songbook view-song "Oceanos"         # View song details
+songbook info "Oceanos"              # Song statistics and history
 songbook replace --moment louvor --position 2  # Replace song
 songbook transpose "Oceanos" --to G  # Transpose chords (preview)
 songbook view-song "Oceanos" -t G    # View transposed (display-only)
@@ -157,6 +158,61 @@ Displays:
 - Fuzzy matching for typos and partial names
 - Transposition preserves chord-lyric column alignment
 - Minor/major quality inferred from original key (e.g., `--transpose G` on a Bm song transposes to Gm)
+
+---
+
+### songbook info
+
+Show detailed statistics for a song: metadata, recency score, and full usage history.
+
+**Usage:**
+```bash
+# View statistics for a song
+songbook info "Oceanos"
+
+# Fuzzy search on partial match
+songbook info "ocean"
+```
+
+**Arguments:**
+- `SONG_NAME` - Name of the song to look up (supports tab completion)
+
+**Output:**
+Displays:
+- Song title and key (extracted from chord file heading)
+- Energy level and description
+- Tags with weights
+- Recency score (0.00 = just used, 1.00 = never used)
+- Days since last use (or "never")
+- Full usage history with dates and moments
+
+**Example output:**
+```
+============================================================
+Oceanos (Bm)
+============================================================
+
+Energy:  3 - Moderate-low, reflective, slower
+Tags:    louvor(2)
+
+------------------------------------------------------------
+RECENCY
+------------------------------------------------------------
+Score:          0.99
+Last used:      191 day(s) ago
+
+------------------------------------------------------------
+USAGE HISTORY (2 time(s))
+------------------------------------------------------------
+  2025-05-31  louvor
+  2025-07-27  louvor
+```
+
+**Edge cases:**
+- **Song not found**: Shows fuzzy-match suggestions, exits with code 1
+- **No chord file**: Title shown without key
+- **Never used**: Score = 1.00, "Last used: never", "(no usage history)"
+- **No history directory**: Treated as "never used"
 
 ---
 
@@ -448,6 +504,11 @@ songbook fix-punctuation     # Fix punctuation
 songbook cleanup             # Verify (should show 0 issues)
 ```
 
+**Check song statistics:**
+```bash
+songbook info "Oceanos"              # Recency, history, metadata
+```
+
 **Transpose a song:**
 ```bash
 songbook transpose "Oceanos" --to G          # Preview
@@ -518,6 +579,7 @@ Then restart your shell or run `source ~/.bashrc` (bash) / `source ~/.zshrc` (zs
 - Option names (--date, --moment, --with, --to, etc.)
 
 **Completion points:**
+- `info SONG_NAME` - autocomplete song names
 - `view-song SONG_NAME` - autocomplete song names
 - `view-song --transpose` - autocomplete key names
 - `transpose SONG_NAME` - autocomplete song names

@@ -19,6 +19,7 @@ An intelligent setlist generator for church worship services that automatically 
 - [Quick Start](#quick-start)
 - [How It Works](#how-it-works)
 - [Usage Guide](#usage-guide)
+- [Song Statistics](#song-statistics)
 - [Transposing Songs](#transposing-songs)
 - [Replacing Songs](#replacing-songs)
 - [Managing Songs](#managing-songs)
@@ -454,6 +455,47 @@ G         D       A
 - `--list` or `-l`: List all available songs with their keys and tags
 - `--no-metadata`: Hide tags and energy information
 - `--transpose KEY` or `-t KEY`: Transpose chords to target key (display-only)
+
+## Song Statistics
+
+View detailed statistics for any song, including metadata, recency score, and full usage history:
+
+```bash
+songbook info "Oceanos"
+```
+
+**Example output:**
+```
+============================================================
+Oceanos (Bm)
+============================================================
+
+Energy:  3 - Moderate-low, reflective, slower
+Tags:    louvor(2)
+
+------------------------------------------------------------
+RECENCY
+------------------------------------------------------------
+Score:          0.99
+Last used:      191 day(s) ago
+
+------------------------------------------------------------
+USAGE HISTORY (2 time(s))
+------------------------------------------------------------
+  2025-05-31  louvor
+  2025-07-27  louvor
+```
+
+**Features:**
+- Shows song key, energy level, and moment tags with weights
+- Displays recency score (0.00 = just used, 1.00 = never used / very long ago)
+- Lists every date the song was used and in which moment
+- Smart search: suggests similar songs if name not found
+
+**Use cases:**
+- Check when a song was last used before adding it to an override
+- Understand why a song keeps or doesn't keep appearing in setlists
+- Review a song's full performance history
 
 ## Transposing Songs
 

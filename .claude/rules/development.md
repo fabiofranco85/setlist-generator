@@ -75,10 +75,12 @@ class Setlist:
 - Lazy loads chords content (only when needed)
 
 ### selector.py
-**Purpose:** Song selection algorithms
+**Purpose:** Song selection algorithms and usage queries
 
 **Contents:**
 - `calculate_recency_scores(songs, history, target_date)` - Time-based decay scoring
+- `get_song_usage_history(song_title, history)` - Full usage history for a song (dates + moments)
+- `get_days_since_last_use(song_title, history, current_date)` - Days since most recent use (or None)
 - `select_songs_for_moment(moment, count, songs, recency_scores, already_selected, overrides)` - Core selection algorithm
 
 **Key algorithm:**

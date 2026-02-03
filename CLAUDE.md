@@ -37,6 +37,7 @@ songbook --help                      # Main help
 songbook generate --date 2026-02-15  # Generate setlist
 songbook view-setlist --keys         # View setlist with keys
 songbook view-song "Oceanos"         # View song details
+songbook info "Oceanos"              # Song statistics and history
 songbook replace --moment louvor --position 2  # Replace song
 songbook transpose "Oceanos" --to G  # Transpose chords (preview)
 songbook transpose "Oceanos" --to G --save  # Transpose and persist
@@ -128,6 +129,11 @@ songbook generate --pdf  # Include PDF output
 ```bash
 songbook replace --moment louvor --position 2
 songbook replace --moment louvor --position 2 --with "Oceanos"  # Manual
+```
+
+**Song statistics:**
+```bash
+songbook info "Oceanos"  # Metadata, recency, and usage history
 ```
 
 **Transpose a song:**

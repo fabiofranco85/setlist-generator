@@ -76,7 +76,7 @@ The codebase is organized into focused modules for better maintainability and re
 - `config.py` - Configuration constants (moments, weights, energy rules)
 - `models.py` - Data structures (Song, Setlist dataclasses)
 - `loader.py` - Load songs from CSV and history from JSON
-- `selector.py` - Song selection algorithms (scoring, recency calculation)
+- `selector.py` - Song selection algorithms (scoring, recency calculation, usage queries)
 - `ordering.py` - Energy-based ordering for emotional arcs
 - `transposer.py` - Deterministic chromatic chord transposition (pure functions, `re` only)
 - `generator.py` - Orchestrates the complete setlist generation (includes SetlistGenerator class)
