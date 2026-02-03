@@ -9,6 +9,7 @@ from cli.completions import (
     complete_song_names,
     complete_moment_names,
     complete_history_dates,
+    complete_key_names,
 )
 
 
@@ -24,6 +25,7 @@ def cli():
       generate       Generate new setlist for a service date
       view-setlist   View generated setlist (markdown format)
       view-song      View song lyrics, chords, and metadata
+      transpose      Transpose a song to a different key
       replace        Replace song in existing setlist
       pdf            Generate PDF from existing setlist
       list-moments   List available service moments
@@ -83,7 +85,8 @@ def view_setlist(date, keys, output_dir, history_dir):
 @click.argument("song_name", required=False, shell_complete=complete_song_names)
 @click.option("--list", "-l", is_flag=True, help="List all songs")
 @click.option("--no-metadata", is_flag=True, help="Hide tags/energy")
-def view_song(song_name, list, no_metadata):
+@click.option("--transpose", "-t", "transpose_to", shell_complete=complete_key_names, help="Transpose to key (e.g. G, Bb, F#m)")
+def view_song(song_name, list, no_metadata, transpose_to):
     """View song lyrics, chords, and metadata.
 
     \b
@@ -91,9 +94,33 @@ def view_song(song_name, list, no_metadata):
       songbook view-song "Oceanos"
       songbook view-song --list
       songbook view-song "Hosana" --no-metadata
+      songbook view-song "Oceanos" --transpose G
+      songbook view-song "Oceanos" -t D
     """
     from cli.commands.view_song import run
-    run(song_name, list, no_metadata)
+    run(song_name, list, no_metadata, transpose_to)
+
+
+@cli.command()
+@click.argument("song_name", shell_complete=complete_song_names)
+@click.option("--to", "to_key", required=True, shell_complete=complete_key_names, help="Target key (e.g. G, Bb, F#m)")
+@click.option("--save", is_flag=True, help="Overwrite the chord file with transposed chords")
+def transpose(song_name, to_key, save):
+    """Transpose a song to a different key.
+
+    \b
+    By default, shows a preview without modifying files.
+    Use --save to overwrite the chord file with the transposed chords.
+
+    \b
+    Examples:
+      songbook transpose "Oceanos" --to G          # preview only
+      songbook transpose "Oceanos" --to G --save    # persist to file
+      songbook transpose "Hosana" --to Bb
+      songbook transpose "Lugar Secreto" --to A
+    """
+    from cli.commands.transpose import run
+    run(song_name, to_key, save=save)
 
 
 @cli.command("list-moments")

@@ -5,6 +5,7 @@ Completions are dynamically generated from:
 - Song names (database.csv)
 - Moment names (config.MOMENTS_CONFIG)
 - Available dates (history/*.json files)
+- Musical key names (for transposition commands)
 
 All functions gracefully handle errors by returning empty lists rather than raising exceptions.
 """
@@ -93,6 +94,33 @@ def complete_moment_names(ctx, param, incomplete: str) -> List[CompletionItem]:
     except Exception:
         # Gracefully return empty list on any error
         return []
+
+
+# All valid musical keys for transposition tab-completion
+_ALL_KEYS = [
+    "C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B",
+    "Cm", "C#m", "Dm", "D#m", "Ebm", "Em", "Fm", "F#m", "Gm", "G#m", "Am", "A#m", "Bbm", "Bm",
+]
+
+
+def complete_key_names(ctx, param, incomplete: str) -> List[CompletionItem]:
+    """Complete musical key names for transposition.
+
+    Args:
+        ctx: Click context object
+        param: Click parameter object
+        incomplete: Partial input from user
+
+    Returns:
+        List of CompletionItem objects matching the incomplete input.
+
+    Example:
+        Input: "B" -> Returns: ["B", "Bb", "Bm", "Bbm"]
+        Input: "F#" -> Returns: ["F#", "F#m"]
+    """
+    incomplete_lower = incomplete.lower()
+    matching = [k for k in _ALL_KEYS if k.lower().startswith(incomplete_lower)]
+    return [CompletionItem(k) for k in matching]
 
 
 def complete_history_dates(ctx, param, incomplete: str) -> List[CompletionItem]:

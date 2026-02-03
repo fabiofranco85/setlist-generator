@@ -23,6 +23,12 @@ from .replacer import (
     select_replacement_song,
     validate_replacement_request,
 )
+from .transposer import (
+    calculate_semitones,
+    resolve_target_key,
+    should_use_flats,
+    transpose_content,
+)
 
 __all__ = [
     # Configuration
@@ -55,4 +61,9 @@ __all__ = [
     "replace_song_in_setlist",
     "replace_songs_batch",
     "validate_replacement_request",
+    # Transposition
+    "transpose_content",
+    "calculate_semitones",
+    "should_use_flats",
+    "resolve_target_key",
 ]

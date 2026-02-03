@@ -47,13 +47,15 @@ def list_all_songs(songs: dict):
     print()
 
 
-def display_song(song_name: str, songs: dict, show_metadata: bool = True):
-    """Display a song's content.
+def display_song(song_name: str, songs: dict, show_metadata: bool = True,
+                 transpose_to: str | None = None):
+    """Display a song's content, optionally transposed.
 
     Args:
         song_name: Name of the song to display
         songs: Dictionary of song name -> Song object
         show_metadata: Whether to show metadata (tags, energy)
+        transpose_to: Target key for transposition (None = no transposition)
     """
     song = songs.get(song_name)
 
@@ -84,6 +86,35 @@ def display_song(song_name: str, songs: dict, show_metadata: bool = True):
     key = ""
     content = song.content or ""
 
+    # Apply transposition if requested
+    original_key = ""
+    if transpose_to:
+        from library.transposer import (
+            calculate_semitones,
+            resolve_target_key,
+            should_use_flats,
+            transpose_content,
+        )
+
+    if transpose_to and content:
+        # Extract original key before transposing
+        first_line = content.split("\n")[0].strip()
+        if "(" in first_line and ")" in first_line:
+            s = first_line.rfind("(")
+            e = first_line.rfind(")")
+            if s != -1 and e != -1 and e > s:
+                original_key = first_line[s + 1 : e].strip()
+
+        if original_key:
+            try:
+                effective_key = resolve_target_key(original_key, transpose_to)
+                semitones = calculate_semitones(original_key, effective_key)
+                use_flats = should_use_flats(effective_key)
+                content = transpose_content(content, semitones, use_flats)
+            except ValueError as exc:
+                print(f"\nTransposition error: {exc}")
+                return 1
+
     if content:
         lines = content.split("\n")
         first_line = lines[0].strip()
@@ -104,11 +135,23 @@ def display_song(song_name: str, songs: dict, show_metadata: bool = True):
 
     # Display header
     print("\n" + "=" * 70)
-    if key:
+    if transpose_to and original_key:
+        semitones = calculate_semitones(original_key, transpose_to)
+        if semitones == 0:
+            print(f"{title} ({key})")
+        else:
+            print(f"{title} ({key})  [original: {original_key}]")
+    elif key:
         print(f"{title} ({key})")
     else:
         print(title)
     print("=" * 70)
+
+    # Note when already in target key
+    if transpose_to and original_key:
+        semitones = calculate_semitones(original_key, transpose_to)
+        if semitones == 0:
+            print(f"\n  Already in {transpose_to} — showing original.")
 
     # Show metadata if requested
     if show_metadata:
@@ -146,7 +189,7 @@ def display_song(song_name: str, songs: dict, show_metadata: bool = True):
     return 0
 
 
-def run(song_name, list_songs, no_metadata):
+def run(song_name, list_songs, no_metadata, transpose_to=None):
     """
     View a specific song's lyrics and chords.
 
@@ -154,6 +197,7 @@ def run(song_name, list_songs, no_metadata):
         song_name: Name of the song to view
         list_songs: Whether to list all available songs
         no_metadata: Whether to hide metadata (tags, energy)
+        transpose_to: Target key for transposition (None = no transposition)
     """
     from cli.cli_utils import handle_error
 
@@ -182,6 +226,7 @@ def run(song_name, list_songs, no_metadata):
         raise SystemExit(1)
 
     # Display the song
-    exit_code = display_song(song_name, songs, show_metadata=not no_metadata)
+    exit_code = display_song(song_name, songs, show_metadata=not no_metadata,
+                             transpose_to=transpose_to)
     if exit_code != 0:
         raise SystemExit(exit_code)
