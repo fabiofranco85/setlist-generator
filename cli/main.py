@@ -25,6 +25,7 @@ def cli():
       generate       Generate new setlist for a service date
       view-setlist   View generated setlist (markdown format)
       view-song      View song lyrics, chords, and metadata
+      info           Show detailed statistics for a song
       transpose      Transpose a song to a different key
       replace        Replace song in existing setlist
       pdf            Generate PDF from existing setlist
@@ -99,6 +100,23 @@ def view_song(song_name, list, no_metadata, transpose_to):
     """
     from cli.commands.view_song import run
     run(song_name, list, no_metadata, transpose_to)
+
+
+@cli.command()
+@click.argument("song_name", shell_complete=complete_song_names)
+def info(song_name):
+    """Show detailed statistics for a song.
+
+    \b
+    Displays metadata, recency score, and full usage history.
+
+    \b
+    Examples:
+      songbook info "Oceanos"
+      songbook info "Hosana"
+    """
+    from cli.commands.info import run
+    run(song_name)
 
 
 @cli.command()

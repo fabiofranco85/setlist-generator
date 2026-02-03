@@ -13,6 +13,11 @@ from .config import (
 from .formatter import format_setlist_markdown, save_setlist_history
 from .generator import SetlistGenerator, generate_setlist
 from .loader import load_history, load_songs
+from .selector import (
+    calculate_recency_scores,
+    get_days_since_last_use,
+    get_song_usage_history,
+)
 from .models import Setlist, Song
 from .paths import PathConfig, get_output_paths
 from .pdf_formatter import generate_setlist_pdf
@@ -46,6 +51,9 @@ __all__ = [
     # Core functions
     "load_songs",
     "load_history",
+    "calculate_recency_scores",
+    "get_song_usage_history",
+    "get_days_since_last_use",
     "generate_setlist",
     "format_setlist_markdown",
     "save_setlist_history",

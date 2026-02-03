@@ -75,6 +75,80 @@ def calculate_recency_scores(
     return scores
 
 
+def get_song_usage_history(
+    song_title: str,
+    history: list[dict],
+) -> list[dict]:
+    """
+    Get full usage history for a specific song.
+
+    Scans all history entries for appearances of the song.
+
+    Args:
+        song_title: Title of the song to search for
+        history: List of historical setlists (sorted by date, most recent first)
+
+    Returns:
+        List of {"date": "YYYY-MM-DD", "moments": ["louvor", ...]} sorted ascending by date
+    """
+    usages = []
+
+    for setlist in history:
+        setlist_date = setlist.get("date")
+        if not setlist_date:
+            continue
+
+        moments_found = []
+        for moment, song_list in setlist.get("moments", {}).items():
+            if song_title in song_list:
+                moments_found.append(moment)
+
+        if moments_found:
+            usages.append({"date": setlist_date, "moments": moments_found})
+
+    # History is newest-first; reverse to return ascending by date
+    usages.reverse()
+    return usages
+
+
+def get_days_since_last_use(
+    song_title: str,
+    history: list[dict],
+    current_date: str | None = None,
+) -> int | None:
+    """
+    Get the number of days since a song was last used.
+
+    Args:
+        song_title: Title of the song to search for
+        history: List of historical setlists (sorted by date, most recent first)
+        current_date: Reference date (YYYY-MM-DD, defaults to today)
+
+    Returns:
+        Number of days since last use, or None if never used
+    """
+    if current_date is None:
+        today = date.today()
+    else:
+        today = datetime.strptime(current_date, "%Y-%m-%d").date()
+
+    # History is sorted most recent first — find first match
+    for setlist in history:
+        setlist_date_str = setlist.get("date")
+        if not setlist_date_str:
+            continue
+
+        for moment, song_list in setlist.get("moments", {}).items():
+            if song_title in song_list:
+                try:
+                    last_date = datetime.strptime(setlist_date_str, "%Y-%m-%d").date()
+                except ValueError:
+                    continue
+                return (today - last_date).days
+
+    return None
+
+
 def select_songs_for_moment(
     moment: str,
     count: int,
