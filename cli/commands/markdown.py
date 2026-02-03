@@ -1,12 +1,12 @@
 """
-PDF command - generate PDF from existing setlist.
+Markdown command - regenerate markdown from existing setlist.
 """
 
 from pathlib import Path
 
 from library import (
     Setlist,
-    generate_setlist_pdf,
+    format_setlist_markdown,
     load_history,
     load_songs,
 )
@@ -14,7 +14,7 @@ from library import (
 
 def run(date, output_dir, history_dir):
     """
-    Generate PDF from existing setlist history.
+    Regenerate markdown from existing setlist history.
 
     Args:
         date: Target date (YYYY-MM-DD) or None for latest
@@ -62,24 +62,19 @@ def run(date, output_dir, history_dir):
     setlist = Setlist(date=target_setlist["date"], moments=target_setlist["moments"])
 
     # Display what we're generating
-    print(f"\nGenerating PDF for {setlist.date}...")
+    print(f"\nRegenerating markdown for {setlist.date}...")
     print("Moments:")
     for moment, song_list in setlist.moments.items():
         display_moment = moment.capitalize()
         print(f"  {display_moment}: {', '.join(song_list)}")
 
-    # Generate PDF
-    output_dir_path.mkdir(parents=True, exist_ok=True)
-    pdf_path = output_dir_path / f"{setlist.date}.pdf"
+    # Generate markdown
+    markdown = format_setlist_markdown(setlist, songs)
 
-    try:
-        generate_setlist_pdf(setlist, songs, pdf_path)
-        print(f"\n✓ PDF saved to: {pdf_path}")
-    except ImportError:
-        print("\nError: ReportLab library not installed.")
-        print("Install with: uv sync            (installs all dependencies)")
-        print("         or: uv add reportlab    (adds to pyproject.toml)")
-        print("         or: pip install reportlab")
-        raise SystemExit(1)
-    except Exception as e:
-        handle_error(f"Generating PDF: {e}")
+    # Write output
+    output_dir_path.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir_path / f"{setlist.date}.md"
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(markdown)
+    print(f"\n✓ Markdown saved to: {output_path}")

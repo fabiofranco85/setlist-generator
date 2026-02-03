@@ -29,6 +29,7 @@ def cli():
       transpose      Transpose a song to a different key
       replace        Replace song in existing setlist
       pdf            Generate PDF from existing setlist
+      markdown       Regenerate markdown from existing setlist
       list-moments   List available service moments
 
     \b
@@ -188,6 +189,27 @@ def pdf(date, output_dir, history_dir):
       songbook pdf --date 2026-02-15
     """
     from cli.commands.pdf import run
+    run(date, output_dir, history_dir)
+
+
+@cli.command()
+@click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
+@click.option("--output-dir", help="Custom output directory")
+@click.option("--history-dir", help="Custom history directory")
+def markdown(date, output_dir, history_dir):
+    """Regenerate markdown from existing setlist.
+
+    \b
+    Rebuilds the markdown output file using current chord files
+    without re-running the selection algorithm. Useful after
+    transposing songs or updating chord sheets.
+
+    \b
+    Examples:
+      songbook markdown
+      songbook markdown --date 2026-02-15
+    """
+    from cli.commands.markdown import run
     run(date, output_dir, history_dir)
 
 

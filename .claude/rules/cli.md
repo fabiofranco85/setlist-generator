@@ -32,6 +32,7 @@ songbook replace --moment louvor --position 2  # Replace song
 songbook transpose "Oceanos" --to G  # Transpose chords (preview)
 songbook view-song "Oceanos" -t G    # View transposed (display-only)
 songbook pdf --date 2026-02-15       # Generate PDF
+songbook markdown --date 2026-02-15  # Regenerate markdown from history
 songbook list-moments                # List available moments
 songbook cleanup                     # Data quality checks
 ```
@@ -335,6 +336,36 @@ pip install reportlab
 
 ---
 
+### songbook markdown
+
+Regenerate markdown output from an existing setlist.
+
+**Usage:**
+```bash
+# Regenerate markdown for the latest setlist
+songbook markdown
+
+# Regenerate for a specific date
+songbook markdown --date 2026-02-15
+```
+
+**Options:**
+- `--date YYYY-MM-DD` - Target date (default: latest)
+- `--output-dir PATH` - Custom output directory
+- `--history-dir PATH` - Custom history directory
+
+**Behavior:**
+- Reads the song list from history (does NOT re-run the selection algorithm)
+- Uses current chord files (picks up any transpositions or edits)
+- Overwrites the existing `output/{date}.md` file
+
+**When to use:**
+- After transposing a song with `songbook transpose --save`
+- After manually editing a chord file in `chords/`
+- When the markdown output is out of sync with chord files
+
+---
+
 ### songbook list-moments
 
 Display all available service moments.
@@ -507,6 +538,13 @@ songbook cleanup             # Verify (should show 0 issues)
 **Check song statistics:**
 ```bash
 songbook info "Oceanos"              # Recency, history, metadata
+```
+
+**Transpose and regenerate outputs:**
+```bash
+songbook transpose "Oceanos" --to G --save   # Persist to file
+songbook markdown --date 2026-02-15          # Regenerate markdown with new chords
+songbook pdf --date 2026-02-15               # Regenerate PDF with new chords
 ```
 
 **Transpose a song:**

@@ -43,6 +43,7 @@ songbook transpose "Oceanos" --to G  # Transpose chords (preview)
 songbook transpose "Oceanos" --to G --save  # Transpose and persist
 songbook view-song "Oceanos" -t G    # View song transposed
 songbook pdf --date 2026-02-15       # Generate PDF
+songbook markdown --date 2026-02-15  # Regenerate markdown from history
 songbook list-moments                # List available moments
 songbook cleanup                     # Data quality checks
 ```

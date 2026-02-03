@@ -143,7 +143,17 @@ songbook pdf
 songbook pdf --date 2026-01-25
 ```
 
-This is useful when you've already generated a setlist but want to create a PDF later.
+**Regenerate markdown from existing setlist**:
+
+```bash
+# Regenerate markdown for the latest setlist
+songbook markdown
+
+# Regenerate markdown for specific date
+songbook markdown --date 2026-01-25
+```
+
+Both `pdf` and `markdown` read the song list from history and use current chord files. This means if you transpose a song or edit a chord sheet, you can regenerate the output files without re-running the selection algorithm.
 
 ### Shell Completion
 
@@ -250,6 +260,9 @@ songbook generate --date 2026-02-15 --pdf
 
 # Generate PDF from existing setlist
 songbook pdf --date 2026-01-25
+
+# Regenerate markdown from existing setlist
+songbook markdown --date 2026-01-25
 ```
 
 ### Using Overrides
