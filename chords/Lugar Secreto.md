@@ -1,4 +1,4 @@
-###Lugar Secreto (C)
+### Lugar Secreto (C)
 
 [Intro] F7M(9)  Am  G4(6)
         F7M(9)  Am  G4(6)

@@ -1,4 +1,4 @@
-###Vou Deixar Na Cruz (G)
+### Vou Deixar Na Cruz (G)
 
 [Intro] Em  C9  G/B  D
         Em7  C9  G

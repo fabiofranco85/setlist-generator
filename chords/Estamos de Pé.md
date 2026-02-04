@@ -1,4 +1,4 @@
-###Estamos de Pé (D)
+### Estamos de Pé (D)
 
 [Intro] D  Bm  G  D
 

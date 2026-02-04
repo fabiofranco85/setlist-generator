@@ -1,4 +1,4 @@
-###Autoridade e Poder (G)
+### Autoridade e Poder (G)
 
          G
 Os que confiam no Senhor , são como os

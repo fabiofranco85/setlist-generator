@@ -1,4 +1,4 @@
-###Consagração (G)
+### Consagração (G)
 
 [Intro] G2  G4  G2  G4
         G2  G4  G2  G4

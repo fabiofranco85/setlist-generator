@@ -1,4 +1,4 @@
-###Grande É o Senhor (G)
+### Grande É o Senhor (G)
 
   G9        C9
 Grande é o Senhor
