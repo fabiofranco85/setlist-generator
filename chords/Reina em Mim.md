@@ -19,7 +19,7 @@ Sobre a escuridão
 Sobre os sonhos meus
       F      Eb        F        Gm
 Tu és o    Senhor de tudo o que sou
-       F      G      C    Riff
+       Eb    F      Bb   Riff
 Vem reinar em mim, Senhor
 
 Bb        F      Eb            F    Bb
@@ -31,4 +31,4 @@ Tu és para mim mais que tudo aqui
        Eb     F       Bb
 Vem reinar de novo em mim
 
-[Solo]  Cm Dm  Eb Gm
+[Solo]    Cm Dm Eb Gm

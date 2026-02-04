@@ -180,6 +180,40 @@ def is_chord_line(line: str) -> bool:
     return True
 
 
+def _is_mixed_chord_line(line: str) -> bool:
+    """Return ``True`` if *line* mixes chord tokens with non-chord annotations.
+
+    A mixed chord line has at least 2 chord tokens and the chord tokens
+    outnumber (or equal) the non-chord tokens.  This avoids false positives
+    on lyric lines that happen to contain a chord-like word (e.g. Portuguese
+    "Em" = "in" looks like E-minor).
+
+    >>> _is_mixed_chord_line("F  G  C  Riff")
+    True
+    >>> _is_mixed_chord_line("Intro 2x: Am Dm F7+ G")
+    True
+    >>> _is_mixed_chord_line("Tua voz me chama")
+    False
+    >>> _is_mixed_chord_line("Em Deus")
+    False
+    """
+    stripped = line.strip()
+    if not stripped:
+        return False
+
+    test = _SECTION_MARKER_RE.sub("", stripped).strip()
+    if not test:
+        return False
+
+    tokens = test.split()
+    if not tokens:
+        return False
+
+    chord_count = sum(1 for t in tokens if _CHORD_RE.match(t))
+    non_chord_count = len(tokens) - chord_count
+    return chord_count >= 2 and non_chord_count >= 1 and chord_count >= non_chord_count
+
+
 # ── line-level transposition with column alignment ───────────────────
 
 def transpose_line(line: str, semitones: int, use_flats: bool = False) -> str:
@@ -231,6 +265,48 @@ def transpose_line(line: str, semitones: int, use_flats: bool = False) -> str:
     return "".join(parts)
 
 
+def _transpose_mixed_line(line: str, semitones: int, use_flats: bool = False) -> str:
+    """Transpose chord tokens in a mixed chord/annotation line.
+
+    Unlike :func:`transpose_line` (which only handles pure chord lines),
+    this preserves non-chord tokens (e.g. ``Riff``, ``Intro 2x:``) while
+    transposing the chord tokens and maintaining column alignment.
+    """
+    marker_match = _SECTION_MARKER_RE.match(line)
+    marker = marker_match.group(0) if marker_match else ""
+    search_start = len(marker)
+
+    # Classify every whitespace-delimited token as chord or non-chord
+    entries: list[tuple[int, str]] = []  # (start_col, output_text)
+    for m in re.finditer(r"\S+", line):
+        if m.start() < search_start:
+            continue  # inside section marker — skip
+        token = m.group(0)
+        if _CHORD_RE.match(token):
+            entries.append((m.start(), transpose_chord(token, semitones, use_flats)))
+        else:
+            entries.append((m.start(), token))  # keep annotation as-is
+
+    if not entries:
+        return line
+
+    # Reconstruct preserving column alignment
+    parts: list[str] = []
+    if marker:
+        parts.append(marker)
+
+    cursor = len(marker)
+    for start_col, text in entries:
+        gap = start_col - cursor
+        if gap < 1 and parts:
+            gap = 1
+        parts.append(" " * gap)
+        parts.append(text)
+        cursor += gap + len(text)
+
+    return "".join(parts)
+
+
 # ── heading key replacement ──────────────────────────────────────────
 
 _HEADING_KEY_RE = re.compile(r"(###\s*.+?\()([A-G][#b]?m?)(\)\s*)$")
@@ -273,6 +349,8 @@ def transpose_content(content: str, semitones: int, use_flats: bool = False) -> 
             result_lines.append(_transpose_heading(line, semitones, use_flats))
         elif is_chord_line(line):
             result_lines.append(transpose_line(line, semitones, use_flats))
+        elif _is_mixed_chord_line(line):
+            result_lines.append(_transpose_mixed_line(line, semitones, use_flats))
         else:
             result_lines.append(line)
     return "\n".join(result_lines)
