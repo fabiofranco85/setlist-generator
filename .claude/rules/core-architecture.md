@@ -41,7 +41,7 @@ Where:
 
 ```
 .
-├── database.csv                 # Song database: "song;energy;tags"
+├── database.csv                 # Song database: "song;energy;tags;youtube"
 ├── chords/                  # Individual song files with chords
 │   └── <Song Name>.md       # Format: "# Song (Key)\n```\nchords...\n```"
 ├── output/                  # Generated markdown setlists
@@ -59,7 +59,8 @@ Where:
     ├── transposer.py        # Chord transposition (chromatic)
     ├── generator.py         # Core setlist generation
     ├── formatter.py         # Output formatting (markdown, JSON)
-    └── pdf_formatter.py     # PDF generation (ReportLab)
+    ├── pdf_formatter.py     # PDF generation (ReportLab)
+    └── youtube.py           # YouTube playlist integration
 ```
 
 ## Modular Architecture
@@ -82,6 +83,7 @@ The codebase is organized into focused modules for better maintainability and re
 - `generator.py` - Orchestrates the complete setlist generation (includes SetlistGenerator class)
 - `formatter.py` - Output formatting (markdown, JSON)
 - `pdf_formatter.py` - PDF generation using ReportLab
+- `youtube.py` - YouTube playlist integration (URL parsing, OAuth, API)
 
 ## Hybrid Architecture (Functional + Object-Oriented)
 
@@ -118,15 +120,16 @@ Defined in `MOMENTS_CONFIG` (library/config.py):
 ## Tags Format
 
 In `database.csv`:
-- Format: `song;energy;tags`
+- Format: `song;energy;tags;youtube`
 - Energy: 1-4 scale (intrinsic property of the song)
 - Tags: Moment assignments with optional weights
+- YouTube: Optional YouTube video URL
 
 Examples:
 ```csv
-Oceanos;2;louvor(5)
-Hosana;1;louvor
-Lugar Secreto;4;louvor
+Oceanos;2;louvor(5);https://www.youtube.com/watch?v=XXXXXXXXXXX
+Hosana;1;louvor;https://youtu.be/YYYYYYYYYYY
+Lugar Secreto;4;louvor;
 Autoridade e Poder;1;prelúdio,poslúdio
 Brilha Jesus;2;saudação(4),poslúdio(2)
 ```

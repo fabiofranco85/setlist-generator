@@ -33,6 +33,7 @@ songbook transpose "Oceanos" --to G  # Transpose chords (preview)
 songbook view-song "Oceanos" -t G    # View transposed (display-only)
 songbook pdf --date 2026-02-15       # Generate PDF
 songbook markdown --date 2026-02-15  # Regenerate markdown from history
+songbook youtube --date 2026-02-15   # Create YouTube playlist from setlist
 songbook list-moments                # List available moments
 songbook cleanup                     # Data quality checks
 ```
@@ -363,6 +364,46 @@ songbook markdown --date 2026-02-15
 - After transposing a song with `songbook transpose --save`
 - After manually editing a chord file in `chords/`
 - When the markdown output is out of sync with chord files
+
+---
+
+### songbook youtube
+
+Create a YouTube playlist from an existing setlist.
+
+**Usage:**
+```bash
+# Create playlist from the latest setlist
+songbook youtube
+
+# Create playlist for a specific date
+songbook youtube --date 2026-02-15
+```
+
+**Options:**
+- `--date YYYY-MM-DD` - Target date (default: latest)
+- `--output-dir PATH` - Custom output directory
+- `--history-dir PATH` - Custom history directory
+
+**Behavior:**
+- Reads setlist from history (same as `pdf` and `markdown` commands)
+- Maps songs to YouTube video IDs via the `youtube` column in `database.csv`
+- Creates an unlisted playlist on YouTube with songs in exact setlist order
+- Songs without YouTube links are skipped with a warning
+- If ALL songs lack YouTube links, the command errors out
+
+**Prerequisites:**
+- YouTube URLs in `database.csv`'s `youtube` column
+- Google OAuth credentials (`client_secrets.json` in project root)
+- See `YOUTUBE.md` for full setup instructions
+
+**Dependencies:**
+Requires `google-api-python-client`, `google-auth-oauthlib`, `google-auth-httplib2` (included in `pyproject.toml`):
+
+```bash
+# Install all dependencies with uv
+uv sync
+```
 
 ---
 

@@ -29,3 +29,9 @@ DEFAULT_HISTORY_DIR = "history"    # JSON tracking directory
 # Environment variable names (for documentation)
 ENV_OUTPUT_DIR = "SETLIST_OUTPUT_DIR"
 ENV_HISTORY_DIR = "SETLIST_HISTORY_DIR"
+
+# YouTube integration
+YOUTUBE_PLAYLIST_NAME_PATTERN = "Culto {DD.MM.YY}"
+YOUTUBE_PLAYLIST_PRIVACY = "unlisted"
+YOUTUBE_CLIENT_SECRETS_FILE = "client_secrets.json"
+YOUTUBE_TOKEN_FILE = ".youtube_token.json"

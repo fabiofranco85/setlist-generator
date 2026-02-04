@@ -11,6 +11,7 @@ class Song:
     tags: Dict[str, int]  # {moment: weight}
     energy: float
     content: str  # Chord sheet content
+    youtube_url: str = ""  # Optional YouTube video URL
 
     def get_weight(self, moment: str) -> int:
         """Get weight for a specific moment."""

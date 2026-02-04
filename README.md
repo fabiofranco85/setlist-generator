@@ -27,6 +27,7 @@ An intelligent setlist generator for church worship services that automatically 
 - [Programmatic Usage](#programmatic-usage)
 - [Output Files](#output-files)
 - [Examples](#examples)
+- [YouTube Playlist Integration](#youtube-playlist-integration)
 - [Troubleshooting](#troubleshooting)
 
 ## Installation
@@ -154,6 +155,20 @@ songbook markdown --date 2026-01-25
 ```
 
 Both `pdf` and `markdown` read the song list from history and use current chord files. This means if you transpose a song or edit a chord sheet, you can regenerate the output files without re-running the selection algorithm.
+
+### YouTube Playlist Integration
+
+Create an unlisted YouTube playlist from an existing setlist:
+
+```bash
+# Create playlist from the latest setlist
+songbook youtube
+
+# Create playlist for a specific date
+songbook youtube --date 2026-02-15
+```
+
+**Prerequisites:** Requires Google OAuth credentials and YouTube URLs in `database.csv`. See [`YOUTUBE.md`](./YOUTUBE.md) for full setup instructions.
 
 ### Shell Completion
 

@@ -34,6 +34,12 @@ from .transposer import (
     should_use_flats,
     transpose_content,
 )
+from .youtube import (
+    create_setlist_playlist,
+    extract_video_id,
+    format_playlist_name,
+    resolve_setlist_videos,
+)
 
 __all__ = [
     # Configuration
@@ -74,4 +80,9 @@ __all__ = [
     "calculate_semitones",
     "should_use_flats",
     "resolve_target_key",
+    # YouTube integration
+    "extract_video_id",
+    "format_playlist_name",
+    "resolve_setlist_videos",
+    "create_setlist_playlist",
 ]

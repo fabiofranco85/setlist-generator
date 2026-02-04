@@ -1,0 +1,135 @@
+"""
+YouTube command - create YouTube playlist from existing setlist.
+"""
+
+from pathlib import Path
+
+from library import (
+    load_history,
+    load_songs,
+    resolve_setlist_videos,
+)
+
+
+def run(date, output_dir, history_dir):
+    """
+    Create a YouTube playlist from an existing setlist.
+
+    Args:
+        date: Target date (YYYY-MM-DD) or None for latest
+        output_dir: Custom output directory
+        history_dir: Custom history directory
+    """
+    from cli.cli_utils import resolve_paths, handle_error
+
+    # Paths
+    base_path = Path.cwd()
+    paths = resolve_paths(output_dir, history_dir)
+    history_dir_path = paths.history_dir
+
+    # Load data
+    print("Loading songs...")
+    songs = load_songs(base_path)
+    print(f"Loaded {len(songs)} songs")
+
+    print("Loading history...")
+    history = load_history(history_dir_path)
+    if not history:
+        handle_error("No history files found. Generate a setlist first.")
+
+    print(f"Found {len(history)} historical setlists")
+
+    # Find target setlist
+    if date:
+        target_setlist = None
+        for setlist_dict in history:
+            if setlist_dict.get("date") == date:
+                target_setlist = setlist_dict
+                break
+
+        if not target_setlist:
+            print(f"Error: Setlist for {date} not found in history")
+            print(f"Available dates: {', '.join(s['date'] for s in history[-5:] if 'date' in s)}")
+            raise SystemExit(1)
+    else:
+        target_setlist = history[0]
+
+    target_date = target_setlist["date"]
+
+    # Display setlist
+    print(f"\nCreating YouTube playlist for {target_date}...")
+    print("Moments:")
+    for moment, song_list in target_setlist["moments"].items():
+        display_moment = moment.capitalize()
+        print(f"  {display_moment}: {', '.join(song_list)}")
+
+    # Resolve videos and show status
+    video_entries = resolve_setlist_videos(target_setlist, songs)
+
+    added = [(title, vid) for title, vid in video_entries if vid]
+    skipped = [title for title, vid in video_entries if not vid]
+
+    if skipped:
+        print(f"\nWarning: {len(skipped)} song(s) without YouTube links (will be skipped):")
+        for title in skipped:
+            print(f"  - {title}")
+
+    if not added:
+        handle_error(
+            "No songs in this setlist have YouTube links.\n"
+            "Add YouTube URLs to the 'youtube' column in database.csv."
+        )
+
+    print(f"\n{len(added)} song(s) will be added to the playlist.")
+
+    # Import YouTube API dependencies
+    try:
+        from library.youtube import (
+            create_setlist_playlist,
+            get_credentials,
+        )
+        from library.config import (
+            YOUTUBE_CLIENT_SECRETS_FILE,
+            YOUTUBE_TOKEN_FILE,
+        )
+    except ImportError:
+        print("\nError: Google API libraries not installed.")
+        print("Install with: uv sync            (installs all dependencies)")
+        print("         or: uv add google-api-python-client google-auth-oauthlib google-auth-httplib2")
+        raise SystemExit(1)
+
+    # Authenticate
+    print("\nAuthenticating with YouTube...")
+    try:
+        credentials = get_credentials(
+            client_secrets_path=YOUTUBE_CLIENT_SECRETS_FILE,
+            token_path=YOUTUBE_TOKEN_FILE,
+        )
+    except FileNotFoundError as e:
+        handle_error(str(e))
+    except Exception as e:
+        handle_error(f"Authentication failed: {e}")
+
+    # Create playlist
+    try:
+        playlist_url, added_songs, skipped_songs = create_setlist_playlist(
+            setlist_dict=target_setlist,
+            songs=songs,
+            credentials=credentials,
+        )
+    except Exception as e:
+        handle_error(f"Creating playlist: {e}")
+
+    # Display summary
+    print(f"\n{'=' * 60}")
+    print(f"YOUTUBE PLAYLIST CREATED")
+    print(f"{'=' * 60}")
+    print(f"\nPlaylist URL: {playlist_url}")
+    print(f"\nAdded ({len(added_songs)} songs):")
+    for i, title in enumerate(added_songs, 1):
+        print(f"  {i}. {title}")
+
+    if skipped_songs:
+        print(f"\nSkipped ({len(skipped_songs)} songs, no YouTube link):")
+        for title in skipped_songs:
+            print(f"  - {title}")

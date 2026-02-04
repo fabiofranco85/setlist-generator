@@ -14,3 +14,7 @@ wheels/
 uv.lock
 IMPLEMENTATION_SUMMARY.md
 MIGRATION_COMPLETE.md
+
+# YouTube API credentials
+client_secrets.json
+.youtube_token.json

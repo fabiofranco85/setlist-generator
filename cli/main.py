@@ -30,6 +30,7 @@ def cli():
       replace        Replace song in existing setlist
       pdf            Generate PDF from existing setlist
       markdown       Regenerate markdown from existing setlist
+      youtube        Create YouTube playlist from existing setlist
       list-moments   List available service moments
 
     \b
@@ -210,6 +211,31 @@ def markdown(date, output_dir, history_dir):
       songbook markdown --date 2026-02-15
     """
     from cli.commands.markdown import run
+    run(date, output_dir, history_dir)
+
+
+@cli.command()
+@click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
+@click.option("--output-dir", help="Custom output directory")
+@click.option("--history-dir", help="Custom history directory")
+def youtube(date, output_dir, history_dir):
+    """Create YouTube playlist from existing setlist.
+
+    \b
+    Creates an unlisted YouTube playlist with songs from a setlist,
+    in exact service order. Songs without YouTube links are skipped.
+
+    \b
+    Requires:
+      - YouTube URLs in the 'youtube' column of database.csv
+      - Google OAuth credentials (see YOUTUBE.md for setup)
+
+    \b
+    Examples:
+      songbook youtube
+      songbook youtube --date 2026-02-15
+    """
+    from cli.commands.youtube import run
     run(date, output_dir, history_dir)
 
 

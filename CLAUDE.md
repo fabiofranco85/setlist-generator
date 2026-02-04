@@ -44,6 +44,7 @@ songbook transpose "Oceanos" --to G --save  # Transpose and persist
 songbook view-song "Oceanos" -t G    # View song transposed
 songbook pdf --date 2026-02-15       # Generate PDF
 songbook markdown --date 2026-02-15  # Regenerate markdown from history
+songbook youtube --date 2026-02-15   # Create YouTube playlist from setlist
 songbook list-moments                # List available moments
 songbook cleanup                     # Data quality checks
 ```
@@ -62,7 +63,7 @@ This is a **setlist generator** for church worship services. It intelligently se
 
 ```
 .
-├── database.csv                 # Song database: "song;energy;tags"
+├── database.csv                 # Song database: "song;energy;tags;youtube"
 ├── chords/                      # Individual song files with chords
 │   └── <Song Name>.md
 ├── output/                      # Generated markdown setlists
@@ -78,7 +79,8 @@ This is a **setlist generator** for church worship services. It intelligently se
 │   ├── transposer.py           # Chord transposition (chromatic)
 │   ├── generator.py            # Core setlist generation
 │   ├── formatter.py            # Output formatting
-│   └── pdf_formatter.py        # PDF generation
+│   ├── pdf_formatter.py        # PDF generation
+│   └── youtube.py              # YouTube playlist integration
 └── cli/                         # CLI interface
     ├── main.py                 # Entry point
     └── commands/               # Command implementations
@@ -103,10 +105,11 @@ Where:
 
 1. Add to `database.csv`:
    ```csv
-   New Song Title;2;louvor(4),prelúdio
+   New Song Title;2;louvor(4),prelúdio;https://youtu.be/VIDEO_ID
    ```
    - Energy: 1=upbeat, 2=moderate-high, 3=moderate-low, 4=contemplative
    - Tags: moment names with optional weights in parentheses
+   - YouTube: optional YouTube video URL
 
 2. Create `chords/New Song Title.md`:
    ```markdown
@@ -201,3 +204,4 @@ For detailed documentation on specific areas, see the path-scoped documentation 
 - **Data maintenance** → `.claude/rules/data-maintenance.md`
 - **Development patterns** → `.claude/rules/development.md`
 - **Recency system** → `RECENCY_SYSTEM.md`
+- **YouTube integration** → `YOUTUBE.md`

@@ -69,11 +69,15 @@ def load_songs(base_path: Path) -> dict[str, Song]:
                 with open(song_file, "r", encoding="utf-8") as sf:
                     content = sf.read()
 
+            # Parse YouTube URL (optional column)
+            youtube_url = (row.get("youtube") or "").strip()
+
             songs[title] = Song(
                 title=title,
                 tags=tags,
                 energy=energy,
-                content=content
+                content=content,
+                youtube_url=youtube_url,
             )
 
     return songs
