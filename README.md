@@ -444,13 +444,13 @@ songbook generate
 **3. Configuration File:**
 Edit `library/config.py`:
 ```python
-DEFAULT_OUTPUT_DIR = "output"    # Markdown files
+DEFAULT_OUTPUT_DIR = "output"    # Markdown and PDF files
 DEFAULT_HISTORY_DIR = "history"  # JSON tracking
 ```
 
 **4. Defaults:**
 If no configuration is provided:
-- Markdown files → `output/`
+- Markdown and PDF files → `output/`
 - JSON history → `history/`
 
 **Examples:**
