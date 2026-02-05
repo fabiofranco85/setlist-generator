@@ -5,7 +5,7 @@ View setlist command - display generated setlists.
 from datetime import datetime
 from pathlib import Path
 
-from library import load_history, load_songs
+from library import get_repositories
 from library.config import MOMENTS_CONFIG
 
 
@@ -102,9 +102,12 @@ def run(date, keys, output_dir, history_dir):
     history_dir_path = paths.history_dir
     output_dir_path = paths.output_dir
 
+    # Load data via repositories
+    repos = get_repositories(history_dir=history_dir_path, output_dir=output_dir_path)
+
     # Load history
     try:
-        history = load_history(history_dir_path)
+        history = repos.history.get_all()
     except Exception as e:
         handle_error(f"Loading history: {e}")
 
@@ -138,7 +141,7 @@ def run(date, keys, output_dir, history_dir):
     songs = {}
     if keys:
         try:
-            songs = load_songs(Path.cwd())
+            songs = repos.songs.get_all()
         except Exception as e:
             print(f"Warning: Could not load songs: {e}")
             print("Continuing without keys...\n")

@@ -20,16 +20,12 @@ class SetlistGenerator:
     This class encapsulates the stateful operations of setlist generation,
     managing recency scores and tracking already-selected songs internally.
 
-    Example using direct initialization:
-        >>> songs = load_songs(Path("."))
-        >>> history = load_history(Path("./setlists"))
-        >>> generator = SetlistGenerator(songs, history)
-        >>> setlist = generator.generate("2026-02-15", overrides={"louvor": ["Oceanos"]})
-
-    Example using repositories:
+    Example:
+        >>> from library import get_repositories, SetlistGenerator
         >>> repos = get_repositories()
         >>> generator = SetlistGenerator.from_repositories(repos.songs, repos.history)
-        >>> setlist = generator.generate("2026-02-15")
+        >>> setlist = generator.generate("2026-02-15", overrides={"louvor": ["Oceanos"]})
+        >>> repos.history.save(setlist)
     """
 
     def __init__(self, songs: dict[str, Song], history: list[dict]):

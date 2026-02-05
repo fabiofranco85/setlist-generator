@@ -52,7 +52,7 @@ Where:
     ├── __init__.py          # Public API exports
     ├── config.py            # Configuration constants
     ├── models.py            # Song and Setlist data structures
-    ├── loader.py            # Data loading (DEPRECATED - use repositories)
+    ├── loader.py            # Tag parsing utilities
     ├── selector.py          # Song selection algorithms
     ├── paths.py             # Path resolution utilities
     ├── ordering.py          # Energy-based ordering
@@ -357,23 +357,6 @@ for moment, song_list in setlist.moments.items():
 - ✓ Clear lifecycle (init → generate → return)
 - ✓ Easy to test (mock constructor params)
 - ✓ Reusable (generate multiple setlists with same instance)
-
-### Legacy API (Deprecated)
-
-The legacy functions still work but emit deprecation warnings:
-
-```python
-# DEPRECATED - use get_repositories() instead
-from library import load_songs, load_history, generate_setlist
-from pathlib import Path
-
-songs = load_songs(Path("."))      # ⚠️ Deprecated
-history = load_history(Path("./history"))  # ⚠️ Deprecated
-
-setlist = generate_setlist(songs, history, date="2026-02-15")
-```
-
-Migrate to repository pattern for new code.
 
 ### Chord Transposition
 

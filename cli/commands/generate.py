@@ -10,9 +10,7 @@ from library import (
     format_setlist_markdown,
     generate_setlist,
     generate_setlist_pdf,
-    load_history,
-    load_songs,
-    save_setlist_history,
+    get_repositories,
 )
 
 
@@ -68,18 +66,19 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output):
         date = datetime.now().strftime("%Y-%m-%d")
 
     # Paths
-    base_path = Path.cwd()
     paths = resolve_paths(output_dir, history_dir)
     output_dir_path = paths.output_dir
     history_dir_path = paths.history_dir
 
-    # Load data
+    # Load data via repositories
+    repos = get_repositories(history_dir=history_dir_path, output_dir=output_dir_path)
+
     print("Loading songs...")
-    songs = load_songs(base_path)
+    songs = repos.songs.get_all()
     print(f"Loaded {len(songs)} songs")
 
     print("Loading history...")
-    history = load_history(history_dir_path)
+    history = repos.history.get_all()
     print(f"Found {len(history)} historical setlists")
 
     # Parse overrides
@@ -112,7 +111,7 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output):
     print(f"\nMarkdown saved to: {output_path}")
 
     if not no_save:
-        save_setlist_history(setlist, history_dir_path)
+        repos.history.save(setlist)
         print(f"History saved to: {history_dir_path / f'{date}.json'}")
     else:
         print("(Dry run - history not saved)")

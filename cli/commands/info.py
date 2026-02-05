@@ -2,14 +2,11 @@
 Info command - display detailed statistics for a song.
 """
 
-from pathlib import Path
-
 from library import (
     calculate_recency_scores,
     get_days_since_last_use,
     get_song_usage_history,
-    load_history,
-    load_songs,
+    get_repositories,
 )
 
 
@@ -28,11 +25,12 @@ def _extract_key(content: str) -> str:
 
 def run(song_name: str):
     """Show detailed statistics for a song."""
-    from cli.cli_utils import handle_error, resolve_paths
+    from cli.cli_utils import handle_error
 
-    # Load songs
+    # Load data via repositories
     try:
-        songs = load_songs(Path.cwd())
+        repos = get_repositories()
+        songs = repos.songs.get_all()
     except Exception as e:
         handle_error(f"Loading songs: {e}")
 
@@ -63,8 +61,7 @@ def run(song_name: str):
         raise SystemExit(1)
 
     # Load history
-    paths = resolve_paths(None, None)
-    history = load_history(paths.history_dir)
+    history = repos.history.get_all()
 
     # Extract key from chord content
     key = _extract_key(song.content)

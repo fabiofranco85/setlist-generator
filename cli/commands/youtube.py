@@ -2,11 +2,8 @@
 YouTube command - create YouTube playlist from existing setlist.
 """
 
-from pathlib import Path
-
 from library import (
-    load_history,
-    load_songs,
+    get_repositories,
     resolve_setlist_videos,
 )
 
@@ -23,17 +20,18 @@ def run(date, output_dir, history_dir):
     from cli.cli_utils import resolve_paths, handle_error
 
     # Paths
-    base_path = Path.cwd()
     paths = resolve_paths(output_dir, history_dir)
     history_dir_path = paths.history_dir
 
-    # Load data
+    # Load data via repositories
+    repos = get_repositories(history_dir=history_dir_path)
+
     print("Loading songs...")
-    songs = load_songs(base_path)
+    songs = repos.songs.get_all()
     print(f"Loaded {len(songs)} songs")
 
     print("Loading history...")
-    history = load_history(history_dir_path)
+    history = repos.history.get_all()
     if not history:
         handle_error("No history files found. Generate a setlist first.")
 

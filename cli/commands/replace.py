@@ -6,10 +6,8 @@ import sys
 from pathlib import Path
 
 from library import (
-    load_songs,
-    load_history,
     format_setlist_markdown,
-    save_setlist_history,
+    get_repositories,
 )
 from library.models import Setlist
 from library.replacer import (
@@ -36,15 +34,17 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir)
     from cli.cli_utils import resolve_paths, handle_error
 
     # Setup paths
-    base_path = Path.cwd()
     paths = resolve_paths(output_dir, history_dir)
 
+    # Load data via repositories
+    repos = get_repositories(history_dir=paths.history_dir, output_dir=paths.output_dir)
+
     print("Loading songs...")
-    songs = load_songs(base_path)
+    songs = repos.songs.get_all()
     print(f"Loaded {len(songs)} songs")
 
     print("Loading history...")
-    history = load_history(paths.history_dir)
+    history = repos.history.get_all()
 
     if not history:
         handle_error("No setlists found in history")
@@ -169,7 +169,7 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir)
     print(f"\nMarkdown saved to: {output_path}")
 
     # Save history
-    save_setlist_history(setlist_obj, paths.history_dir)
+    repos.history.save(setlist_obj)
     history_path = paths.history_dir / f"{setlist_obj.date}.json"
     print(f"History saved to: {history_path}")
 

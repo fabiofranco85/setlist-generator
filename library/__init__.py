@@ -10,9 +10,9 @@ from .config import (
     MOMENTS_CONFIG,
     RECENCY_DECAY_DAYS,
 )
-from .formatter import format_setlist_markdown, save_setlist_history
+from .formatter import format_setlist_markdown
 from .generator import SetlistGenerator, generate_setlist
-from .loader import load_history, load_songs
+from .loader import parse_tags
 from .selector import (
     calculate_recency_scores,
     get_days_since_last_use,
@@ -71,14 +71,12 @@ __all__ = [
     "Song",
     "Setlist",
     # Core functions
-    "load_songs",
-    "load_history",
+    "parse_tags",
     "calculate_recency_scores",
     "get_song_usage_history",
     "get_days_since_last_use",
     "generate_setlist",
     "format_setlist_markdown",
-    "save_setlist_history",
     "generate_setlist_pdf",
     # Classes
     "SetlistGenerator",

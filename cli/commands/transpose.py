@@ -4,7 +4,7 @@ Transpose command - display a song transposed to a different key.
 
 from pathlib import Path
 
-from library import load_songs
+from library import get_repositories
 from library.transposer import (
     calculate_semitones,
     resolve_target_key,
@@ -37,7 +37,8 @@ def run(song_name: str, to_key: str, save: bool = False):
     from cli.cli_utils import handle_error
 
     try:
-        songs = load_songs(Path.cwd())
+        repos = get_repositories()
+        songs = repos.songs.get_all()
     except Exception as e:
         handle_error(f"Loading songs: {e}")
 

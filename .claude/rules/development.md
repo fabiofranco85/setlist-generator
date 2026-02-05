@@ -56,27 +56,13 @@ class Setlist:
     moments: Dict[str, List[str]]  # moment → [song names]
 ```
 
-### loader.py (Deprecated)
-**Purpose:** Legacy data loading from files
-
-**Status:** Deprecated in favor of repository pattern. Use `get_repositories()` instead.
+### loader.py
+**Purpose:** Tag parsing utilities
 
 **Contents:**
-- `load_songs(base_path)` - **Deprecated** - Use `repos.songs.get_all()`
-- `load_history(history_dir)` - **Deprecated** - Use `repos.history.get_all()`
-- `parse_tags(tag_string)` - Parse tag format (e.g., "louvor(5),prelúdio") - NOT deprecated
+- `parse_tags(tag_string)` - Parse tag format (e.g., "louvor(5),prelúdio") into dict of {moment: weight}
 
-**Migration:**
-```python
-# Old way (deprecated)
-songs = load_songs(Path("."))
-history = load_history(Path("./history"))
-
-# New way (recommended)
-repos = get_repositories()
-songs = repos.songs.get_all()
-history = repos.history.get_all()
-```
+**Note:** Data loading functions have been replaced by the repository pattern. Use `get_repositories()` for loading songs and history.
 
 ### repositories/ (New)
 **Purpose:** Data access abstraction layer
@@ -255,18 +241,13 @@ setlist = generator.generate(
 
 **Contents:**
 - `format_setlist_markdown(setlist, songs)` - Generate markdown with chords
-- `save_setlist_history(setlist, history_dir)` - Save JSON history
-- `format_date(date_str)` - Format date for display
 
 **When to modify:**
 - Changing markdown format
 - Adding new export formats (HTML, etc.)
 - Customizing output templates
 
-**Implementation notes:**
-- Markdown includes full chord notation
-- JSON history only stores song titles (lightweight)
-- Date formatting uses locale-aware formatting
+**Note:** For saving setlists to history, use the repository pattern: `repos.history.save(setlist)`
 
 ### pdf_formatter.py
 **Purpose:** PDF generation
@@ -553,16 +534,16 @@ replacement = select_songs_for_moment(
 ### Core Selection Components
 ```python
 from library import (
-    load_songs,
-    load_history,
+    get_repositories,
     calculate_recency_scores,
     select_songs_for_moment,
     apply_energy_ordering,
 )
 
-# Load data
-songs = load_songs(Path("."))
-history = load_history(Path("./history"))
+# Load data via repositories
+repos = get_repositories()
+songs = repos.songs.get_all()
+history = repos.history.get_all()
 
 # Calculate recency
 recency_scores = calculate_recency_scores(songs, history, "2026-02-15")
@@ -583,15 +564,16 @@ ordered = apply_energy_ordering(selected, "louvor", songs, override_count=0)
 
 ### Generation Components
 ```python
-from library import SetlistGenerator
+from library import SetlistGenerator, get_repositories
 
-# Object-oriented API
-generator = SetlistGenerator(songs, history)
+# Using repositories (recommended)
+repos = get_repositories()
+generator = SetlistGenerator.from_repositories(repos.songs, repos.history)
 setlist = generator.generate(date="2026-02-15")
 
-# OR functional API (backward compatible)
-from library import generate_setlist
-setlist = generate_setlist(songs, history, date="2026-02-15")
+# Or direct initialization
+generator = SetlistGenerator(songs_dict, history_list)
+setlist = generator.generate(date="2026-02-15")
 ```
 
 ### Transposition Components
@@ -608,18 +590,21 @@ transposed = transpose_content(song.content, semitones, use_flats)
 
 ### Formatting Components
 ```python
-from library import format_setlist_markdown, save_setlist_history
+from library import get_repositories, format_setlist_markdown, generate_setlist_pdf
+from pathlib import Path
+
+repos = get_repositories()
+songs = repos.songs.get_all()
 
 # Generate markdown
 markdown = format_setlist_markdown(setlist, songs)
 output_path = Path("output/2026-02-15.md")
 output_path.write_text(markdown)
 
-# Save history
-save_setlist_history(setlist, Path("./history"))
+# Save history via repository
+repos.history.save(setlist)
 
 # Generate PDF
-from library import generate_setlist_pdf
 pdf_path = Path("output/2026-02-15.pdf")
 generate_setlist_pdf(setlist, songs, pdf_path)
 ```
@@ -827,9 +812,10 @@ def format_setlist_html(setlist, songs):
 @click.command()
 def export_html():
     """Export setlist as HTML."""
-    setlist = load_latest_setlist()
-    songs = load_songs(Path("."))
-    html = format_setlist_html(setlist, songs)
+    repos = get_repositories()
+    songs = repos.songs.get_all()
+    latest = repos.history.get_latest()
+    html = format_setlist_html(latest, songs)
     Path("output/latest.html").write_text(html)
 ```
 

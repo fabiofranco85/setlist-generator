@@ -33,11 +33,11 @@ def complete_song_names(ctx, param, incomplete: str) -> List[CompletionItem]:
         Input: "OU" -> Returns: ["Ousado Amor"]
     """
     try:
-        from library import load_songs
+        from library import get_repositories
 
-        # Load songs from database.csv
-        base_path = Path.cwd()
-        songs = load_songs(base_path)
+        # Load songs via repository
+        repos = get_repositories()
+        songs = repos.songs.get_all()
 
         # Filter by incomplete input (case-insensitive)
         # songs is a dict where keys are song titles

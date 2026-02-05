@@ -600,28 +600,6 @@ setlist3 = generator.generate("2026-03-29")
 - `repos.config.get_moments_config()` - Get service moments
 - `repos.output.save_markdown(date, content)` - Save markdown file
 
-### Using the Legacy API (Deprecated)
-
-The legacy functional API still works but emits deprecation warnings:
-
-```python
-from library import load_songs, load_history, generate_setlist
-from pathlib import Path
-
-# ⚠️ These functions are deprecated
-songs = load_songs(Path("."))
-history = load_history(Path("./history"))
-
-setlist = generate_setlist(
-    songs=songs,
-    history=history,
-    date="2026-03-15",
-    overrides={"louvor": ["Oceanos"]}
-)
-```
-
-**Migration:** Replace `load_songs()`/`load_history()` with `get_repositories()`.
-
 ### Custom Formatting and Saving
 
 ```python

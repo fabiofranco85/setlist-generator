@@ -2,9 +2,7 @@
 View song command - display song lyrics, chords, and metadata.
 """
 
-from pathlib import Path
-
-from library import load_songs
+from library import get_repositories
 
 
 def list_all_songs(songs: dict):
@@ -203,7 +201,8 @@ def run(song_name, list_songs, no_metadata, transpose_to=None):
 
     # Load songs
     try:
-        songs = load_songs(Path.cwd())
+        repos = get_repositories()
+        songs = repos.songs.get_all()
     except Exception as e:
         handle_error(f"Loading songs: {e}")
 
