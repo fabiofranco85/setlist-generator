@@ -25,26 +25,55 @@ Create unlisted YouTube playlists from your setlists with a single command.
 
 ### 3. Configure OAuth Consent Screen
 
-1. Go to **APIs & Services** > **OAuth consent screen**
-2. Select **External** user type, click **Create**
-3. Fill in the required fields (App name, User support email, Developer email)
-4. Click **Save and Continue**
-5. On the **Scopes** page, click **Add or Remove Scopes**
-6. Find and add `https://www.googleapis.com/auth/youtube`
-7. Click **Save and Continue**
-8. On the **Test Users** page, add your Google email address
-9. Click **Save and Continue**, then **Back to Dashboard**
+1. Go to **Menu** > **Google Auth platform** > **Branding**
+2. If unconfigured, click **Get Started**
+3. Under **App Information**, enter:
+   - App name (e.g., "Songbook YouTube")
+   - User support email address
+4. Click **Next**
+5. Under **Audience**, select user type:
+   - **Internal** (for Google Workspace organization only) - **Not available for personal accounts**
+   - **External** (for any Google account user) - **Required for personal accounts**
+6. Click **Next**
+7. Under **Contact Information**, enter your email for notifications
+8. Click **Next**
+9. Review the **Google API Services User Data Policy**
+10. Select the agreement checkbox
+11. Click **Continue**, then **Create**
+
+#### Add Test Users (External Apps Only)
+
+If you selected **External** user type:
+
+1. Navigate to **Audience** section in the left menu
+2. Under **Test users**, click **Add users**
+3. Enter your Google email address
+4. Click **Save**
+
+#### Configure Scopes (External Apps Only)
+
+If you selected **External** user type:
+
+1. Navigate to **Data Access** section in the left menu
+2. Click **Add or Remove Scopes**
+3. Search for and add: `https://www.googleapis.com/auth/youtube`
+4. Click **Save**
+
+**Note:** Internal apps don't require scope configuration or test users.
 
 ### 4. Create OAuth 2.0 Credentials
 
-1. Go to **APIs & Services** > **Credentials**
-2. Click **Create Credentials** > **OAuth Client ID**
-3. Application type: **Desktop application**
-4. Name it (e.g., "Songbook CLI")
+1. Go to **Menu** > **Google Auth platform** > **Clients**
+2. Click **Create Client**
+3. Click **Application type** > **Desktop app**
+4. In the **Name** field, enter a name (e.g., "Songbook CLI")
 5. Click **Create**
-6. Click **Download JSON** on the confirmation dialog
-7. Rename the downloaded file to `client_secrets.json`
-8. Place it in the project root (same directory as `database.csv`)
+6. The credential appears under **OAuth 2.0 Client IDs**
+7. Click the download icon (⬇) to download the JSON file
+8. Rename the downloaded file to `client_secrets.json`
+9. Place it in the project root (same directory as `database.csv`)
+
+**Important:** Starting June 2025, client secrets are only visible at creation time. Download the JSON file immediately.
 
 The file is automatically gitignored for security.
 
@@ -185,9 +214,9 @@ songbook youtube
 ### "Access blocked: This app's request is invalid" (Error 400)
 
 This happens when the OAuth consent screen is not properly configured. Check:
-1. The YouTube Data API v3 is enabled
-2. Your email is added as a test user
-3. The `youtube` scope is added to the consent screen
+1. The YouTube Data API v3 is enabled (Menu > APIs & Services > Library)
+2. Your email is added as a test user (Menu > Google Auth platform > Branding > Audience)
+3. The `youtube` scope is added (Menu > Google Auth platform > Branding > Data Access)
 
 ### API Quota
 
