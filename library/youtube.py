@@ -167,8 +167,9 @@ def get_credentials(
             )
             creds = flow.run_local_server(port=0)
 
-        # Cache token
+        # Cache token with restricted permissions (owner read/write only)
         token_file.write_text(creds.to_json())
+        token_file.chmod(0o600)
 
     return creds
 

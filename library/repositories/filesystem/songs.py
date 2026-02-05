@@ -40,8 +40,17 @@ class FilesystemSongRepository:
 
         Returns:
             Dictionary mapping song titles to Song objects
+
+        Raises:
+            FileNotFoundError: If database.csv doesn't exist
         """
         songs = {}
+
+        if not self._database_file.exists():
+            raise FileNotFoundError(
+                f"Song database not found: {self._database_file}. "
+                "Ensure database.csv exists in the project root."
+            )
 
         with open(self._database_file, "r", encoding="utf-8") as f:
             reader = csv.DictReader(f, delimiter=";")
