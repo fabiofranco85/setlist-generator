@@ -92,8 +92,12 @@ def run(song_name: str):
         4: "Deep worship, contemplative, intimate",
     }
     energy = song.energy
-    desc = energy_desc.get(int(energy), "Unknown") if energy else "Unknown"
-    energy_display = int(energy) if energy == int(energy) else energy
+    if energy is None:
+        energy_display = "N/A"
+        desc = "Unknown"
+    else:
+        desc = energy_desc.get(int(energy), "Unknown")
+        energy_display = int(energy) if energy == int(energy) else energy
     print()
     print(f"Energy:  {energy_display} - {desc}")
 

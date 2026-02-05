@@ -161,8 +161,10 @@ def _register_filesystem_backend() -> None:
         from .filesystem import FilesystemRepositoryContainer
 
         RepositoryFactory.register("filesystem", FilesystemRepositoryContainer)
-    except ImportError:
+    except ModuleNotFoundError:
         # Filesystem module not yet created - will be registered when available
+        # Using ModuleNotFoundError (not ImportError) to avoid masking real errors
+        # like syntax errors or missing dependencies within the module
         pass
 
 
