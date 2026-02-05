@@ -18,3 +18,7 @@ MIGRATION_COMPLETE.md
 # YouTube API credentials
 client_secrets.json
 .youtube_token.json
+
+# Claude Code local settings (user-specific)
+.claude/settings.local.json
+.claude/settings.json
