@@ -550,20 +550,18 @@ DEFAULT_WEIGHT = 3  # Default weight when not specified in tags
 
 The setlist generator can be used as a Python library in your own scripts, allowing you to integrate setlist generation into custom workflows, web applications, or automation tools.
 
-### Using the SetlistGenerator Class (Recommended)
+### Using the Repository Pattern (Recommended)
 
-The object-oriented API provides better state management and is recommended for new code:
+The repository pattern provides a clean abstraction for data access, enabling future backend flexibility (PostgreSQL, MongoDB, etc.):
 
 ```python
-from library import SetlistGenerator, load_songs, load_history
-from pathlib import Path
+from library import get_repositories, SetlistGenerator
 
-# Load songs and history
-songs = load_songs(Path("."))
-history = load_history(Path("./history"))
+# Get repositories (uses STORAGE_BACKEND env var, default: filesystem)
+repos = get_repositories()
 
-# Create generator instance
-generator = SetlistGenerator(songs, history)
+# Create generator from repositories
+generator = SetlistGenerator.from_repositories(repos.songs, repos.history)
 
 # Generate setlist
 setlist = generator.generate(
@@ -578,24 +576,39 @@ for moment, song_list in setlist.moments.items():
     for song in song_list:
         print(f"  - {song}")
 
+# Save through repositories
+repos.history.save(setlist)
+
 # Generate multiple setlists with same instance
 setlist2 = generator.generate("2026-03-22")
 setlist3 = generator.generate("2026-03-29")
 ```
 
 **Benefits:**
+- ✓ Backend-agnostic (swap filesystem for database without code changes)
 - ✓ State managed internally (recency scores calculated once)
 - ✓ Reusable (generate multiple setlists efficiently)
 - ✓ Easy to test and extend
 
-### Using the Functional API (Backward Compatible)
+**Repository methods:**
+- `repos.songs.get_all()` - Get all songs
+- `repos.songs.get_by_title(title)` - Get single song
+- `repos.songs.search(query)` - Search by title
+- `repos.history.get_all()` - Get all history (most recent first)
+- `repos.history.get_by_date(date)` - Get specific setlist
+- `repos.history.save(setlist)` - Save new setlist
+- `repos.config.get_moments_config()` - Get service moments
+- `repos.output.save_markdown(date, content)` - Save markdown file
 
-The functional API is still available and works identically:
+### Using the Legacy API (Deprecated)
+
+The legacy functional API still works but emits deprecation warnings:
 
 ```python
 from library import load_songs, load_history, generate_setlist
 from pathlib import Path
 
+# ⚠️ These functions are deprecated
 songs = load_songs(Path("."))
 history = load_history(Path("./history"))
 
@@ -607,24 +620,21 @@ setlist = generate_setlist(
 )
 ```
 
-Both APIs produce identical results. Choose based on your needs:
-- **SetlistGenerator class**: Better for complex workflows, testing, or multiple generations
-- **generate_setlist() function**: Simpler for one-off script usage
+**Migration:** Replace `load_songs()`/`load_history()` with `get_repositories()`.
 
 ### Custom Formatting and Saving
 
 ```python
-from library import SetlistGenerator, load_songs, load_history
-from library import format_setlist_markdown, save_setlist_history
+from library import get_repositories, SetlistGenerator, format_setlist_markdown
 from pathlib import Path
 
-# Generate setlist
-songs = load_songs(Path("."))
-history = load_history(Path("./history"))
-generator = SetlistGenerator(songs, history)
+# Get repositories and generate setlist
+repos = get_repositories()
+generator = SetlistGenerator.from_repositories(repos.songs, repos.history)
 setlist = generator.generate("2026-03-15")
 
 # Format as markdown
+songs = repos.songs.get_all()
 markdown = format_setlist_markdown(setlist, songs)
 
 # Save to custom location
@@ -632,8 +642,11 @@ output_path = Path("~/Desktop/next-service.md").expanduser()
 with open(output_path, "w", encoding="utf-8") as f:
     f.write(markdown)
 
-# Save to history (optional)
-save_setlist_history(setlist, Path("./history"))
+# Save to history through repository
+repos.history.save(setlist)
+
+# Or use the output repository for standard locations
+repos.output.save_markdown(setlist.date, markdown)
 ```
 
 ### Batch Generation
@@ -641,13 +654,11 @@ save_setlist_history(setlist, Path("./history"))
 Generate multiple setlists programmatically:
 
 ```python
-from library import SetlistGenerator, load_songs, load_history
-from pathlib import Path
+from library import get_repositories, SetlistGenerator
 from datetime import datetime, timedelta
 
-songs = load_songs(Path("."))
-history = load_history(Path("./history"))
-generator = SetlistGenerator(songs, history)
+repos = get_repositories()
+generator = SetlistGenerator.from_repositories(repos.songs, repos.history)
 
 # Generate setlists for next 4 Sundays
 start_date = datetime(2026, 3, 1)
@@ -663,15 +674,13 @@ for i in range(4):
 
 ```python
 from flask import Flask, jsonify
-from library import SetlistGenerator, load_songs, load_history
-from pathlib import Path
+from library import get_repositories, SetlistGenerator
 
 app = Flask(__name__)
 
 # Initialize once at startup
-songs = load_songs(Path("."))
-history = load_history(Path("./history"))
-generator = SetlistGenerator(songs, history)
+repos = get_repositories()
+generator = SetlistGenerator.from_repositories(repos.songs, repos.history)
 
 @app.route('/generate/<date>')
 def generate_setlist_api(date):
@@ -681,6 +690,11 @@ def generate_setlist_api(date):
         "moments": setlist.moments,
         "total_songs": sum(len(s) for s in setlist.moments.values())
     })
+
+@app.route('/songs')
+def list_songs():
+    songs = repos.songs.get_all()
+    return jsonify([{"title": s.title, "energy": s.energy} for s in songs.values()])
 
 if __name__ == '__main__':
     app.run(debug=True)

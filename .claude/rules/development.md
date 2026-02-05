@@ -56,23 +56,84 @@ class Setlist:
     moments: Dict[str, List[str]]  # moment → [song names]
 ```
 
-### loader.py
-**Purpose:** Data loading from files
+### loader.py (Deprecated)
+**Purpose:** Legacy data loading from files
+
+**Status:** Deprecated in favor of repository pattern. Use `get_repositories()` instead.
 
 **Contents:**
-- `load_songs(base_path)` - Load songs from database.csv and chords/*.md
-- `load_history(history_dir)` - Load historical setlists from JSON
-- `parse_tags(tag_string)` - Parse tag format (e.g., "louvor(5),prelúdio")
+- `load_songs(base_path)` - **Deprecated** - Use `repos.songs.get_all()`
+- `load_history(history_dir)` - **Deprecated** - Use `repos.history.get_all()`
+- `parse_tags(tag_string)` - Parse tag format (e.g., "louvor(5),prelúdio") - NOT deprecated
+
+**Migration:**
+```python
+# Old way (deprecated)
+songs = load_songs(Path("."))
+history = load_history(Path("./history"))
+
+# New way (recommended)
+repos = get_repositories()
+songs = repos.songs.get_all()
+history = repos.history.get_all()
+```
+
+### repositories/ (New)
+**Purpose:** Data access abstraction layer
+
+**Structure:**
+```
+repositories/
+├── __init__.py         # Public exports + get_repositories()
+├── protocols.py        # Protocol definitions (interfaces)
+├── factory.py          # RepositoryFactory + RepositoryContainer
+└── filesystem/
+    ├── __init__.py     # FilesystemRepositoryContainer
+    ├── songs.py        # FilesystemSongRepository
+    ├── history.py      # FilesystemHistoryRepository
+    ├── config.py       # FilesystemConfigRepository
+    └── output.py       # FilesystemOutputRepository
+```
+
+**Key Components:**
+- `get_repositories()` - Factory function, reads STORAGE_BACKEND env var
+- `RepositoryContainer` - Bundles all repository instances
+- Protocols: `SongRepository`, `HistoryRepository`, `ConfigRepository`, `OutputRepository`
+
+**Usage:**
+```python
+from library import get_repositories, SetlistGenerator
+
+# Get repositories (uses STORAGE_BACKEND env var, default: filesystem)
+repos = get_repositories()
+
+# Access data through repositories
+songs = repos.songs.get_all()
+song = repos.songs.get_by_title("Oceanos")
+history = repos.history.get_all()
+latest = repos.history.get_latest()
+config = repos.config.get_moments_config()
+
+# Use with SetlistGenerator
+generator = SetlistGenerator.from_repositories(repos.songs, repos.history)
+setlist = generator.generate("2026-02-15")
+
+# Save through repositories
+repos.history.save(setlist)
+repos.output.save_markdown(setlist.date, markdown_content)
+```
+
+**Environment Configuration:**
+```bash
+STORAGE_BACKEND=filesystem  # Default (CSV + JSON files)
+STORAGE_BACKEND=postgres    # PostgreSQL/Supabase (future)
+STORAGE_BACKEND=mongodb     # MongoDB (future)
+```
 
 **When to modify:**
-- Changing database format
-- Adding new data sources
-- Optimizing load performance
-
-**Implementation notes:**
-- Uses CSV for database (semicolon-separated)
-- Uses JSON for history (one file per date)
-- Lazy loads chords content (only when needed)
+- Adding new storage backends
+- Adding new repository methods
+- Changing caching behavior
 
 ### selector.py
 **Purpose:** Song selection algorithms and usage queries

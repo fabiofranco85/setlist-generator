@@ -1,6 +1,18 @@
-"""Output formatting for setlists."""
+"""Output formatting for setlists.
+
+The ``format_setlist_markdown()`` function is NOT deprecated and remains the
+standard way to generate markdown content.
+
+.. deprecated::
+    The ``save_setlist_history()`` function is deprecated. Use repositories instead:
+
+    >>> from library import get_repositories
+    >>> repos = get_repositories()
+    >>> repos.history.save(setlist)
+"""
 
 import json
+import warnings
 from pathlib import Path
 
 from .models import Song, Setlist
@@ -41,10 +53,22 @@ def save_setlist_history(
     """
     Save setlist to history as JSON.
 
+    .. deprecated::
+        Use ``get_repositories().history.save(setlist)`` instead:
+
+        >>> from library import get_repositories
+        >>> repos = get_repositories(history_dir=setlists_path)
+        >>> repos.history.save(setlist)
+
     Args:
         setlist: The setlist to save
         setlists_path: Path to history directory (e.g., Path("./history"))
     """
+    warnings.warn(
+        "save_setlist_history() is deprecated. Use get_repositories().history.save() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     setlists_path.mkdir(exist_ok=True)
 
     history_file = setlists_path / f"{setlist.date}.json"

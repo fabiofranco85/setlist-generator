@@ -160,19 +160,22 @@ songbook cleanup  # Check and fix data issues
 ## Programmatic Usage
 
 ```python
-from library import SetlistGenerator, load_songs, load_history
-from pathlib import Path
+from library import get_repositories, SetlistGenerator
 
-# Load data
-songs = load_songs(Path("."))
-history = load_history(Path("./history"))
+# Get repositories (uses STORAGE_BACKEND env var, default: filesystem)
+repos = get_repositories()
+
+# Create generator from repositories
+generator = SetlistGenerator.from_repositories(repos.songs, repos.history)
 
 # Generate setlist
-generator = SetlistGenerator(songs, history)
 setlist = generator.generate(
     date="2026-02-15",
     overrides={"louvor": ["Oceanos", "Ousado Amor"]}
 )
+
+# Save through repositories
+repos.history.save(setlist)
 
 # Access results
 for moment, song_list in setlist.moments.items():

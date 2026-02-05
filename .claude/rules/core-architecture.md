@@ -52,12 +52,16 @@ Where:
     ├── __init__.py          # Public API exports
     ├── config.py            # Configuration constants
     ├── models.py            # Song and Setlist data structures
-    ├── loader.py            # Data loading (CSV, history, chords)
+    ├── loader.py            # Data loading (DEPRECATED - use repositories)
     ├── selector.py          # Song selection algorithms
     ├── paths.py             # Path resolution utilities
     ├── ordering.py          # Energy-based ordering
     ├── transposer.py        # Chord transposition (chromatic)
     ├── generator.py         # Core setlist generation
+    ├── repositories/        # Data access abstraction layer (NEW)
+    │   ├── protocols.py     # Repository interfaces
+    │   ├── factory.py       # Backend factory + RepositoryContainer
+    │   └── filesystem/      # Filesystem backend implementation
     ├── formatter.py         # Output formatting (markdown, JSON)
     ├── pdf_formatter.py     # PDF generation (ReportLab)
     └── youtube.py           # YouTube playlist integration
@@ -289,20 +293,53 @@ Edit `ENERGY_ORDERING_ENABLED` or `ENERGY_ORDERING_RULES` in `library/config.py`
 
 ## Programmatic Usage
 
-### SetlistGenerator Class (Recommended)
+### Repository Pattern (Recommended)
+
+The repository pattern provides a clean abstraction for data access, enabling future backend flexibility (PostgreSQL, MongoDB, etc.):
+
+```python
+from library import get_repositories, SetlistGenerator
+
+# Get repositories (uses STORAGE_BACKEND env var, default: filesystem)
+repos = get_repositories()
+
+# Create generator from repositories
+generator = SetlistGenerator.from_repositories(repos.songs, repos.history)
+
+# Generate setlist
+setlist = generator.generate(
+    date="2026-02-15",
+    overrides={"louvor": ["Oceanos", "Ousado Amor"]}
+)
+
+# Save through repositories
+repos.history.save(setlist)
+md_path, pdf_path = repos.output.save_from_setlist(setlist, repos.songs.get_all(), include_pdf=True)
+```
+
+**Repository methods:**
+- `repos.songs.get_all()` - Get all songs
+- `repos.songs.get_by_title(title)` - Get single song
+- `repos.songs.search(query)` - Search by title
+- `repos.history.get_all()` - Get all history (most recent first)
+- `repos.history.get_by_date(date)` - Get specific setlist
+- `repos.history.save(setlist)` - Save new setlist
+- `repos.config.get_moments_config()` - Get service moments
+- `repos.output.save_markdown(date, content)` - Save markdown file
+
+### SetlistGenerator Class
 
 The `SetlistGenerator` class encapsulates the stateful operations of setlist generation:
 
 ```python
-from library import SetlistGenerator, load_songs, load_history
-from pathlib import Path
+from library import SetlistGenerator, get_repositories
 
-# Load data
-songs = load_songs(Path("."))
-history = load_history(Path("./history"))
+# Using repositories (recommended)
+repos = get_repositories()
+generator = SetlistGenerator.from_repositories(repos.songs, repos.history)
 
-# Create generator (manages state internally)
-generator = SetlistGenerator(songs, history)
+# Or direct initialization (still supported)
+generator = SetlistGenerator(songs_dict, history_list)
 
 # Generate setlist
 setlist = generator.generate(
@@ -321,28 +358,22 @@ for moment, song_list in setlist.moments.items():
 - ✓ Easy to test (mock constructor params)
 - ✓ Reusable (generate multiple setlists with same instance)
 
-### Functional API (Backward Compatible)
+### Legacy API (Deprecated)
 
-For backward compatibility, the functional API is still available:
+The legacy functions still work but emit deprecation warnings:
 
 ```python
+# DEPRECATED - use get_repositories() instead
 from library import load_songs, load_history, generate_setlist
 from pathlib import Path
 
-# Load data
-songs = load_songs(Path("."))
-history = load_history(Path("./history"))
+songs = load_songs(Path("."))      # ⚠️ Deprecated
+history = load_history(Path("./history"))  # ⚠️ Deprecated
 
-# Generate setlist (functional style)
-setlist = generate_setlist(
-    songs=songs,
-    history=history,
-    date="2026-02-15",
-    overrides={"louvor": ["Oceanos", "Ousado Amor"]}
-)
+setlist = generate_setlist(songs, history, date="2026-02-15")
 ```
 
-Both APIs produce identical results. New code should prefer `SetlistGenerator` for better state management.
+Migrate to repository pattern for new code.
 
 ### Chord Transposition
 

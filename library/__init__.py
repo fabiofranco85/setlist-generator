@@ -40,6 +40,22 @@ from .youtube import (
     format_playlist_name,
     resolve_setlist_videos,
 )
+from .repositories import (
+    get_repositories,
+    RepositoryContainer,
+    RepositoryFactory,
+    # Protocols
+    SongRepository,
+    HistoryRepository,
+    ConfigRepository,
+    OutputRepository,
+    # Filesystem implementations
+    FilesystemRepositoryContainer,
+    FilesystemSongRepository,
+    FilesystemHistoryRepository,
+    FilesystemConfigRepository,
+    FilesystemOutputRepository,
+)
 
 __all__ = [
     # Configuration
@@ -85,4 +101,19 @@ __all__ = [
     "format_playlist_name",
     "resolve_setlist_videos",
     "create_setlist_playlist",
+    # Repository pattern
+    "get_repositories",
+    "RepositoryContainer",
+    "RepositoryFactory",
+    # Repository protocols
+    "SongRepository",
+    "HistoryRepository",
+    "ConfigRepository",
+    "OutputRepository",
+    # Filesystem repositories
+    "FilesystemRepositoryContainer",
+    "FilesystemSongRepository",
+    "FilesystemHistoryRepository",
+    "FilesystemConfigRepository",
+    "FilesystemOutputRepository",
 ]

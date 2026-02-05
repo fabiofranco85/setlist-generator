@@ -1,11 +1,16 @@
 """Core setlist generation logic."""
 
-from typing import Dict
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from .config import MOMENTS_CONFIG
 from .models import Song, Setlist
 from .ordering import apply_energy_ordering
 from .selector import calculate_recency_scores, select_songs_for_moment
+
+if TYPE_CHECKING:
+    from .repositories.protocols import SongRepository, HistoryRepository
 
 
 class SetlistGenerator:
@@ -15,11 +20,16 @@ class SetlistGenerator:
     This class encapsulates the stateful operations of setlist generation,
     managing recency scores and tracking already-selected songs internally.
 
-    Example:
+    Example using direct initialization:
         >>> songs = load_songs(Path("."))
         >>> history = load_history(Path("./setlists"))
         >>> generator = SetlistGenerator(songs, history)
         >>> setlist = generator.generate("2026-02-15", overrides={"louvor": ["Oceanos"]})
+
+    Example using repositories:
+        >>> repos = get_repositories()
+        >>> generator = SetlistGenerator.from_repositories(repos.songs, repos.history)
+        >>> setlist = generator.generate("2026-02-15")
     """
 
     def __init__(self, songs: dict[str, Song], history: list[dict]):
@@ -35,6 +45,35 @@ class SetlistGenerator:
         self._recency_scores = {}  # Calculated per generation, not at init
         self._already_selected = set()
         self._moments = {}
+
+    @classmethod
+    def from_repositories(
+        cls,
+        songs_repo: SongRepository,
+        history_repo: HistoryRepository,
+    ) -> SetlistGenerator:
+        """
+        Create a generator from repository instances.
+
+        This is the recommended way to create a generator when using the
+        repository pattern. It automatically extracts the data from the
+        repositories.
+
+        Args:
+            songs_repo: Repository providing song data
+            history_repo: Repository providing history data
+
+        Returns:
+            SetlistGenerator instance initialized with repository data
+
+        Example:
+            >>> repos = get_repositories()
+            >>> generator = SetlistGenerator.from_repositories(repos.songs, repos.history)
+            >>> setlist = generator.generate("2026-02-15")
+        """
+        songs = songs_repo.get_all()
+        history = history_repo.get_all()
+        return cls(songs, history)
 
     def generate(
         self,

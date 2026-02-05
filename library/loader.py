@@ -1,8 +1,21 @@
-"""Data loading utilities for songs and history."""
+"""Data loading utilities for songs and history.
+
+.. deprecated::
+    The functions in this module are deprecated. Use the repository pattern instead:
+
+    >>> from library import get_repositories
+    >>> repos = get_repositories()
+    >>> songs = repos.songs.get_all()
+    >>> history = repos.history.get_all()
+
+The ``parse_tags()`` function is NOT deprecated as it remains useful for parsing
+tag strings in various contexts.
+"""
 
 import csv
 import json
 import re
+import warnings
 from pathlib import Path
 from typing import Dict
 
@@ -41,8 +54,25 @@ def parse_tags(tags_str: str) -> dict[str, int]:
 def load_songs(base_path: Path) -> dict[str, Song]:
     """
     Load songs from database.csv and their content from chords/*.md files.
-    Returns: {song_title: Song}
+
+    .. deprecated::
+        Use ``get_repositories().songs.get_all()`` instead:
+
+        >>> from library import get_repositories
+        >>> repos = get_repositories(base_path=base_path)
+        >>> songs = repos.songs.get_all()
+
+    Args:
+        base_path: Project root directory
+
+    Returns:
+        Dictionary mapping song titles to Song objects
     """
+    warnings.warn(
+        "load_songs() is deprecated. Use get_repositories().songs.get_all() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     songs = {}
     tags_file = base_path / "database.csv"
     chords_path = base_path / "chords"
@@ -87,12 +117,24 @@ def load_history(setlists_path: Path) -> list[dict]:
     """
     Load setlist history from JSON files.
 
+    .. deprecated::
+        Use ``get_repositories().history.get_all()`` instead:
+
+        >>> from library import get_repositories
+        >>> repos = get_repositories(history_dir=setlists_path)
+        >>> history = repos.history.get_all()
+
     Args:
         setlists_path: Path to history directory (e.g., Path("./history"))
 
     Returns:
         List of historical setlists sorted by date (most recent first)
     """
+    warnings.warn(
+        "load_history() is deprecated. Use get_repositories().history.get_all() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     history = []
 
     if not setlists_path.exists():
