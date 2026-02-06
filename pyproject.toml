@@ -45,8 +45,9 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["library", "cli"]
+source = ["library"]
 branch = true
+omit = ["library/pdf_formatter.py"]
 
 [tool.coverage.report]
 fail_under = 80

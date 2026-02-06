@@ -10,11 +10,11 @@ from library.models import Setlist, Song
 # Automatic markers based on directory
 # ---------------------------------------------------------------------------
 
-
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     """Auto-apply ``unit`` / ``integration`` markers by test location."""
     for item in items:
-        parts = item.path.parts
+        test_path = item.path
+        parts = test_path.parts
         if "unit" in parts:
             item.add_marker(pytest.mark.unit)
         elif "integration" in parts:
