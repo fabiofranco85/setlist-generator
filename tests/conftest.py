@@ -14,8 +14,7 @@ from library.models import Setlist, Song
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     """Auto-apply ``unit`` / ``integration`` markers by test location."""
     for item in items:
-        test_path = Path(item.fspath)
-        parts = test_path.parts
+        parts = item.path.parts
         if "unit" in parts:
             item.add_marker(pytest.mark.unit)
         elif "integration" in parts:
