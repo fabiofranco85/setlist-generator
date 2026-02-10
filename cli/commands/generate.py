@@ -46,7 +46,7 @@ def parse_overrides(override_args: tuple[str, ...] | None) -> dict[str, list[str
     return overrides
 
 
-def run(date, override, pdf, no_save, output_dir, history_dir, output):
+def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=False):
     """
     Generate a setlist for a service date.
 
@@ -58,8 +58,12 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output):
         output_dir: Custom output directory
         history_dir: Custom history directory
         output: Custom output filename
+        verbose: Whether to enable debug-level observability output
     """
-    from cli.cli_utils import resolve_paths
+    from cli.cli_utils import resolve_paths, print_metrics_summary
+    from library.observability import Observability
+
+    obs = Observability.for_cli(level="DEBUG" if verbose else "WARNING")
 
     # Use today if no date specified
     if not date:
@@ -88,7 +92,7 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output):
 
     # Generate setlist
     print("\nGenerating setlist...")
-    setlist = generate_setlist(songs, history, date, overrides)
+    setlist = generate_setlist(songs, history, date, overrides, obs=obs)
 
     # Display summary
     print(f"\n{'=' * 50}")
@@ -130,3 +134,6 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output):
             print("         or: pip install reportlab")
         except Exception as e:
             print(f"Error generating PDF: {e}")
+
+    if verbose:
+        print_metrics_summary(obs.metrics.get_summary())

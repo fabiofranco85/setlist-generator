@@ -56,6 +56,17 @@ from .repositories import (
     FilesystemConfigRepository,
     FilesystemOutputRepository,
 )
+from .observability import (
+    Observability,
+    LoggerPort,
+    MetricsPort,
+    TracerPort,
+    Span,
+    NullLogger,
+    NullMetrics,
+    NullTracer,
+    NullSpan,
+)
 
 __all__ = [
     # Configuration
@@ -114,4 +125,14 @@ __all__ = [
     "FilesystemHistoryRepository",
     "FilesystemConfigRepository",
     "FilesystemOutputRepository",
+    # Observability
+    "Observability",
+    "LoggerPort",
+    "MetricsPort",
+    "TracerPort",
+    "Span",
+    "NullLogger",
+    "NullMetrics",
+    "NullTracer",
+    "NullSpan",
 ]

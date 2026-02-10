@@ -59,3 +59,21 @@ def handle_error(error, exit_code=1):
     """
     click.secho(f"Error: {error}", fg="red", err=True)
     raise SystemExit(exit_code)
+
+
+def print_metrics_summary(summary):
+    """
+    Print observability metrics summary to stderr.
+
+    Args:
+        summary: Dict returned by MetricsPort.get_summary()
+    """
+    import sys
+
+    parts = []
+    for name, value in summary.get("counters", {}).items():
+        parts.append(f"{name}={value}")
+    for name, data in summary.get("timers", {}).items():
+        parts.append(f"{name}={data['total']:.2f}s")
+    if parts:
+        print(f"\n[stats] {', '.join(parts)}", file=sys.stderr)

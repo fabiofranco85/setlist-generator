@@ -15,7 +15,9 @@ from cli.completions import (
 
 @click.group()
 @click.version_option(version="1.0.0", prog_name="songbook")
-def cli():
+@click.option("--verbose", "-v", is_flag=True, help="Enable verbose output (debug logging)")
+@click.pass_context
+def cli(ctx, verbose):
     """Church worship setlist generator.
 
     Unified CLI for managing worship service setlists.
@@ -41,7 +43,8 @@ def cli():
 
     Use 'songbook <command> --help' for command-specific help.
     """
-    pass
+    ctx.ensure_object(dict)
+    ctx.obj["verbose"] = verbose
 
 
 @cli.command()
@@ -52,7 +55,8 @@ def cli():
 @click.option("--output-dir", help="Custom markdown output directory")
 @click.option("--history-dir", help="Custom history directory")
 @click.option("--output", help="Custom output filename")
-def generate(date, override, pdf, no_save, output_dir, history_dir, output):
+@click.pass_context
+def generate(ctx, date, override, pdf, no_save, output_dir, history_dir, output):
     """Generate new setlist for a service date.
 
     \b
@@ -63,7 +67,8 @@ def generate(date, override, pdf, no_save, output_dir, history_dir, output):
       songbook generate --override "prelúdio:Estamos de Pé" --override "louvor:Oceanos"
     """
     from cli.commands.generate import run
-    run(date, override, pdf, no_save, output_dir, history_dir, output)
+    run(date, override, pdf, no_save, output_dir, history_dir, output,
+        verbose=ctx.obj.get("verbose", False))
 
 
 @cli.command("view-setlist")
@@ -163,7 +168,8 @@ def list_moments():
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
-def replace(moment, position, positions, replacement, date, output_dir, history_dir):
+@click.pass_context
+def replace(ctx, moment, position, positions, replacement, date, output_dir, history_dir):
     """Replace song in existing setlist.
 
     \b
@@ -174,7 +180,8 @@ def replace(moment, position, positions, replacement, date, output_dir, history_
       songbook replace --moment louvor --positions 1,3
     """
     from cli.commands.replace import run
-    run(moment, position, positions, replacement, date, output_dir, history_dir)
+    run(moment, position, positions, replacement, date, output_dir, history_dir,
+        verbose=ctx.obj.get("verbose", False))
 
 
 @cli.command()

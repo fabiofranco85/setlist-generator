@@ -18,7 +18,7 @@ from library.replacer import (
 )
 
 
-def run(moment, position, positions, replacement, date, output_dir, history_dir):
+def run(moment, position, positions, replacement, date, output_dir, history_dir, verbose=False):
     """
     Replace song in existing setlist.
 
@@ -30,8 +30,12 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir)
         date: Target date (YYYY-MM-DD) or None for latest
         output_dir: Custom output directory
         history_dir: Custom history directory
+        verbose: Whether to enable debug-level observability output
     """
-    from cli.cli_utils import resolve_paths, handle_error
+    from cli.cli_utils import resolve_paths, handle_error, print_metrics_summary
+    from library.observability import Observability
+
+    obs = Observability.for_cli(level="DEBUG" if verbose else "WARNING")
 
     # Setup paths
     paths = resolve_paths(output_dir, history_dir)
@@ -124,7 +128,8 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir)
                 position=pos,
                 replacement_song=replacement_song,
                 songs=songs,
-                reorder_energy=True
+                reorder_energy=True,
+                obs=obs,
             )
 
         else:
@@ -143,7 +148,8 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir)
                 setlist_dict=setlist_dict,
                 replacements=replacements_list,
                 songs=songs,
-                history=history
+                history=history,
+                obs=obs,
             )
 
     except ValueError as e:
@@ -174,3 +180,6 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir)
     print(f"History saved to: {history_path}")
 
     print("\n✅ Replacement complete!")
+
+    if verbose:
+        print_metrics_summary(obs.metrics.get_summary())

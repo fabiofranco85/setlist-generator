@@ -5,12 +5,17 @@ This module provides functions to replace songs in already-generated setlists,
 either automatically (using the selection algorithm) or manually (user-specified).
 """
 
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 from .config import ENERGY_ORDERING_ENABLED, ENERGY_ORDERING_RULES, MOMENTS_CONFIG
 from .models import Song
 from .ordering import apply_energy_ordering
 from .selector import calculate_recency_scores, select_songs_for_moment
+
+if TYPE_CHECKING:
+    from .observability import Observability
 
 
 def find_target_setlist(
@@ -168,7 +173,8 @@ def replace_song_in_setlist(
     position: int,
     replacement_song: str,
     songs: dict[str, Song],
-    reorder_energy: bool = True
+    reorder_energy: bool = True,
+    obs: Observability | None = None,
 ) -> dict[str, Any]:
     """
     Replace a song and optionally reorder by energy.
@@ -180,10 +186,23 @@ def replace_song_in_setlist(
         replacement_song: New song title
         songs: All available songs
         reorder_energy: Whether to reapply energy ordering
+        obs: Observability container (defaults to noop)
 
     Returns:
         Updated setlist dict (new copy, original unchanged)
     """
+    from .observability import Observability as _Obs
+
+    obs = obs or _Obs.noop()
+    old_song = setlist_dict["moments"][moment][position]
+    obs.logger.info(
+        "Replacing song",
+        moment=moment,
+        position=position,
+        old=old_song,
+        new=replacement_song,
+    )
+
     # Create a copy to avoid mutating original
     new_setlist = {
         "date": setlist_dict["date"],
@@ -216,6 +235,7 @@ def replace_song_in_setlist(
 
             new_setlist["moments"][moment] = ordered_songs
 
+    obs.metrics.counter("songs_replaced")
     return new_setlist
 
 
@@ -223,7 +243,8 @@ def replace_songs_batch(
     setlist_dict: dict[str, Any],
     replacements: list[tuple[str, int, str | None]],
     songs: dict[str, Song],
-    history: list[dict[str, Any]]
+    history: list[dict[str, Any]],
+    obs: Observability | None = None,
 ) -> dict[str, Any]:
     """
     Replace multiple songs at once.
@@ -234,6 +255,7 @@ def replace_songs_batch(
             manual_song can be None for auto-selection
         songs: All available songs
         history: Historical setlists
+        obs: Observability container (defaults to noop)
 
     Returns:
         Updated setlist dict (new copy, original unchanged)
@@ -241,6 +263,10 @@ def replace_songs_batch(
     Raises:
         ValueError: If any replacement is invalid
     """
+    from .observability import Observability as _Obs
+
+    obs = obs or _Obs.noop()
+    obs.logger.info("Batch replacing songs", count=len(replacements))
     # Validate all replacements first
     for moment, position, manual_song in replacements:
         validate_replacement_request(
@@ -322,4 +348,5 @@ def replace_songs_batch(
             )
             new_setlist["moments"][moment] = ordered
 
+    obs.metrics.counter("songs_replaced", value=len(replacements))
     return new_setlist
