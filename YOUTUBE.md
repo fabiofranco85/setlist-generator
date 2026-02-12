@@ -130,12 +130,16 @@ Creating YouTube playlist for 2026-02-15...
 Moments:
   Prelúdio: Estamos de Pé
   Ofertório: Agradeço
+  Saudação: Corpo e Família
+  Crianças: Deus Grandão
   Louvor: Hosana, Oceanos, Perfeito Amor, Lugar Secreto
   Poslúdio: Autoridade e Poder
 
-Warning: 3 song(s) without YouTube links (will be skipped):
-  - Agradeço
+Warning: 5 song(s) without YouTube links (will be skipped):
   - Estamos de Pé
+  - Agradeço
+  - Corpo e Família
+  - Deus Grandão
   - Autoridade e Poder
 
 4 song(s) will be added to the playlist.
@@ -154,9 +158,11 @@ Added (4 songs):
   3. Perfeito Amor
   4. Lugar Secreto
 
-Skipped (3 songs, no YouTube link):
-  - Agradeço
+Skipped (5 songs, no YouTube link):
   - Estamos de Pé
+  - Agradeço
+  - Corpo e Família
+  - Deus Grandão
   - Autoridade e Poder
 ```
 
