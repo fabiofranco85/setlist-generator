@@ -116,7 +116,9 @@ This will:
 
 ```bash
 songbook generate --pdf              # Generate setlist with PDF
+songbook generate --label evening    # Derive labeled variant from primary
 songbook view-setlist --keys         # View latest setlist with keys
+songbook view-setlist --label evening  # View labeled setlist
 songbook view-song "Oceanos"         # View song details
 songbook info "Oceanos"              # Show song statistics
 songbook replace --moment louvor --position 2  # Replace a song
@@ -598,10 +600,12 @@ setlist3 = generator.generate("2026-03-29")
 - `repos.songs.get_by_title(title)` - Get single song
 - `repos.songs.search(query)` - Search by title
 - `repos.history.get_all()` - Get all history (most recent first)
-- `repos.history.get_by_date(date)` - Get specific setlist
+- `repos.history.get_by_date(date, label="")` - Get specific setlist by date+label
+- `repos.history.get_by_date_all(date)` - Get all setlists for a date (all labels)
 - `repos.history.save(setlist)` - Save new setlist
+- `repos.history.exists(date, label="")` - Check if setlist exists
 - `repos.config.get_moments_config()` - Get service moments
-- `repos.output.save_markdown(date, content)` - Save markdown file
+- `repos.output.save_markdown(date, content, label="")` - Save markdown file
 
 ### Custom Formatting and Saving
 
@@ -683,11 +687,13 @@ if __name__ == '__main__':
 
 ## Output Files
 
-### Markdown Setlist (`output/YYYY-MM-DD.md`)
+Files use `YYYY-MM-DD` for unlabeled setlists and `YYYY-MM-DD_label` for labeled ones (e.g., `2026-03-01_evening.md`).
+
+### Markdown Setlist (`output/YYYY-MM-DD[_label].md`)
 
 Human-readable setlist with full chords and lyrics for musicians.
 
-### PDF Setlist (`output/YYYY-MM-DD.pdf`)
+### PDF Setlist (`output/YYYY-MM-DD[_label].pdf`)
 
 Professional PDF setlist for print or digital use (generated with `--pdf` flag).
 
@@ -715,7 +721,7 @@ The PDF uses church-specific terminology:
 
 ### Markdown Setlist (Detailed)
 
-**Structure**:
+**Structure** (unlabeled):
 ```markdown
 # Setlist - 2026-02-15
 
@@ -734,16 +740,21 @@ Estamos de pé...
 ...
 ```
 
+**Labeled setlists** include the label in the header:
+```markdown
+# Setlist - 2026-03-01 (evening)
+```
+
 **Use cases**:
 - Print for musicians
 - Display on tablet/screen during rehearsal
 - Share via email/WhatsApp
 
-### History File (`history/YYYY-MM-DD.json`)
+### History File (`history/YYYY-MM-DD[_label].json`)
 
 Machine-readable format for tracking which songs were used.
 
-**Structure**:
+**Structure** (unlabeled):
 ```json
 {
   "date": "2026-02-15",
@@ -758,7 +769,16 @@ Machine-readable format for tracking which songs were used.
 }
 ```
 
-**Purpose**: The generator reads these files to avoid repeating songs too soon.
+**Labeled setlists** include the `"label"` key:
+```json
+{
+  "date": "2026-03-01",
+  "label": "evening",
+  "moments": { ... }
+}
+```
+
+**Purpose**: The generator reads these files to avoid repeating songs too soon. Both labeled and unlabeled setlists contribute to recency scoring.
 
 ## Examples
 
@@ -877,6 +897,35 @@ songbook generate --date 2026-03-01
 ```
 
 Each service will automatically avoid songs used in previous services.
+
+### Example 6: Multiple Services on the Same Day (Labels)
+
+When you have morning and evening services on the same date:
+
+```bash
+# Generate the primary (morning) setlist
+songbook generate --date 2026-03-01
+
+# Derive an evening variant (replaces some songs automatically)
+songbook generate --date 2026-03-01 --label evening
+
+# Derive replacing exactly 3 songs
+songbook generate --date 2026-03-01 --label evening --replace 3
+
+# Derive replacing all songs
+songbook generate --date 2026-03-01 --label evening --replace all
+```
+
+This creates two separate files:
+- `history/2026-03-01.json` (primary/morning)
+- `history/2026-03-01_evening.json` (evening variant)
+
+View or manage labeled setlists by adding `--label`:
+```bash
+songbook view-setlist --date 2026-03-01 --label evening
+songbook replace --moment louvor --position 2 --date 2026-03-01 --label evening
+songbook pdf --date 2026-03-01 --label evening
+```
 
 ## Troubleshooting
 

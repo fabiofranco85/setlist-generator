@@ -25,13 +25,18 @@ pip install -e .
 ```bash
 songbook --help                      # Main help
 songbook generate --date 2026-02-15  # Generate setlist
+songbook generate --label evening    # Derive labeled variant from primary
+songbook generate --label evening --replace 3  # Derive replacing 3 songs
 songbook view-setlist --keys         # View setlist with keys
+songbook view-setlist --label evening  # View labeled setlist
 songbook view-song "Oceanos"         # View song details
 songbook info "Oceanos"              # Song statistics and history
 songbook replace --moment louvor --position 2  # Replace song
+songbook replace --moment louvor --position 2 --label evening  # Replace in labeled
 songbook transpose "Oceanos" --to G  # Transpose chords (preview)
 songbook view-song "Oceanos" -t G    # View transposed (display-only)
 songbook pdf --date 2026-02-15       # Generate PDF
+songbook pdf --label evening         # Generate PDF for labeled setlist
 songbook markdown --date 2026-02-15  # Regenerate markdown from history
 songbook youtube --date 2026-02-15   # Create YouTube playlist from setlist
 songbook list-moments                # List available moments
@@ -42,7 +47,7 @@ songbook cleanup                     # Data quality checks
 
 ### songbook generate
 
-Generate a new setlist for a specific date.
+Generate a new setlist for a specific date, or derive a labeled variant from an existing one.
 
 **Usage:**
 ```bash
@@ -55,6 +60,11 @@ songbook generate --date 2026-02-15
 # Generate with PDF output
 songbook generate --pdf
 songbook generate --date 2026-02-15 --pdf
+
+# Derive labeled variant (from existing primary setlist)
+songbook generate --date 2026-03-01 --label evening
+songbook generate --label evening --replace 3      # Replace exactly 3 songs
+songbook generate --label evening --replace all    # Replace all songs
 
 # Override specific moments
 songbook generate --override "louvor:Oceanos,Santo Pra Sempre"
@@ -69,11 +79,19 @@ songbook generate --output-dir custom/output --history-dir custom/history
 
 **Options:**
 - `--date YYYY-MM-DD` - Target date (default: today)
+- `--label TEXT` or `-l` - Setlist label for multiple setlists per date (e.g., "evening", "morning")
+- `--replace N` or `-r` - Songs to replace when deriving (number or "all", default: random). Only valid with `--label`
 - `--override "moment:song1,song2"` - Force specific songs for a moment (can be used multiple times)
 - `--pdf` - Generate PDF output in addition to markdown
 - `--no-save` - Dry run mode, don't save to history
 - `--output-dir PATH` - Custom output directory for markdown files
 - `--history-dir PATH` - Custom history directory for JSON tracking
+
+**Label behavior:**
+- When `--label` is provided and a base setlist exists for the date: **derives** from the base by replacing songs
+- When `--label` is provided but no base exists: generates from scratch with the label
+- Labels are validated: lowercase alphanumeric, hyphens, underscores, max 30 chars
+- `--replace` without `--label` produces an error
 
 **Override Format:**
 - Single song: `--override "prelúdio:Estamos de Pé"`
@@ -82,9 +100,9 @@ songbook generate --output-dir custom/output --history-dir custom/history
 
 **Output:**
 - Terminal: Summary with song titles
-- `output/YYYY-MM-DD.md`: Full markdown with chords
-- `output/YYYY-MM-DD.pdf`: PDF setlist (if `--pdf` flag used)
-- `history/YYYY-MM-DD.json`: History tracking (unless `--no-save`)
+- `output/YYYY-MM-DD[_label].md`: Full markdown with chords
+- `output/YYYY-MM-DD[_label].pdf`: PDF setlist (if `--pdf` flag used)
+- `history/YYYY-MM-DD[_label].json`: History tracking (unless `--no-save`)
 
 ---
 
@@ -100,6 +118,9 @@ songbook view-setlist
 # View a specific date
 songbook view-setlist --date 2026-02-15
 
+# View a labeled setlist
+songbook view-setlist --date 2026-03-01 --label evening
+
 # View with song keys
 songbook view-setlist --keys
 songbook view-setlist --date 2026-02-15 --keys
@@ -110,6 +131,7 @@ songbook view-setlist --history-dir custom/history
 
 **Options:**
 - `--date YYYY-MM-DD` - View specific date (default: latest)
+- `--label TEXT` or `-l` - Setlist label
 - `--keys` - Show song keys alongside titles
 - `--history-dir PATH` - Custom history directory
 
@@ -273,6 +295,9 @@ songbook replace --moment louvor --positions 1,3
 
 # Replace for specific date
 songbook replace --date 2026-03-15 --moment louvor --position 2
+
+# Replace in a labeled setlist
+songbook replace --moment louvor --position 2 --date 2026-03-01 --label evening
 ```
 
 **Options:**
@@ -281,6 +306,7 @@ songbook replace --date 2026-03-15 --moment louvor --position 2
 - `--positions N,N` - Multiple positions (comma-separated). Cannot be used with `--position`
 - `--with SONG` - Manual replacement song (auto-select if omitted)
 - `--date YYYY-MM-DD` - Target date (default: latest)
+- `--label TEXT` or `-l` - Setlist label
 - `--output-dir PATH` - Custom output directory
 - `--history-dir PATH` - Custom history directory
 
@@ -303,10 +329,14 @@ Generate PDF from an existing setlist.
 # Generate PDF from existing setlist
 songbook pdf
 songbook pdf --date 2026-02-15
+
+# Generate PDF for a labeled setlist
+songbook pdf --date 2026-03-01 --label evening
 ```
 
 **Options:**
 - `--date YYYY-MM-DD` - Target date (default: today)
+- `--label TEXT` or `-l` - Setlist label
 
 **PDF Format:**
 - **Page 1**: Table of contents with song list and page numbers
@@ -348,17 +378,21 @@ songbook markdown
 
 # Regenerate for a specific date
 songbook markdown --date 2026-02-15
+
+# Regenerate for a labeled setlist
+songbook markdown --date 2026-03-01 --label evening
 ```
 
 **Options:**
 - `--date YYYY-MM-DD` - Target date (default: latest)
+- `--label TEXT` or `-l` - Setlist label
 - `--output-dir PATH` - Custom output directory
 - `--history-dir PATH` - Custom history directory
 
 **Behavior:**
 - Reads the song list from history (does NOT re-run the selection algorithm)
 - Uses current chord files (picks up any transpositions or edits)
-- Overwrites the existing `output/{date}.md` file
+- Overwrites the existing `output/{date}[_label].md` file
 
 **When to use:**
 - After transposing a song with `songbook transpose --save`
@@ -378,10 +412,14 @@ songbook youtube
 
 # Create playlist for a specific date
 songbook youtube --date 2026-02-15
+
+# Create playlist for a labeled setlist
+songbook youtube --date 2026-03-01 --label evening
 ```
 
 **Options:**
 - `--date YYYY-MM-DD` - Target date (default: latest)
+- `--label TEXT` or `-l` - Setlist label
 - `--output-dir PATH` - Custom output directory
 - `--history-dir PATH` - Custom history directory
 
@@ -562,6 +600,15 @@ songbook generate --date 2026-02-15
 songbook view-setlist --date 2026-02-15 --keys
 ```
 
+**Multiple services same day (labels):**
+```bash
+songbook generate --date 2026-03-01                          # Primary
+songbook generate --date 2026-03-01 --label evening          # Derive variant
+songbook generate --date 2026-03-01 --label evening --replace 3  # Replace exactly 3
+songbook view-setlist --date 2026-03-01 --label evening      # Review variant
+songbook pdf --date 2026-03-01 --label evening               # Generate PDF
+```
+
 **Replace and regenerate PDF:**
 ```bash
 songbook replace --moment louvor --position 2 --with "Oceanos"
@@ -654,8 +701,9 @@ Then restart your shell or run `source ~/.bashrc` (bash) / `source ~/.zshrc` (zs
 - Song names (from database.csv)
 - Moment names (prelúdio, louvor, ofertório, etc.)
 - Musical key names (C, C#, Db, ..., Bm, F#m — for `--to` and `--transpose`)
-- Dates (from history directory)
-- Option names (--date, --moment, --with, --to, etc.)
+- Dates (from history directory, including labeled setlists)
+- Labels (from history directory filenames)
+- Option names (--date, --moment, --with, --to, --label, etc.)
 
 **Completion points:**
 - `info SONG_NAME` - autocomplete song names
@@ -666,6 +714,7 @@ Then restart your shell or run `source ~/.bashrc` (bash) / `source ~/.zshrc` (zs
 - `replace --moment` - autocomplete moment names
 - `replace --with` - autocomplete song names
 - All `--date` options - autocomplete available dates from history
+- All `--label` options - autocomplete known labels from history
 
 **Features:**
 - Case-insensitive song name matching

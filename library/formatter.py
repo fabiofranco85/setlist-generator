@@ -25,7 +25,10 @@ def format_setlist_markdown(
     Returns:
         Markdown string with full chord content for each song
     """
-    lines = [f"# Setlist - {setlist.date}", ""]
+    header = f"# Setlist - {setlist.date}"
+    if setlist.label:
+        header += f" ({setlist.label})"
+    lines = [header, ""]
 
     for moment, song_list in setlist.moments.items():
         lines.append(f"## {moment.capitalize()}")

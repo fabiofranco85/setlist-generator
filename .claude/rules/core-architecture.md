@@ -27,15 +27,16 @@ Where:
 ## Data Flow
 
 1. **Load songs** from `database.csv` + `chords/*.md` files (includes energy metadata)
-2. **Load history** from `history/*.json` (sorted by date, most recent first)
+2. **Load history** from `history/*.json` (sorted by date, most recent first; within same date, unlabeled before labeled)
 3. **Calculate recency scores** for all songs using time-based exponential decay (considers full history)
 4. **Generate setlist** by selecting songs for each moment using score-based algorithm
+   - If `--label` specified and a base setlist exists for the date, **derive** from the base by replacing a subset of songs
 5. **Apply energy ordering** to multi-song moments (e.g., louvor: 1→4 progression)
-6. **Output**:
+6. **Output** (filenames use `setlist_id` = `date_label` or just `date` when unlabeled):
    - Terminal summary (song titles only)
-   - `output/YYYY-MM-DD.md` (full markdown with chords)
-   - `output/YYYY-MM-DD.pdf` (optional, with `--pdf` flag)
-   - `history/YYYY-MM-DD.json` (history tracking)
+   - `output/YYYY-MM-DD[_label].md` (full markdown with chords)
+   - `output/YYYY-MM-DD[_label].pdf` (optional, with `--pdf` flag)
+   - `history/YYYY-MM-DD[_label].json` (history tracking)
 
 ## File Structure
 
@@ -45,21 +46,24 @@ Where:
 ├── chords/                  # Individual song files with chords
 │   └── <Song Name>.md       # Format: "# Song (Key)\n```\nchords...\n```"
 ├── output/                  # Generated markdown setlists
-│   └── YYYY-MM-DD.md        # Human-readable setlist with full chords
+│   ├── YYYY-MM-DD.md        # Unlabeled setlist
+│   └── YYYY-MM-DD_label.md  # Labeled setlist (e.g. 2026-03-01_evening.md)
 ├── history/                 # JSON history tracking
-│   └── YYYY-MM-DD.json      # History tracking (moments → song lists)
+│   ├── YYYY-MM-DD.json      # Unlabeled setlist
+│   └── YYYY-MM-DD_label.json  # Labeled setlist
 └── library/                 # Core package (modular architecture)
     ├── __init__.py          # Public API exports
     ├── config.py            # Configuration constants
-    ├── models.py            # Song and Setlist data structures
+    ├── models.py            # Song and Setlist data structures (label + setlist_id)
     ├── loader.py            # Tag parsing utilities
     ├── selector.py          # Song selection algorithms
     ├── paths.py             # Path resolution utilities
     ├── ordering.py          # Energy-based ordering
     ├── transposer.py        # Chord transposition (chromatic)
-    ├── generator.py         # Core setlist generation
-    ├── repositories/        # Data access abstraction layer (NEW)
-    │   ├── protocols.py     # Repository interfaces
+    ├── generator.py         # Core setlist generation (label-aware)
+    ├── replacer.py          # Song replacement + derive_setlist()
+    ├── repositories/        # Data access abstraction layer
+    │   ├── protocols.py     # Repository interfaces (label-aware)
     │   ├── factory.py       # Backend factory + RepositoryContainer
     │   └── filesystem/      # Filesystem backend implementation
     ├── formatter.py         # Output formatting (markdown, JSON)
@@ -79,15 +83,16 @@ The codebase is organized into focused modules for better maintainability and re
 
 **Module Responsibilities:**
 - `config.py` - Configuration constants (moments, weights, energy rules)
-- `models.py` - Data structures (Song, Setlist dataclasses)
+- `models.py` - Data structures (Song, Setlist with `label` + `setlist_id` property)
 - `loader.py` - Load songs from CSV and history from JSON
 - `selector.py` - Song selection algorithms (scoring, recency calculation, usage queries)
 - `ordering.py` - Energy-based ordering for emotional arcs
 - `transposer.py` - Deterministic chromatic chord transposition (pure functions, `re` only)
-- `generator.py` - Orchestrates the complete setlist generation (includes SetlistGenerator class)
-- `formatter.py` - Output formatting (markdown, JSON)
-- `pdf_formatter.py` - PDF generation using ReportLab
-- `youtube.py` - YouTube playlist integration (URL parsing, OAuth, API)
+- `generator.py` - Orchestrates the complete setlist generation (includes SetlistGenerator class, label-aware)
+- `replacer.py` - Song replacement, batch replacement, and `derive_setlist()` for creating labeled variants
+- `formatter.py` - Output formatting (markdown, JSON; label in header)
+- `pdf_formatter.py` - PDF generation using ReportLab (label in subtitle)
+- `youtube.py` - YouTube playlist integration (URL parsing, OAuth, API; label in playlist name)
 
 ## Hybrid Architecture (Functional + Object-Oriented)
 
@@ -322,10 +327,15 @@ md_path, pdf_path = repos.output.save_from_setlist(setlist, repos.songs.get_all(
 - `repos.songs.get_by_title(title)` - Get single song
 - `repos.songs.search(query)` - Search by title
 - `repos.history.get_all()` - Get all history (most recent first)
-- `repos.history.get_by_date(date)` - Get specific setlist
-- `repos.history.save(setlist)` - Save new setlist
+- `repos.history.get_by_date(date, label="")` - Get specific setlist by date+label
+- `repos.history.get_by_date_all(date)` - Get all setlists for a date (all labels)
+- `repos.history.save(setlist)` - Save new setlist (uses `setlist.setlist_id` for filename)
+- `repos.history.exists(date, label="")` - Check if setlist exists
+- `repos.history.update(date, data, label="")` - Update setlist data
 - `repos.config.get_moments_config()` - Get service moments
-- `repos.output.save_markdown(date, content)` - Save markdown file
+- `repos.output.save_markdown(date, content, label="")` - Save markdown file
+- `repos.output.get_markdown_path(date, label="")` - Get markdown file path
+- `repos.output.get_pdf_path(date, label="")` - Get PDF file path
 
 ### SetlistGenerator Class
 

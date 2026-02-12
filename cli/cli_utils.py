@@ -4,6 +4,8 @@ Shared CLI utilities for songbook commands.
 Provides reusable Click decorators and helper functions.
 """
 
+import re
+
 import click
 from functools import wraps
 from pathlib import Path
@@ -77,3 +79,95 @@ def print_metrics_summary(summary):
         parts.append(f"{name}={data['total']:.2f}s")
     if parts:
         print(f"\n[stats] {', '.join(parts)}", file=sys.stderr)
+
+
+_LABEL_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
+
+
+def validate_label(label: str) -> str:
+    """Validate and normalize a setlist label.
+
+    Labels must be lowercase alphanumeric with hyphens/underscores,
+    starting with a letter or digit, max 30 characters.
+
+    Args:
+        label: Label string to validate
+
+    Returns:
+        Validated label string
+
+    Raises:
+        SystemExit: If label is invalid
+    """
+    if not label:
+        return ""
+
+    label = label.strip().lower()
+
+    if len(label) > 30:
+        handle_error("Label must be at most 30 characters")
+
+    if not _LABEL_PATTERN.match(label):
+        handle_error(
+            f"Invalid label '{label}'. "
+            "Labels must start with a letter or digit and contain only "
+            "lowercase letters, digits, hyphens, and underscores."
+        )
+
+    return label
+
+
+def find_setlist_or_fail(repos, date, label=""):
+    """Find a setlist by date and label, or exit with error.
+
+    Provides helpful error messages listing available dates/labels.
+
+    Args:
+        repos: RepositoryContainer with history access
+        date: Target date (YYYY-MM-DD) or None for latest
+        label: Optional label for multiple setlists per date
+
+    Returns:
+        Setlist dictionary
+
+    Raises:
+        SystemExit: If setlist not found
+    """
+    if date:
+        setlist = repos.history.get_by_date(date, label=label)
+        if setlist:
+            return setlist
+
+        # Not found — provide helpful message
+        all_for_date = repos.history.get_by_date_all(date)
+        if all_for_date and label:
+            available_labels = [s.get("label", "") or "(unlabeled)" for s in all_for_date]
+            handle_error(
+                f"No setlist found for {date} with label '{label}'.\n"
+                f"Available labels for {date}: {', '.join(available_labels)}"
+            )
+        elif not all_for_date:
+            history = repos.history.get_all()
+            dates = [s["date"] for s in history[:10]]
+            handle_error(
+                f"No setlist found for date: {date}\n"
+                f"Available dates: {', '.join(dates) if dates else '(none)'}"
+            )
+        else:
+            # Found unlabeled but user asked for label
+            handle_error(
+                f"No setlist found for {date} with label '{label}'.\n"
+                f"An unlabeled setlist exists for {date}."
+            )
+    else:
+        # Latest
+        history = repos.history.get_all()
+        if not history:
+            handle_error("No setlists found in history")
+        # If label specified, filter
+        if label:
+            for entry in history:
+                if entry.get("label", "") == label:
+                    return entry
+            handle_error(f"No setlist found with label '{label}'")
+        return history[0]

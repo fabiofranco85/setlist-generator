@@ -95,11 +95,12 @@ class HistoryRepository(Protocol):
         """
         ...
 
-    def get_by_date(self, date: str) -> dict | None:
-        """Get a setlist by date.
+    def get_by_date(self, date: str, label: str = "") -> dict | None:
+        """Get a setlist by date and optional label.
 
         Args:
             date: Date string in YYYY-MM-DD format
+            label: Optional label for multiple setlists per date
 
         Returns:
             Setlist dictionary if found, None otherwise
@@ -121,30 +122,44 @@ class HistoryRepository(Protocol):
             setlist: Setlist object to save
 
         Note:
-            If a setlist with the same date exists, it will be overwritten.
+            If a setlist with the same date/label exists, it will be overwritten.
         """
         ...
 
-    def update(self, date: str, setlist_dict: dict) -> None:
+    def update(self, date: str, setlist_dict: dict, label: str = "") -> None:
         """Update an existing setlist in history.
 
         Args:
             date: Date string identifying the setlist
             setlist_dict: Updated setlist dictionary
+            label: Optional label for multiple setlists per date
 
         Raises:
-            KeyError: If no setlist exists for the given date
+            KeyError: If no setlist exists for the given date/label
         """
         ...
 
-    def exists(self, date: str) -> bool:
-        """Check if a setlist exists for a date.
+    def exists(self, date: str, label: str = "") -> bool:
+        """Check if a setlist exists for a date and optional label.
+
+        Args:
+            date: Date string in YYYY-MM-DD format
+            label: Optional label for multiple setlists per date
+
+        Returns:
+            True if setlist exists, False otherwise
+        """
+        ...
+
+    def get_by_date_all(self, date: str) -> list[dict]:
+        """Get all setlists for a date (all labels).
 
         Args:
             date: Date string in YYYY-MM-DD format
 
         Returns:
-            True if setlist exists, False otherwise
+            List of setlist dictionaries for the given date,
+            sorted by label (empty label first, then alphabetical)
         """
         ...
 
@@ -217,12 +232,13 @@ class OutputRepository(Protocol):
     Outputs include markdown files and PDF files.
     """
 
-    def save_markdown(self, date: str, content: str) -> Path:
+    def save_markdown(self, date: str, content: str, label: str = "") -> Path:
         """Save setlist as markdown file.
 
         Args:
             date: Setlist date (used for filename)
             content: Markdown content to save
+            label: Optional label for multiple setlists per date
 
         Returns:
             Path to the saved file
@@ -241,22 +257,24 @@ class OutputRepository(Protocol):
         """
         ...
 
-    def get_markdown_path(self, date: str) -> Path:
+    def get_markdown_path(self, date: str, label: str = "") -> Path:
         """Get the path where markdown would be saved for a date.
 
         Args:
             date: Setlist date
+            label: Optional label for multiple setlists per date
 
         Returns:
             Path where markdown file would be saved
         """
         ...
 
-    def get_pdf_path(self, date: str) -> Path:
+    def get_pdf_path(self, date: str, label: str = "") -> Path:
         """Get the path where PDF would be saved for a date.
 
         Args:
             date: Setlist date
+            label: Optional label for multiple setlists per date
 
         Returns:
             Path where PDF file would be saved

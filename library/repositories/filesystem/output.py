@@ -34,18 +34,27 @@ class FilesystemOutputRepository:
         """Ensure output directory exists."""
         self.output_dir.mkdir(exist_ok=True)
 
-    def save_markdown(self, date: str, content: str) -> Path:
+    @staticmethod
+    def _make_setlist_id(date: str, label: str = "") -> str:
+        """Build setlist_id from date and optional label."""
+        if label:
+            return f"{date}_{label}"
+        return date
+
+    def save_markdown(self, date: str, content: str, label: str = "") -> Path:
         """Save setlist as markdown file.
 
         Args:
             date: Setlist date (used for filename)
             content: Markdown content to save
+            label: Optional label for multiple setlists per date
 
         Returns:
             Path to the saved file
         """
         self._ensure_dir()
-        output_path = self.output_dir / f"{date}.md"
+        setlist_id = self._make_setlist_id(date, label)
+        output_path = self.output_dir / f"{setlist_id}.md"
         output_path.write_text(content, encoding="utf-8")
         return output_path
 
@@ -71,31 +80,35 @@ class FilesystemOutputRepository:
             ) from e
 
         self._ensure_dir()
-        output_path = self.output_dir / f"{setlist.date}.pdf"
+        output_path = self.output_dir / f"{setlist.setlist_id}.pdf"
         generate_setlist_pdf(setlist, songs, output_path)
         return output_path
 
-    def get_markdown_path(self, date: str) -> Path:
+    def get_markdown_path(self, date: str, label: str = "") -> Path:
         """Get the path where markdown would be saved for a date.
 
         Args:
             date: Setlist date
+            label: Optional label for multiple setlists per date
 
         Returns:
             Path where markdown file would be saved
         """
-        return self.output_dir / f"{date}.md"
+        setlist_id = self._make_setlist_id(date, label)
+        return self.output_dir / f"{setlist_id}.md"
 
-    def get_pdf_path(self, date: str) -> Path:
+    def get_pdf_path(self, date: str, label: str = "") -> Path:
         """Get the path where PDF would be saved for a date.
 
         Args:
             date: Setlist date
+            label: Optional label for multiple setlists per date
 
         Returns:
             Path where PDF file would be saved
         """
-        return self.output_dir / f"{date}.pdf"
+        setlist_id = self._make_setlist_id(date, label)
+        return self.output_dir / f"{setlist_id}.pdf"
 
     def save_from_setlist(
         self, setlist: Setlist, songs: dict[str, Song], include_pdf: bool = False
@@ -112,7 +125,7 @@ class FilesystemOutputRepository:
         """
         # Generate and save markdown
         markdown_content = format_setlist_markdown(setlist, songs)
-        md_path = self.save_markdown(setlist.date, markdown_content)
+        md_path = self.save_markdown(setlist.date, markdown_content, label=setlist.label)
 
         # Optionally generate PDF
         pdf_path = None

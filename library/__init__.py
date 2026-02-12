@@ -22,6 +22,7 @@ from .models import Setlist, Song
 from .paths import PathConfig, get_output_paths
 from .pdf_formatter import generate_setlist_pdf
 from .replacer import (
+    derive_setlist,
     find_target_setlist,
     replace_song_in_setlist,
     replace_songs_batch,
@@ -95,6 +96,7 @@ __all__ = [
     "PathConfig",
     "get_output_paths",
     # Replacement functions
+    "derive_setlist",
     "find_target_setlist",
     "select_replacement_song",
     "replace_song_in_setlist",

@@ -103,6 +103,9 @@ songbook youtube
 
 # Create playlist for a specific date
 songbook youtube --date 2026-02-15
+
+# Create playlist for a labeled setlist
+songbook youtube --date 2026-03-01 --label evening
 ```
 
 ### First Run Authentication

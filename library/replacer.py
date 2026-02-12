@@ -20,7 +20,8 @@ if TYPE_CHECKING:
 
 def find_target_setlist(
     history: list[dict[str, Any]],
-    target_date: str | None = None
+    target_date: str | None = None,
+    target_label: str = "",
 ) -> dict[str, Any]:
     """
     Find the setlist to modify.
@@ -28,12 +29,13 @@ def find_target_setlist(
     Args:
         history: List of all historical setlists (sorted by date, most recent first)
         target_date: Specific date (YYYY-MM-DD), or None for latest
+        target_label: Optional label for multiple setlists per date
 
     Returns:
         Setlist dict: {"date": "...", "moments": {...}}
 
     Raises:
-        ValueError: If date not found or no history exists
+        ValueError: If date/label not found or no history exists
     """
     if not history:
         raise ValueError("No setlists found in history")
@@ -42,10 +44,12 @@ def find_target_setlist(
         return history[0]  # Already sorted by date (most recent first)
 
     for setlist in history:
-        if setlist.get("date") == target_date:
+        if (setlist.get("date") == target_date
+                and setlist.get("label", "") == target_label):
             return setlist
 
-    raise ValueError(f"Setlist for date {target_date} not found")
+    label_suffix = f" (label: {target_label})" if target_label else ""
+    raise ValueError(f"Setlist for date {target_date}{label_suffix} not found")
 
 
 def validate_replacement_request(
@@ -206,8 +210,10 @@ def replace_song_in_setlist(
     # Create a copy to avoid mutating original
     new_setlist = {
         "date": setlist_dict["date"],
-        "moments": {}
+        "moments": {},
     }
+    if setlist_dict.get("label"):
+        new_setlist["label"] = setlist_dict["label"]
 
     # Copy all moments
     for m, song_list in setlist_dict["moments"].items():
@@ -322,8 +328,10 @@ def replace_songs_batch(
     # Apply all replacements
     new_setlist = {
         "date": setlist_dict["date"],
-        "moments": {}
+        "moments": {},
     }
+    if setlist_dict.get("label"):
+        new_setlist["label"] = setlist_dict["label"]
 
     for m, song_list in setlist_dict["moments"].items():
         new_setlist["moments"][m] = song_list.copy()
@@ -350,3 +358,71 @@ def replace_songs_batch(
 
     obs.metrics.counter("songs_replaced", value=len(replacements))
     return new_setlist
+
+
+def derive_setlist(
+    base_setlist_dict: dict[str, Any],
+    songs: dict[str, Song],
+    history: list[dict[str, Any]],
+    replace_count: int | None = None,
+) -> dict[str, Any]:
+    """
+    Derive a new setlist by replacing songs from a base setlist.
+
+    Creates a variant of the base setlist by randomly selecting positions
+    to replace and using the existing replacement algorithm for auto-selection.
+
+    Args:
+        base_setlist_dict: The primary setlist to derive from
+        songs: All available songs
+        history: Historical setlists for recency
+        replace_count: Number of songs to replace.
+            None = random (1 to total_songs).
+
+    Returns:
+        New setlist dict with replaced songs (caller sets label)
+    """
+    import random
+
+    # Enumerate all (moment, position) pairs
+    all_positions = []
+    for moment_name, song_list in base_setlist_dict["moments"].items():
+        for idx in range(len(song_list)):
+            all_positions.append((moment_name, idx))
+
+    total_songs = len(all_positions)
+    if total_songs == 0:
+        return dict(base_setlist_dict)
+
+    # Determine how many to replace
+    if replace_count is None:
+        replace_count = random.randint(1, total_songs)
+    else:
+        replace_count = max(0, min(replace_count, total_songs))
+
+    if replace_count == 0:
+        # Copy exactly (no changes)
+        new_setlist = {
+            "date": base_setlist_dict["date"],
+            "moments": {},
+        }
+        for m, sl in base_setlist_dict["moments"].items():
+            new_setlist["moments"][m] = sl.copy()
+        return new_setlist
+
+    # Randomly sample positions to replace
+    positions_to_replace = random.sample(all_positions, replace_count)
+
+    # Build replacements list (all auto-selection)
+    replacements: list[tuple[str, int, str | None]] = [
+        (moment, pos, None)
+        for moment, pos in positions_to_replace
+    ]
+
+    # Use replace_songs_batch for the actual replacement
+    return replace_songs_batch(
+        setlist_dict=base_setlist_dict,
+        replacements=replacements,
+        songs=songs,
+        history=history,
+    )

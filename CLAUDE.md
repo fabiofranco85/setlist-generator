@@ -41,14 +41,19 @@ uv add --dev package-name
 ```bash
 songbook --help                      # Main help
 songbook generate --date 2026-02-15  # Generate setlist
+songbook generate --label evening    # Derive labeled variant from primary
+songbook generate --label evening --replace 3  # Derive replacing 3 songs
 songbook view-setlist --keys         # View setlist with keys
+songbook view-setlist --label evening  # View labeled setlist
 songbook view-song "Oceanos"         # View song details
 songbook info "Oceanos"              # Song statistics and history
 songbook replace --moment louvor --position 2  # Replace song
+songbook replace --moment louvor --position 2 --label evening  # Replace in labeled
 songbook transpose "Oceanos" --to G  # Transpose chords (preview)
 songbook transpose "Oceanos" --to G --save  # Transpose and persist
 songbook view-song "Oceanos" -t G    # View song transposed
 songbook pdf --date 2026-02-15       # Generate PDF
+songbook pdf --label evening         # Generate PDF for labeled setlist
 songbook markdown --date 2026-02-15  # Regenerate markdown from history
 songbook youtube --date 2026-02-15   # Create YouTube playlist from setlist
 songbook list-moments                # List available moments
@@ -72,10 +77,12 @@ This is a **setlist generator** for church worship services. It intelligently se
 ├── database.csv                 # Song database: "song;energy;tags;youtube"
 ├── chords/                      # Individual song files with chords
 │   └── <Song Name>.md
-├── output/                      # Generated markdown setlists
-│   └── YYYY-MM-DD.md
+├── output/                      # Generated markdown/PDF setlists
+│   ├── YYYY-MM-DD.md           # Unlabeled setlist
+│   └── YYYY-MM-DD_label.md     # Labeled setlist (e.g. 2026-03-01_evening.md)
 ├── history/                     # JSON history tracking
-│   └── YYYY-MM-DD.json
+│   ├── YYYY-MM-DD.json         # Unlabeled setlist
+│   └── YYYY-MM-DD_label.json   # Labeled setlist (e.g. 2026-03-01_evening.json)
 ├── library/                     # Core package (modular architecture)
 │   ├── config.py               # Configuration constants
 │   ├── models.py               # Song and Setlist data structures
@@ -84,6 +91,7 @@ This is a **setlist generator** for church worship services. It intelligently se
 │   ├── ordering.py             # Energy-based ordering
 │   ├── transposer.py           # Chord transposition (chromatic)
 │   ├── generator.py            # Core setlist generation
+│   ├── replacer.py             # Song replacement + derivation
 │   ├── formatter.py            # Output formatting
 │   ├── pdf_formatter.py        # PDF generation
 │   └── youtube.py              # YouTube playlist integration
@@ -135,10 +143,19 @@ songbook generate --date 2026-02-15
 songbook generate --pdf  # Include PDF output
 ```
 
+**Multiple setlists per date (labels):**
+```bash
+songbook generate --date 2026-03-01                      # Primary (unlabeled)
+songbook generate --date 2026-03-01 --label evening      # Derive from primary
+songbook generate --date 2026-03-01 --label evening --replace 3  # Replace exactly 3
+songbook generate --date 2026-03-01 --label evening --replace all  # Replace all
+```
+
 **Replace a song:**
 ```bash
 songbook replace --moment louvor --position 2
 songbook replace --moment louvor --position 2 --with "Oceanos"  # Manual
+songbook replace --moment louvor --position 2 --label evening   # In labeled setlist
 ```
 
 **Song statistics:**
@@ -156,6 +173,7 @@ songbook view-song "Oceanos" --transpose G   # View transposed (always dry)
 **View setlist:**
 ```bash
 songbook view-setlist --date 2026-02-15 --keys
+songbook view-setlist --date 2026-03-01 --label evening  # View labeled
 ```
 
 **Data quality:**
@@ -180,6 +198,16 @@ setlist = generator.generate(
     overrides={"louvor": ["Oceanos", "Ousado Amor"]}
 )
 
+# Generate labeled setlist (for multiple services on same date)
+evening = generator.generate(date="2026-02-15", label="evening")
+
+# Derive a labeled variant from an existing setlist
+from library import derive_setlist
+songs = repos.songs.get_all()
+history = repos.history.get_all()
+base = repos.history.get_by_date("2026-02-15")
+derived = derive_setlist(base, songs, history, replace_count=3)
+
 # Save through repositories
 repos.history.save(setlist)
 
@@ -187,6 +215,15 @@ repos.history.save(setlist)
 for moment, song_list in setlist.moments.items():
     print(f"{moment}: {', '.join(song_list)}")
 ```
+
+**Key repository methods (label-aware):**
+- `repos.history.get_by_date(date, label="")` - Get specific setlist by date+label
+- `repos.history.get_by_date_all(date)` - Get all setlists for a date (all labels)
+- `repos.history.exists(date, label="")` - Check if setlist exists
+- `repos.history.update(date, data, label="")` - Update a setlist
+- `repos.output.save_markdown(date, content, label="")` - Save labeled markdown
+- `repos.output.get_markdown_path(date, label="")` - Get output path
+- `repos.output.get_pdf_path(date, label="")` - Get PDF path
 
 ## Configuration
 

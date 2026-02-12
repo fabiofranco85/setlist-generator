@@ -9,6 +9,7 @@ from cli.completions import (
     complete_song_names,
     complete_moment_names,
     complete_history_dates,
+    complete_history_labels,
     complete_key_names,
 )
 
@@ -49,6 +50,8 @@ def cli(ctx, verbose):
 
 @cli.command()
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (YYYY-MM-DD, default: today)")
+@click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label (for multiple setlists per date)")
+@click.option("--replace", "-r", "replace_count", default=None, help="Songs to replace when deriving (number or 'all', default: random)")
 @click.option("--override", multiple=True, help="Force songs: MOMENT:SONG1,SONG2")
 @click.option("--pdf", is_flag=True, help="Generate PDF output")
 @click.option("--no-save", is_flag=True, help="Dry run (don't save to history)")
@@ -56,7 +59,7 @@ def cli(ctx, verbose):
 @click.option("--history-dir", help="Custom history directory")
 @click.option("--output", help="Custom output filename")
 @click.pass_context
-def generate(ctx, date, override, pdf, no_save, output_dir, history_dir, output):
+def generate(ctx, date, label, replace_count, override, pdf, no_save, output_dir, history_dir, output):
     """Generate new setlist for a service date.
 
     \b
@@ -64,19 +67,22 @@ def generate(ctx, date, override, pdf, no_save, output_dir, history_dir, output)
       songbook generate
       songbook generate --date 2026-02-15 --pdf
       songbook generate --override "louvor:Oceanos,Santo Pra Sempre"
-      songbook generate --override "prelúdio:Estamos de Pé" --override "louvor:Oceanos"
+      songbook generate --label evening                  # derive from primary
+      songbook generate --label evening --replace 3      # derive replacing 3 songs
+      songbook generate --label evening --replace all    # derive replacing all
     """
     from cli.commands.generate import run
     run(date, override, pdf, no_save, output_dir, history_dir, output,
-        verbose=ctx.obj.get("verbose", False))
+        verbose=ctx.obj.get("verbose", False), label=label, replace_count=replace_count)
 
 
 @cli.command("view-setlist")
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
+@click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
 @click.option("--keys", "-k", is_flag=True, help="Show song keys")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
-def view_setlist(date, keys, output_dir, history_dir):
+def view_setlist(date, label, keys, output_dir, history_dir):
     """View generated setlist (markdown format).
 
     \b
@@ -84,9 +90,10 @@ def view_setlist(date, keys, output_dir, history_dir):
       songbook view-setlist
       songbook view-setlist --keys
       songbook view-setlist --date 2026-02-15
+      songbook view-setlist --date 2026-02-15 --label evening
     """
     from cli.commands.view_setlist import run
-    run(date, keys, output_dir, history_dir)
+    run(date, keys, output_dir, history_dir, label=label)
 
 
 @cli.command("view-song")
@@ -166,10 +173,11 @@ def list_moments():
 @click.option("--positions", help="Multiple positions (comma-separated)")
 @click.option("--with", "replacement", shell_complete=complete_song_names, help="Manual song selection")
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
+@click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
 @click.pass_context
-def replace(ctx, moment, position, positions, replacement, date, output_dir, history_dir):
+def replace(ctx, moment, position, positions, replacement, date, label, output_dir, history_dir):
     """Replace song in existing setlist.
 
     \b
@@ -178,33 +186,37 @@ def replace(ctx, moment, position, positions, replacement, date, output_dir, his
       songbook replace --moment louvor --position 2
       songbook replace --moment louvor --position 2 --with "Oceanos"
       songbook replace --moment louvor --positions 1,3
+      songbook replace --moment louvor --position 2 --date 2026-02-15 --label evening
     """
     from cli.commands.replace import run
     run(moment, position, positions, replacement, date, output_dir, history_dir,
-        verbose=ctx.obj.get("verbose", False))
+        verbose=ctx.obj.get("verbose", False), label=label)
 
 
 @cli.command()
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
+@click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
-def pdf(date, output_dir, history_dir):
+def pdf(date, label, output_dir, history_dir):
     """Generate PDF from existing setlist.
 
     \b
     Examples:
       songbook pdf
       songbook pdf --date 2026-02-15
+      songbook pdf --date 2026-02-15 --label evening
     """
     from cli.commands.pdf import run
-    run(date, output_dir, history_dir)
+    run(date, output_dir, history_dir, label=label)
 
 
 @cli.command()
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
+@click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
-def markdown(date, output_dir, history_dir):
+def markdown(date, label, output_dir, history_dir):
     """Regenerate markdown from existing setlist.
 
     \b
@@ -216,16 +228,18 @@ def markdown(date, output_dir, history_dir):
     Examples:
       songbook markdown
       songbook markdown --date 2026-02-15
+      songbook markdown --date 2026-02-15 --label evening
     """
     from cli.commands.markdown import run
-    run(date, output_dir, history_dir)
+    run(date, output_dir, history_dir, label=label)
 
 
 @cli.command()
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
+@click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
-def youtube(date, output_dir, history_dir):
+def youtube(date, label, output_dir, history_dir):
     """Create YouTube playlist from existing setlist.
 
     \b
@@ -241,9 +255,10 @@ def youtube(date, output_dir, history_dir):
     Examples:
       songbook youtube
       songbook youtube --date 2026-02-15
+      songbook youtube --date 2026-02-15 --label evening
     """
     from cli.commands.youtube import run
-    run(date, output_dir, history_dir)
+    run(date, output_dir, history_dir, label=label)
 
 
 @cli.command()

@@ -9,7 +9,7 @@ from library import (
 )
 
 
-def run(date, output_dir, history_dir):
+def run(date, output_dir, history_dir, label=""):
     """
     Generate PDF from existing setlist history.
 
@@ -17,8 +17,11 @@ def run(date, output_dir, history_dir):
         date: Target date (YYYY-MM-DD) or None for latest
         output_dir: Custom output directory
         history_dir: Custom history directory
+        label: Optional label for multiple setlists per date
     """
-    from cli.cli_utils import resolve_paths, handle_error
+    from cli.cli_utils import resolve_paths, handle_error, validate_label, find_setlist_or_fail
+
+    label = validate_label(label)
 
     # Paths
     paths = resolve_paths(output_dir, history_dir)
@@ -32,35 +35,21 @@ def run(date, output_dir, history_dir):
     songs = repos.songs.get_all()
     print(f"Loaded {len(songs)} songs")
 
-    print("Loading history...")
-    history = repos.history.get_all()
-    if not history:
-        handle_error("No history files found. Generate a setlist first.")
-
-    print(f"Found {len(history)} historical setlists")
-
     # Find target setlist
-    if date:
-        # Find specific date
-        target_setlist = None
-        for setlist_dict in history:
-            if setlist_dict.get("date") == date:
-                target_setlist = setlist_dict
-                break
-
-        if not target_setlist:
-            print(f"Error: Setlist for {date} not found in history")
-            print(f"Available dates: {', '.join(s['date'] for s in history[-5:] if 'date' in s)}")
-            raise SystemExit(1)
-    else:
-        # Use latest (first in history - already sorted by date desc)
-        target_setlist = history[0]
+    target_setlist = find_setlist_or_fail(repos, date, label)
 
     # Convert to Setlist object
-    setlist = Setlist(date=target_setlist["date"], moments=target_setlist["moments"])
+    setlist = Setlist(
+        date=target_setlist["date"],
+        moments=target_setlist["moments"],
+        label=target_setlist.get("label", ""),
+    )
 
     # Display what we're generating
-    print(f"\nGenerating PDF for {setlist.date}...")
+    header = f"\nGenerating PDF for {setlist.date}"
+    if setlist.label:
+        header += f" ({setlist.label})"
+    print(header + "...")
     print("Moments:")
     for moment, song_list in setlist.moments.items():
         display_moment = moment.capitalize()
@@ -68,7 +57,7 @@ def run(date, output_dir, history_dir):
 
     # Generate PDF
     output_dir_path.mkdir(parents=True, exist_ok=True)
-    pdf_path = output_dir_path / f"{setlist.date}.pdf"
+    pdf_path = output_dir_path / f"{setlist.setlist_id}.pdf"
 
     try:
         generate_setlist_pdf(setlist, songs, pdf_path)

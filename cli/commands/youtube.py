@@ -8,7 +8,7 @@ from library import (
 )
 
 
-def run(date, output_dir, history_dir):
+def run(date, output_dir, history_dir, label=""):
     """
     Create a YouTube playlist from an existing setlist.
 
@@ -16,8 +16,11 @@ def run(date, output_dir, history_dir):
         date: Target date (YYYY-MM-DD) or None for latest
         output_dir: Custom output directory
         history_dir: Custom history directory
+        label: Optional label for multiple setlists per date
     """
-    from cli.cli_utils import resolve_paths, handle_error
+    from cli.cli_utils import resolve_paths, handle_error, validate_label, find_setlist_or_fail
+
+    label = validate_label(label)
 
     # Paths
     paths = resolve_paths(output_dir, history_dir)
@@ -30,32 +33,17 @@ def run(date, output_dir, history_dir):
     songs = repos.songs.get_all()
     print(f"Loaded {len(songs)} songs")
 
-    print("Loading history...")
-    history = repos.history.get_all()
-    if not history:
-        handle_error("No history files found. Generate a setlist first.")
-
-    print(f"Found {len(history)} historical setlists")
-
     # Find target setlist
-    if date:
-        target_setlist = None
-        for setlist_dict in history:
-            if setlist_dict.get("date") == date:
-                target_setlist = setlist_dict
-                break
-
-        if not target_setlist:
-            print(f"Error: Setlist for {date} not found in history")
-            print(f"Available dates: {', '.join(s['date'] for s in history[-5:] if 'date' in s)}")
-            raise SystemExit(1)
-    else:
-        target_setlist = history[0]
+    target_setlist = find_setlist_or_fail(repos, date, label)
 
     target_date = target_setlist["date"]
+    target_label = target_setlist.get("label", "")
 
     # Display setlist
-    print(f"\nCreating YouTube playlist for {target_date}...")
+    header = f"\nCreating YouTube playlist for {target_date}"
+    if target_label:
+        header += f" ({target_label})"
+    print(header + "...")
     print("Moments:")
     for moment, song_list in target_setlist["moments"].items():
         display_moment = moment.capitalize()

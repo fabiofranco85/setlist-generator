@@ -524,6 +524,8 @@ def generate_setlist_pdf(
     """
     # Format date
     formatted_date = format_date_portuguese(setlist.date)
+    if setlist.label:
+        formatted_date += f" ({setlist.label})"
 
     # Calculate page numbers (simplified - just use moment starts)
     # For a more accurate TOC, we could do a two-pass render

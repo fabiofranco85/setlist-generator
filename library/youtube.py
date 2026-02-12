@@ -261,7 +261,10 @@ def create_setlist_playlist(
         ValueError: If no songs in the setlist have YouTube links
     """
     date_str = setlist_dict["date"]
+    label = setlist_dict.get("label", "")
     playlist_title = format_playlist_name(date_str, playlist_name_pattern)
+    if label:
+        playlist_title += f" ({label})"
 
     # Resolve videos
     video_entries = resolve_setlist_videos(setlist_dict, songs)
@@ -282,10 +285,13 @@ def create_setlist_playlist(
         )
 
     # Create playlist
+    description = f"Setlist for {date_str}"
+    if label:
+        description += f" ({label})"
     playlist_id = create_playlist(
         credentials,
         title=playlist_title,
-        description=f"Setlist for {date_str}",
+        description=description,
         privacy=privacy,
     )
 

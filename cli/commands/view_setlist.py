@@ -33,13 +33,19 @@ def display_setlist(setlist_dict: dict, songs: dict, show_keys: bool = False, ou
         history_dir: Custom history directory (for file paths)
     """
     date = setlist_dict["date"]
+    label = setlist_dict.get("label", "")
     moments = setlist_dict["moments"]
 
     output_dir = output_dir or Path("output")
     history_dir = history_dir or Path("history")
 
+    setlist_id = f"{date}_{label}" if label else date
+
     print("\n" + "=" * 60)
-    print(f"SETLIST FOR {date}")
+    header = f"SETLIST FOR {date}"
+    if label:
+        header += f" ({label})"
+    print(header)
     print(format_date_display(date))
     print("=" * 60)
     print()
@@ -74,9 +80,9 @@ def display_setlist(setlist_dict: dict, songs: dict, show_keys: bool = False, ou
         print()
 
     # Show file paths
-    output_md = output_dir / f"{date}.md"
-    output_pdf = output_dir / f"{date}.pdf"
-    history_json = history_dir / f"{date}.json"
+    output_md = output_dir / f"{setlist_id}.md"
+    output_pdf = output_dir / f"{setlist_id}.pdf"
+    history_json = history_dir / f"{setlist_id}.json"
 
     print("FILES:")
     print(f"  Markdown: {output_md}" + (" ✓" if output_md.exists() else " (not found)"))
@@ -85,7 +91,7 @@ def display_setlist(setlist_dict: dict, songs: dict, show_keys: bool = False, ou
     print()
 
 
-def run(date, keys, output_dir, history_dir):
+def run(date, keys, output_dir, history_dir, label=""):
     """
     View generated setlist (latest or specific date).
 
@@ -94,8 +100,11 @@ def run(date, keys, output_dir, history_dir):
         keys: Whether to show song keys
         output_dir: Custom output directory
         history_dir: Custom history directory
+        label: Optional label for multiple setlists per date
     """
-    from cli.cli_utils import resolve_paths, handle_error
+    from cli.cli_utils import resolve_paths, find_setlist_or_fail, validate_label
+
+    label = validate_label(label)
 
     # Resolve paths
     paths = resolve_paths(output_dir, history_dir)
@@ -105,37 +114,8 @@ def run(date, keys, output_dir, history_dir):
     # Load data via repositories
     repos = get_repositories(history_dir=history_dir_path, output_dir=output_dir_path)
 
-    # Load history
-    try:
-        history = repos.history.get_all()
-    except Exception as e:
-        handle_error(f"Loading history: {e}")
-
-    if not history:
-        print("No setlists found in history.")
-        print(f"History directory: {history_dir_path}")
-        raise SystemExit(1)
-
-    # Find target setlist
-    if date:
-        # Find specific date
-        target_setlist = None
-        for setlist in history:
-            if setlist["date"] == date:
-                target_setlist = setlist
-                break
-
-        if not target_setlist:
-            print(f"No setlist found for date: {date}")
-            print(f"\nAvailable dates:")
-            for setlist in history[:10]:  # Show last 10
-                print(f"  - {setlist['date']}")
-            if len(history) > 10:
-                print(f"  ... and {len(history) - 10} more")
-            raise SystemExit(1)
-    else:
-        # Use latest (first in list, since history is sorted newest first)
-        target_setlist = history[0]
+    # Find target setlist (handles errors internally)
+    target_setlist = find_setlist_or_fail(repos, date, label)
 
     # Load songs if showing keys
     songs = {}

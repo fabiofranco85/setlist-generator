@@ -33,7 +33,7 @@ The `library/` package is organized into focused modules:
 
 **Contents:**
 - `Song` dataclass - Represents a song with name, key, tags, energy, chords
-- `Setlist` dataclass - Represents a generated setlist with date and moments
+- `Setlist` dataclass - Represents a generated setlist with date, moments, and optional label
 
 **When to modify:**
 - Adding new song metadata fields
@@ -54,7 +54,21 @@ class Song:
 class Setlist:
     date: str                      # YYYY-MM-DD
     moments: Dict[str, List[str]]  # moment → [song names]
+    label: str = ""                # Optional label (e.g. "evening", "morning")
+
+    @property
+    def setlist_id(self) -> str:   # "YYYY-MM-DD_label" or just "YYYY-MM-DD"
+        ...
+
+    def to_dict(self) -> dict:     # Omits "label" key when empty
+        ...
 ```
+
+**Label conventions:**
+- `label=""` (default) — unlabeled/primary setlist
+- `setlist_id` = `"{date}_{label}"` if labeled, `"{date}"` if unlabeled
+- `to_dict()` omits `"label"` key when empty (backward compat)
+- Old JSON files without `"label"` key are treated as `label=""`
 
 ### loader.py
 **Purpose:** Tag parsing utilities
@@ -220,7 +234,7 @@ ENERGY_ORDERING_RULES = {
    - Apply overrides if provided
    - Select songs using scoring algorithm
    - Apply energy ordering
-4. Return Setlist object
+4. Return Setlist object (with optional `label`)
 
 **When to modify:**
 - Adding new generation strategies
@@ -232,7 +246,8 @@ ENERGY_ORDERING_RULES = {
 generator = SetlistGenerator(songs, history)
 setlist = generator.generate(
     date="2026-02-15",
-    overrides={"louvor": ["Oceanos"]}
+    overrides={"louvor": ["Oceanos"]},
+    label="evening"  # Optional: creates labeled setlist
 )
 ```
 
@@ -483,11 +498,17 @@ def calculate_recency_scores(songs, history, target_date):
 
 **Key functions:**
 
-1. **`find_target_setlist(history, target_date)`**
-   - Locates setlist by date (latest or specific)
+1. **`find_target_setlist(history, target_date, target_label="")`**
+   - Locates setlist by date and optional label
    - Raises ValueError if not found
 
-2. **`validate_replacement_request(setlist, moment, position, replacement_song, songs)`**
+2. **`derive_setlist(base_setlist_dict, songs, history, replace_count=None)`**
+   - Creates a variant by replacing songs from a base setlist
+   - `replace_count=None` → random number; `replace_count=0` → exact copy; integer → that many
+   - Uses `replace_songs_batch()` internally with auto-selection
+   - Returns new setlist dict (caller sets `label`)
+
+3. **`validate_replacement_request(setlist, moment, position, replacement_song, songs)`**
    - Validates moment exists
    - Validates position in range
    - Validates manual song exists and has required tag
@@ -502,6 +523,7 @@ def calculate_recency_scores(songs, history, target_date):
    - Single replacement with energy reordering
    - Creates new setlist dict (immutable pattern)
    - Calls `apply_energy_ordering()` if enabled
+   - Preserves `"label"` key from input dict
 
 **Auto-selection algorithm:**
 ```python
@@ -570,10 +592,30 @@ from library import SetlistGenerator, get_repositories
 repos = get_repositories()
 generator = SetlistGenerator.from_repositories(repos.songs, repos.history)
 setlist = generator.generate(date="2026-02-15")
+labeled = generator.generate(date="2026-02-15", label="evening")
 
 # Or direct initialization
 generator = SetlistGenerator(songs_dict, history_list)
 setlist = generator.generate(date="2026-02-15")
+```
+
+### Derivation Components
+```python
+from library import derive_setlist, get_repositories
+
+repos = get_repositories()
+songs = repos.songs.get_all()
+history = repos.history.get_all()
+base = repos.history.get_by_date("2026-03-01")
+
+# Derive with random N replacements
+derived = derive_setlist(base, songs, history)
+
+# Derive with exact count
+derived = derive_setlist(base, songs, history, replace_count=3)
+
+# Derive with zero changes (exact copy)
+derived = derive_setlist(base, songs, history, replace_count=0)
 ```
 
 ### Transposition Components

@@ -126,6 +126,8 @@ def complete_key_names(ctx, param, incomplete: str) -> List[CompletionItem]:
 def complete_history_dates(ctx, param, incomplete: str) -> List[CompletionItem]:
     """Complete dates from history/*.json files.
 
+    Supports both plain dates (YYYY-MM-DD) and labeled setlists (YYYY-MM-DD_label).
+
     Args:
         ctx: Click context object
         param: Click parameter object
@@ -159,17 +161,19 @@ def complete_history_dates(ctx, param, incomplete: str) -> List[CompletionItem]:
 
         json_files = list(history_path.glob("*.json"))
 
-        # Extract YYYY-MM-DD from filenames
+        # Extract date (and optional label) from filenames
         dates = []
         for json_file in json_files:
-            # Expected format: YYYY-MM-DD.json
-            date_str = json_file.stem
-            # Basic validation: should be 10 characters (YYYY-MM-DD)
-            if len(date_str) == 10 and date_str.count('-') == 2:
-                dates.append(date_str)
+            stem = json_file.stem
+            # Plain date: YYYY-MM-DD (10 chars)
+            if len(stem) == 10 and stem.count('-') == 2:
+                dates.append(stem)
+            # Labeled: YYYY-MM-DD_label (>10 chars, starts with date pattern)
+            elif len(stem) > 10 and stem[10] == '_' and stem[:10].count('-') == 2:
+                dates.append(stem[:10])  # Only offer the date portion
 
-        # Sort descending (most recent first)
-        dates.sort(reverse=True)
+        # Deduplicate and sort descending
+        dates = sorted(set(dates), reverse=True)
 
         # Filter by incomplete input
         matching_dates = [
@@ -183,4 +187,47 @@ def complete_history_dates(ctx, param, incomplete: str) -> List[CompletionItem]:
     except Exception:
         # Gracefully return empty list on any error
         # (e.g., missing history directory, permission errors)
+        return []
+
+
+def complete_history_labels(ctx, param, incomplete: str) -> List[CompletionItem]:
+    """Complete labels from history/*.json files.
+
+    Args:
+        ctx: Click context object
+        param: Click parameter object
+        incomplete: Partial input from user
+
+    Returns:
+        List of CompletionItem objects for known labels.
+    """
+    try:
+        history_dir = None
+        output_dir = None
+        if ctx and ctx.params:
+            history_dir = ctx.params.get('history_dir')
+            output_dir = ctx.params.get('output_dir')
+
+        from cli.cli_utils import resolve_paths
+        paths = resolve_paths(output_dir, history_dir)
+        history_path = paths.history_dir
+
+        if not history_path.exists():
+            return []
+
+        json_files = list(history_path.glob("*.json"))
+
+        labels = set()
+        for json_file in json_files:
+            stem = json_file.stem
+            # Labeled: YYYY-MM-DD_label
+            if len(stem) > 10 and stem[10] == '_':
+                label = stem[11:]
+                if label:
+                    labels.add(label)
+
+        matching = sorted(l for l in labels if l.startswith(incomplete.lower()))
+        return [CompletionItem(l) for l in matching]
+
+    except Exception:
         return []

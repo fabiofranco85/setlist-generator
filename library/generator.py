@@ -86,7 +86,8 @@ class SetlistGenerator:
     def generate(
         self,
         date: str,
-        overrides: dict[str, list[str]] | None = None
+        overrides: dict[str, list[str]] | None = None,
+        label: str = "",
     ) -> Setlist:
         """
         Generate a complete setlist for all moments.
@@ -94,6 +95,7 @@ class SetlistGenerator:
         Args:
             date: Date for this setlist
             overrides: Optional manual song overrides per moment
+            label: Optional label for multiple setlists per date
 
         Returns:
             Setlist object with selected songs
@@ -124,7 +126,7 @@ class SetlistGenerator:
                 moments=len(self._moments),
             )
 
-        return Setlist(date=date, moments=self._moments)
+        return Setlist(date=date, moments=self._moments, label=label)
 
     def _generate_moment(
         self,
@@ -167,6 +169,7 @@ def generate_setlist(
     date: str,
     overrides: dict[str, list[str]] | None = None,
     obs: Any = None,
+    label: str = "",
 ) -> Setlist:
     """
     Generate a complete setlist for all moments.
@@ -180,9 +183,10 @@ def generate_setlist(
         date: Date for this setlist
         overrides: Optional manual song overrides per moment
         obs: Observability container (defaults to noop)
+        label: Optional label for multiple setlists per date
 
     Returns:
         Setlist object with selected songs
     """
     generator = SetlistGenerator(songs, history, obs=obs)
-    return generator.generate(date, overrides)
+    return generator.generate(date, overrides, label=label)

@@ -186,6 +186,7 @@ Verify good variety without excessive repetition.
 - **Same-day generation:** Score = 0.0 (excluded)
 - **Future dates in history:** Handled as 0.0 score
 - **Never-used songs:** Score = 1.0 (maximum)
+- **Multiple setlists per date (labels):** All setlists for a date share the same `date` field, so songs used in any labeled variant receive the same recency penalty. This is intentional — a song used at the morning service is equally "recently used" for the evening service.
 
 ## Comparison with Old System
 

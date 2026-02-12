@@ -141,11 +141,31 @@ songbook generate --output ~/Desktop/next-sunday.md
 songbook generate --output-dir custom/output --history-dir custom/history
 ```
 
+**Labeled Setlists (Multiple Services Per Day):**
+
+Derive a variant setlist from an existing one for the same date:
+
+```bash
+# Generate primary setlist first
+songbook generate --date 2026-03-01
+
+# Derive evening variant (replaces random songs)
+songbook generate --date 2026-03-01 --label evening
+
+# Derive replacing exactly 3 songs
+songbook generate --date 2026-03-01 --label evening --replace 3
+
+# Derive replacing all songs
+songbook generate --date 2026-03-01 --label evening --replace all
+```
+
 **Options:**
 
 | Option | Description |
 |--------|-------------|
 | `--date YYYY-MM-DD` | Service date (default: today) |
+| `--label TEXT`, `-l` | Setlist label for multiple setlists per date (e.g., "evening") |
+| `--replace N`, `-r` | Songs to replace when deriving (number or "all"). Requires `--label` |
 | `--override MOMENT:SONGS` | Force specific songs (can be used multiple times) |
 | `--pdf` | Generate PDF in addition to markdown |
 | `--no-save` | Preview mode - don't save to history |
@@ -200,6 +220,9 @@ songbook view-setlist
 # View a specific date
 songbook view-setlist --date 2026-02-15
 
+# View a labeled setlist
+songbook view-setlist --date 2026-03-01 --label evening
+
 # Include song keys in the output
 songbook view-setlist --keys
 songbook view-setlist --date 2026-02-15 --keys
@@ -244,6 +267,7 @@ FILES:
 | Option | Description |
 |--------|-------------|
 | `--date YYYY-MM-DD` | View specific date (default: latest) |
+| `--label TEXT`, `-l` | Setlist label |
 | `--keys`, `-k` | Show song keys alongside titles |
 | `--output-dir DIR` | Custom output directory |
 | `--history-dir DIR` | Custom history directory |
@@ -440,6 +464,7 @@ Both files are completely regenerated to reflect the updated setlist.
 | Option | Description |
 |--------|-------------|
 | `--date YYYY-MM-DD` | Target specific date (default: latest) |
+| `--label TEXT`, `-l` | Setlist label |
 | `--moment MOMENT` | Service moment to modify (required) |
 | `--position N` | Position to replace (1-indexed, default: 1) |
 | `--positions N,M,..` | Replace multiple positions (auto mode only) |
@@ -678,6 +703,7 @@ The PDF uses church-specific terminology:
 | Option | Description |
 |--------|-------------|
 | `--date YYYY-MM-DD` | Generate PDF for specific date (default: latest) |
+| `--label TEXT`, `-l` | Setlist label |
 | `--output-dir DIR` | Custom output directory |
 | `--history-dir DIR` | Custom history directory |
 
@@ -711,6 +737,7 @@ The `markdown` command reads the song list from `history/YYYY-MM-DD.json` and us
 | Option | Description |
 |--------|-------------|
 | `--date YYYY-MM-DD` | Regenerate markdown for specific date (default: latest) |
+| `--label TEXT`, `-l` | Setlist label |
 | `--output-dir DIR` | Custom output directory |
 | `--history-dir DIR` | Custom history directory |
 
@@ -774,6 +801,7 @@ URL: https://www.youtube.com/playlist?list=PLxxxxxxxxxxxxxxxxxxx
 | Option | Description |
 |--------|-------------|
 | `--date YYYY-MM-DD` | Create playlist for specific date (default: latest) |
+| `--label TEXT`, `-l` | Setlist label |
 | `--output-dir DIR` | Custom output directory |
 | `--history-dir DIR` | Custom history directory |
 
@@ -942,6 +970,7 @@ Then restart your shell or run `source ~/.bashrc` (bash) / `source ~/.zshrc` (zs
 - Tab-complete song names: `songbook view-song Oce<TAB>` → `songbook view-song Oceanos`
 - Tab-complete moments: `songbook replace --moment lou<TAB>` → `songbook replace --moment louvor`
 - Tab-complete dates: `songbook view-setlist --date 2025-<TAB>` → shows available dates
+- Tab-complete labels: `songbook view-setlist --label eve<TAB>` → `songbook view-setlist --label evening`
 
 See [Shell Completion Guide](./.claude/SHELL_COMPLETION.md) for detailed documentation.
 
