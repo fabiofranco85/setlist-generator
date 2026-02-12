@@ -131,31 +131,23 @@ score = 3 × (0.9 + 0.1) + 0.25 = 3.25
 
 ## Testing
 
-### Verify Time Decay Behavior
+### Verify with Song Statistics
+
+Use the `info` command to inspect recency scores for individual songs:
 
 ```bash
-python test_recency_decay.py
+songbook info "Oceanos"
+songbook info "Hosana"
 ```
 
-Shows recency scores at different time intervals (7 days, 14 days, 30 days, etc.)
-
-### Compare with Actual History
-
-```bash
-python test_comparison.py
-```
-
-Shows:
-- Most recently used songs (the highest penalty)
-- Never-used songs (score = 1.0)
-- Songs in the "getting fresh" range (score 0.5-0.8)
+Shows recency score, days since last use, and full usage history.
 
 ### Generate Multiple Setlists
 
 ```bash
-python generate_setlist.py --date 2026-03-01 --no-save
-python generate_setlist.py --date 2026-03-08 --no-save
-python generate_setlist.py --date 2026-03-15 --no-save
+songbook generate --date 2026-03-01 --no-save
+songbook generate --date 2026-03-08 --no-save
+songbook generate --date 2026-03-15 --no-save
 ```
 
 Verify good variety without excessive repetition.
@@ -186,7 +178,6 @@ Verify good variety without excessive repetition.
 - ✅ Uses existing `history/*.json` files unchanged
 - ✅ `database.csv` format unchanged
 - ✅ Functional API (`generate_setlist()`) still works
-- ✅ `RECENCY_PENALTY_PERFORMANCES` kept for backward compatibility (unused)
 
 ### Edge Cases Handled
 
@@ -273,5 +264,5 @@ Possible improvements (not currently implemented):
 
 - **Algorithm:** Exponential decay: `1.0 - exp(-x/k)`
 - **Inspiration:** Similar to cache eviction algorithms (LRU with time decay)
-- **Implementation:** `library/selector.py` (lines 10-70)
-- **Configuration:** `library/config.py` (line 16)
+- **Implementation:** `library/selector.py` (`calculate_recency_scores()`)
+- **Configuration:** `library/config.py` (`RECENCY_DECAY_DAYS`)

@@ -41,7 +41,7 @@ uv sync
 This single command:
 - ✓ Reads dependencies from `pyproject.toml`
 - ✓ Creates/updates `uv.lock` for reproducible installs
-- ✓ Installs all dependencies (click, reportlab)
+- ✓ Installs all dependencies
 - ✓ Installs the songbook package in editable mode
 - ✓ Creates an isolated virtual environment
 
@@ -245,6 +245,7 @@ FILES:
 |--------|-------------|
 | `--date YYYY-MM-DD` | View specific date (default: latest) |
 | `--keys`, `-k` | Show song keys alongside titles |
+| `--output-dir DIR` | Custom output directory |
 | `--history-dir DIR` | Custom history directory |
 
 ---
@@ -419,7 +420,7 @@ songbook replace --date 2025-12-25 --moment louvor --position 1
 **Auto Mode:**
 1. Calculates recency scores for all songs (same date as original setlist)
 2. Builds exclusion set (all songs currently in setlist EXCEPT the one being replaced)
-3. Uses same selection algorithm as generation (weight × recency + randomization)
+3. Uses same selection algorithm as generation (weight × (recency + 0.1) + randomization)
 4. Reorders moment by energy to maintain emotional arc
 
 **Manual Mode:**
@@ -740,7 +741,7 @@ See [`YOUTUBE.md`](./YOUTUBE.md) for full setup instructions.
 
 1. Reads setlist from `history/YYYY-MM-DD.json`
 2. Extracts YouTube video IDs from `database.csv`
-3. Creates an unlisted playlist with format: "Setlist - YYYY-MM-DD"
+3. Creates an unlisted playlist with format: "Culto DD.MM.YY" (e.g., "Culto 15.02.26")
 4. Adds videos in setlist order
 5. Returns the playlist URL
 
@@ -754,7 +755,7 @@ Found setlist for 2026-02-15
 Authenticating with YouTube...
 ✓ Authenticated as user@example.com
 
-Creating playlist: "Setlist - 2026-02-15"
+Creating playlist: "Culto 15.02.26"
 ✓ Playlist created
 
 Adding videos to playlist...
@@ -773,6 +774,7 @@ URL: https://www.youtube.com/playlist?list=PLxxxxxxxxxxxxxxxxxxx
 | Option | Description |
 |--------|-------------|
 | `--date YYYY-MM-DD` | Create playlist for specific date (default: latest) |
+| `--output-dir DIR` | Custom output directory |
 | `--history-dir DIR` | Custom history directory |
 
 **Troubleshooting:**
@@ -849,9 +851,11 @@ After running `cleanup`, if it reports punctuation differences, use this command
 
 Import historical setlist data from another system.
 
+**Note:** This command requires an `import_real_history.py` script in the project root with your data. Create the script first, then run the import.
+
 **Usage:**
 
-1. **Edit** `import_real_history.py` with your data
+1. **Create** `import_real_history.py` with your data (see format below)
 2. **Run the import:**
    ```bash
    songbook import-history
@@ -893,8 +897,8 @@ Unsupported moments (like "Ceia", "Intercessão") are skipped with a warning.
 **Complete Import Workflow:**
 
 ```bash
-# Step 1: Edit import_real_history.py with your data
-# (Add your JSON data to the raw_data dictionary)
+# Step 1: Create import_real_history.py with your data
+# (Define a main() function and a raw_data dictionary)
 
 # Step 2: Run the import
 songbook import-history
