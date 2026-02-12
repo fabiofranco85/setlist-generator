@@ -11,6 +11,12 @@ This project uses **path-scoped documentation** to keep context focused. Differe
 - **Data Maintenance** (`.claude/rules/data-maintenance.md`) - Loads when working on maintenance scripts. Contains cleanup and import utilities.
 - **Development Guide** (`.claude/rules/development.md`) - Loads when working on `library/**/*.py`. Contains module details and implementation patterns.
 
+### Documentation Rules
+
+- Always update README.md and its references when implementing, changing, or removing features
+- Keep CLAUDE.md and .claude/* files in sync with code changes
+- Update documentation before committing
+
 ## Quick Start
 
 ### Installation
