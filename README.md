@@ -51,7 +51,7 @@ An intelligent setlist generator for church worship services that automatically 
    This single command:
    - ✓ Reads dependencies from `pyproject.toml`
    - ✓ Creates/updates `uv.lock` for reproducible installs
-   - ✓ Installs all dependencies (click, reportlab)
+   - ✓ Installs all dependencies
    - ✓ Installs the songbook package in editable mode
    - ✓ Creates an isolated virtual environment
 
@@ -177,7 +177,7 @@ The system picks songs using a smart scoring algorithm:
 
 3. **Randomization**: Adds variety to prevent the exact same order each time
 
-**Formula**: `score = weight × recency + small_random_factor`
+**Formula**: `score = weight × (recency + 0.1) + random(0, 0.5)`
 
 #### Phase 2: Ordering (Energy-Based)
 
@@ -209,14 +209,16 @@ The generator will likely pick: Oceanos, A Casa é Sua, and two other high-scori
 
 This file maps songs to service moments with energy levels and optional weights.
 
-**Format**: `song;energy;tags`
+**Format**: `song;energy;tags;youtube`
+
+The `youtube` column is optional — rows without a YouTube URL simply omit the fourth field.
 
 #### Basic Format with Energy
 
 ```csv
-song;energy;tags
+song;energy;tags;youtube
 Hosana;1;louvor
-Oceanos;2;louvor
+Oceanos;2;louvor;https://youtu.be/VIDEO_ID
 Perfeito Amor;3;louvor
 Lugar Secreto;4;louvor
 Fico Feliz;1;crianças
@@ -234,7 +236,7 @@ Tributo a Jehovah;2;ofertório
 Add `(weight)` after a moment to increase selection probability (1-10 scale):
 
 ```csv
-song;energy;tags
+song;energy;tags;youtube
 Oceanos;2;louvor(5)           # High weight, moderate energy
 Santo Pra Sempre;1;louvor(4)  # Medium-high weight, high energy
 Lugar Secreto;4;louvor(3)     # Default weight, deep worship energy
@@ -252,7 +254,7 @@ Lugar Secreto;4;louvor(3)     # Default weight, deep worship energy
 Songs can work in different moments with different weights:
 
 ```csv
-song;energy;tags
+song;energy;tags;youtube
 Autoridade e Poder;1;prelúdio,poslúdio
 Brilha Jesus;2;saudação(4),poslúdio(2)
 Estamos de Pé;1;prelúdio(5),poslúdio(3)
@@ -328,7 +330,7 @@ When adding new songs, classify them by these characteristics:
 Each song has a markdown file with chords and lyrics.
 
 **File naming**: Must exactly match the song name in `database.csv`
-- `database.csv`: `Oceanos;louvor`
+- `database.csv`: `Oceanos;2;louvor`
 - File: `chords/Oceanos.md`
 
 **Format**:
@@ -364,13 +366,14 @@ G            D        A
    - Use the energy scale guide above
    - When in doubt, use 2 or 3 (moderate energy)
 
-2. **Add to `database.csv`** with energy and tags:
+2. **Add to `database.csv`** with energy, tags, and optional YouTube URL:
    ```csv
-   Nova Canção;2;louvor(3),prelúdio
+   Nova Canção;2;louvor(3),prelúdio;https://youtu.be/VIDEO_ID
    ```
-   - Format: `song_name;energy;tags`
+   - Format: `song_name;energy;tags;youtube`
    - Energy: 1 (upbeat) to 4 (contemplative)
    - Tags: Moments with optional weights
+   - YouTube: Optional video URL (omit if not available)
 
 3. **Create chord file** `chords/Nova Canção.md`:
    ```markdown
@@ -402,7 +405,7 @@ Intimidade;4;louvor(5)
 
 1. Delete or comment out the line in `database.csv`:
    ```csv
-   # Old Song;louvor  ← This song won't be selected anymore
+   # Old Song;2;louvor  ← This song won't be selected anymore
    ```
 
 2. Optionally delete `chords/Old Song.md`
@@ -413,10 +416,10 @@ Edit `database.csv`:
 
 ```csv
 # Before
-Oceanos;louvor(3)
+Oceanos;2;louvor(3)
 
 # After - increase weight because congregation loves it
-Oceanos;louvor(5)
+Oceanos;2;louvor(5)
 ```
 
 Changes take effect immediately on the next generation.
@@ -469,7 +472,7 @@ songbook generate
 
 ### Change Songs Per Moment
 
-Edit `MOMENTS_CONFIG` (line 31):
+Edit `MOMENTS_CONFIG` in `library/config.py`:
 
 ```python
 MOMENTS_CONFIG = {
@@ -484,7 +487,7 @@ MOMENTS_CONFIG = {
 
 ### Energy-Based Ordering
 
-Edit energy configuration (lines 44-48):
+Edit energy configuration in `library/config.py`:
 
 ```python
 # Enable/disable energy ordering
@@ -525,7 +528,7 @@ RECENCY_DECAY_DAYS = 45  # Days for a song to feel "fresh" again
 
 ### Change Default Weight
 
-Edit `DEFAULT_WEIGHT` (line 40):
+Edit `DEFAULT_WEIGHT` in `library/config.py`:
 
 ```python
 DEFAULT_WEIGHT = 3  # Default weight when not specified in tags
@@ -543,7 +546,7 @@ DEFAULT_WEIGHT = 3  # Default weight when not specified in tags
 
 2. Add songs with the new tag in `database.csv`:
    ```csv
-   Lugar Secreto;meditação
+   Lugar Secreto;4;meditação
    ```
 
 ## Programmatic Usage
@@ -727,7 +730,7 @@ Estamos de pé...
 
 ## Louvor
 
-# Oceanos (Bm)
+### Oceanos (Bm)
 ...
 ```
 
