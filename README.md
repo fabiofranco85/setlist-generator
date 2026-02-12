@@ -190,7 +190,7 @@ After selecting songs, the system orders them by energy level to create emotiona
   - **4** = Deep worship, contemplative, intimate
 
 - **Louvor Progression**: Songs are ordered 1→4 (upbeat to worship)
-  - Example: Hosana (1) → Oceanos (2) → Perfeito Amor (3) → Lugar Secreto (4)
+  - Example: Santo de Deus (1) → Hosana (3) → Perfeito Amor (3) → Lugar Secreto (4)
 
 - **Override Preservation**: Manually specified songs maintain your exact order
 
@@ -217,8 +217,8 @@ The `youtube` column is optional — rows without a YouTube URL simply omit the 
 
 ```csv
 song;energy;tags;youtube
-Hosana;1;louvor
-Oceanos;2;louvor;https://youtu.be/VIDEO_ID
+Santo de Deus;1;louvor
+Hosana;3;louvor
 Perfeito Amor;3;louvor
 Lugar Secreto;4;louvor
 Fico Feliz;1;crianças
@@ -226,8 +226,8 @@ Tributo a Jehovah;2;ofertório
 ```
 
 **Energy column (1-4 scale):**
-- **1**: High energy, upbeat, celebratory (e.g., Hosana, Santo Pra Sempre)
-- **2**: Moderate-high, engaging, rhythmic (e.g., Oceanos, Grande É o Senhor)
+- **1**: High energy, upbeat, celebratory (e.g., Eu Te Busco, Santo de Deus)
+- **2**: Moderate-high, engaging, rhythmic (e.g., Grande É o Senhor)
 - **3**: Moderate-low, reflective, slower (e.g., Perfeito Amor, Consagração)
 - **4**: Deep worship, contemplative, intimate (e.g., Lugar Secreto, Tudo é Perda)
 
@@ -237,8 +237,8 @@ Add `(weight)` after a moment to increase selection probability (1-10 scale):
 
 ```csv
 song;energy;tags;youtube
-Oceanos;2;louvor(5)           # High weight, moderate energy
-Santo Pra Sempre;1;louvor(4)  # Medium-high weight, high energy
+Oceanos;3;louvor(5)           # High weight, moderate-low energy
+Santo Pra Sempre;4;louvor(4)  # Medium-high weight, deep worship energy
 Lugar Secreto;4;louvor(3)     # Default weight, deep worship energy
 ```
 
@@ -272,10 +272,10 @@ Each song has an **intrinsic energy level** (1-4) that defines its musical chara
 
 | Energy | Musical Character | Tempo | Examples |
 |--------|------------------|-------|----------|
-| **1** | High energy, upbeat, celebratory | Fast | Hosana, Santo Pra Sempre, Estamos de Pé |
-| **2** | Moderate-high, engaging, rhythmic | Medium-fast | Oceanos, Ousado Amor, Grande É o Senhor |
-| **3** | Moderate-low, reflective, thoughtful | Medium-slow | Perfeito Amor, Consagração, Jesus Em Tua Presença |
-| **4** | Deep worship, contemplative, intimate | Slow | Tudo é Perda, Lugar Secreto, Aos Pés da Cruz |
+| **1** | High energy, upbeat, celebratory | Fast | Eu Te Busco, Santo de Deus |
+| **2** | Moderate-high, engaging, rhythmic | Medium-fast | Grande É o Senhor |
+| **3** | Moderate-low, reflective, thoughtful | Medium-slow | Hosana, Oceanos, Perfeito Amor |
+| **4** | Deep worship, contemplative, intimate | Slow | Lugar Secreto, Santo Pra Sempre, Tudo é Perda |
 
 #### How Energy Affects Setlists
 
@@ -283,8 +283,8 @@ Each song has an **intrinsic energy level** (1-4) that defines its musical chara
 - Songs are automatically ordered by energy: **1 → 2 → 3 → 4**
 - This creates a natural emotional arc from celebration to intimacy
 - Example progression:
-  1. Santo Pra Sempre (energy 1) - upbeat celebration
-  2. Oceanos (energy 2) - engaging worship
+  1. Santo de Deus (energy 1) - upbeat celebration
+  2. Hosana (energy 3) - reflective
   3. Perfeito Amor (energy 3) - reflective
   4. Lugar Secreto (energy 4) - deep, intimate worship
 
@@ -811,9 +811,9 @@ History saved to: history/2026-02-15.json
 ```
 
 **Note**: The louvor songs are automatically ordered by energy level:
-- Santo Pra Sempre (energy 1) - upbeat celebration
-- Oceanos (energy 2) - engaging worship
-- Consagração (energy 3) - reflective
+- Santo de Deus (energy 1) - upbeat celebration
+- Hosana (energy 3) - reflective
+- Consagração (energy 4) - contemplative
 - Aos Pés da Cruz (energy 4) - deep worship
 
 This creates a natural emotional arc from high energy to intimate worship.
@@ -839,7 +839,7 @@ LOUVOR:
   - Lugar Secreto      (your override - energy 4)
   - Mais Que Uma Voz   (your override - energy 3)
   - Jesus Em Tua Presença (your override - energy 3)
-  - Oceanos            (auto-selected - energy 2)
+  - Oceanos            (auto-selected - energy 3)
 ```
 
 **Note**: Your override songs (first 3) maintain the exact order you specified, even though they're not energy-sorted. Only the auto-selected song (Oceanos) follows energy ordering rules.
@@ -923,10 +923,10 @@ The song is in `database.csv` but the chord file is missing or misnamed.
 3. **Adjust weights** - lower weights on overused songs:
    ```csv
    # Before
-   Oceanos;2;louvor(5)
+   Oceanos;3;louvor(5)
 
    # After
-   Oceanos;2;louvor(3)
+   Oceanos;3;louvor(3)
    ```
 
 ### Problem: Too many/few songs for a moment
@@ -956,10 +956,10 @@ ENERGY_ORDERING_ENABLED = False
 Or if energy classifications seem wrong, update individual songs in `database.csv`:
 ```csv
 # Before
-Hosana;3;louvor  # Classified as reflective (wrong!)
+Hosana;1;louvor  # Classified as upbeat (wrong!)
 
 # After
-Hosana;1;louvor  # Corrected to upbeat (right!)
+Hosana;3;louvor  # Corrected to reflective (right!)
 ```
 
 ### Problem: Override songs are being re-ordered
@@ -1016,15 +1016,15 @@ Ensure your editor/terminal supports UTF-8:
 
 ```csv
 # Initial setup - classify energy, use default weights
-Oceanos;2;louvor
-Santo Pra Sempre;1;louvor
-Hosana;1;louvor
+Oceanos;3;louvor
+Santo Pra Sempre;4;louvor
+Hosana;3;louvor
 Lugar Secreto;4;louvor
 
 # After a few months - adjust weights based on congregation response
-Oceanos;2;louvor(5)         # Everyone loves this (energy unchanged)
-Santo Pra Sempre;1;louvor(4)  # Popular (energy unchanged)
-Hosana;1;louvor(2)         # Less familiar, use less often (energy unchanged)
+Oceanos;3;louvor(5)         # Everyone loves this (energy unchanged)
+Santo Pra Sempre;4;louvor(4)  # Popular (energy unchanged)
+Hosana;3;louvor(2)         # Less familiar, use less often (energy unchanged)
 Lugar Secreto;4;louvor(5)    # Powerful worship moment (energy unchanged)
 ```
 

@@ -131,8 +131,8 @@ In `database.csv`:
 
 Examples:
 ```csv
-Oceanos;2;louvor(5);https://www.youtube.com/watch?v=XXXXXXXXXXX
-Hosana;1;louvor;https://youtu.be/YYYYYYYYYYY
+Oceanos;3;louvor(5);https://www.youtube.com/watch?v=XXXXXXXXXXX
+Hosana;3;louvor;https://youtu.be/YYYYYYYYYYY
 Lugar Secreto;4;louvor;
 Autoridade e Poder;1;prelúdio,poslúdio
 Brilha Jesus;2;saudação(4),poslúdio(2)
@@ -149,10 +149,10 @@ Songs have an intrinsic **energy level** (1-4) that defines their musical charac
 
 | Energy | Description | Examples |
 |--------|-------------|----------|
-| **1** | High energy, upbeat, celebratory | Hosana, Santo Pra Sempre, Estamos de Pé |
-| **2** | Moderate-high, engaging, rhythmic | Oceanos, Ousado Amor, Grande É o Senhor |
-| **3** | Moderate-low, reflective, slower | Perfeito Amor, Consagração, Jesus Em Tua Presença |
-| **4** | Deep worship, contemplative, intimate | Tudo é Perda, Lugar Secreto, Aos Pés da Cruz |
+| **1** | High energy, upbeat, celebratory | Eu Te Busco, Santo de Deus |
+| **2** | Moderate-high, engaging, rhythmic | Grande É o Senhor |
+| **3** | Moderate-low, reflective, slower | Hosana, Oceanos, Perfeito Amor |
+| **4** | Deep worship, contemplative, intimate | Lugar Secreto, Santo Pra Sempre, Tudo é Perda |
 
 **Energy Ordering:**
 - Configured per moment in `ENERGY_ORDERING_RULES` (library/config.py)
@@ -163,15 +163,15 @@ Songs have an intrinsic **energy level** (1-4) that defines their musical charac
 
 **Example louvor progression:**
 ```
-1. Hosana (energy: 1) - upbeat, celebratory
-2. Oceanos (energy: 2) - engaging, rhythmic
+1. Santo de Deus (energy: 1) - upbeat, celebratory
+2. Hosana (energy: 3) - reflective
 3. Perfeito Amor (energy: 3) - reflective
 4. Lugar Secreto (energy: 4) - deep worship
 ```
 
 ## Time-Based Recency System
 
-`RECENCY_DECAY_DAYS = 45` (library/config.py:16)
+`RECENCY_DECAY_DAYS = 45` (library/config.py)
 
 The system uses **time-based exponential decay** to calculate recency scores, considering the **full history** of all services (not just the last 3).
 
@@ -286,10 +286,10 @@ Edit `ENERGY_ORDERING_ENABLED` or `ENERGY_ORDERING_RULES` in `library/config.py`
 3. Run generator - new song will be automatically included in selection pool
 
 **Energy Classification Guide:**
-- **Energy 1**: Fast tempo, celebratory, high intensity (e.g., Hosana)
-- **Energy 2**: Moderate tempo, engaging, rhythmic (e.g., Oceanos)
-- **Energy 3**: Slower tempo, reflective, thoughtful (e.g., Perfeito Amor)
-- **Energy 4**: Very slow, intimate, deep worship (e.g., Lugar Secreto)
+- **Energy 1**: Fast tempo, celebratory, high intensity (e.g., Eu Te Busco, Santo de Deus)
+- **Energy 2**: Moderate tempo, engaging, rhythmic (e.g., Grande É o Senhor)
+- **Energy 3**: Slower tempo, reflective, thoughtful (e.g., Hosana, Oceanos, Perfeito Amor)
+- **Energy 4**: Very slow, intimate, deep worship (e.g., Lugar Secreto, Santo Pra Sempre)
 
 ## Programmatic Usage
 
