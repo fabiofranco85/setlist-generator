@@ -122,6 +122,7 @@ songbook view-setlist --label evening  # View labeled setlist
 songbook view-song "Oceanos"         # View song details
 songbook info "Oceanos"              # Show song statistics
 songbook replace --moment louvor --position 2  # Replace a song
+songbook label --date 2026-03-01 --to evening  # Add/rename/remove label
 songbook transpose "Oceanos" --to G  # Transpose chords (preview)
 songbook pdf                         # Generate PDF from existing setlist
 songbook youtube                     # Create YouTube playlist
@@ -134,7 +135,7 @@ For complete documentation of all CLI commands, options, and examples, see:
 **📖 [CLI Command Reference (CLI_GUIDE.md)](./CLI_GUIDE.md)**
 
 The CLI guide covers:
-- All commands in detail (`generate`, `view-setlist`, `view-song`, `replace`, `info`, `transpose`, etc.)
+- All commands in detail (`generate`, `view-setlist`, `view-song`, `replace`, `label`, `info`, `transpose`, etc.)
 - Command options and flags
 - Usage examples and workflows
 - Shell completion setup
@@ -604,8 +605,10 @@ setlist3 = generator.generate("2026-03-29")
 - `repos.history.get_by_date_all(date)` - Get all setlists for a date (all labels)
 - `repos.history.save(setlist)` - Save new setlist
 - `repos.history.exists(date, label="")` - Check if setlist exists
+- `repos.history.delete(date, label="")` - Delete a setlist
 - `repos.config.get_moments_config()` - Get service moments
 - `repos.output.save_markdown(date, content, label="")` - Save markdown file
+- `repos.output.delete_outputs(date, label="")` - Delete md + pdf files
 
 ### Custom Formatting and Saving
 
@@ -925,6 +928,12 @@ View or manage labeled setlists by adding `--label`:
 songbook view-setlist --date 2026-03-01 --label evening
 songbook replace --moment louvor --position 2 --date 2026-03-01 --label evening
 songbook pdf --date 2026-03-01 --label evening
+```
+
+Rename or remove labels after creation:
+```bash
+songbook label --date 2026-03-01 --label evening --to night  # Rename
+songbook label --date 2026-03-01 --label night --remove      # Remove
 ```
 
 ## Troubleshooting

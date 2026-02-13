@@ -31,6 +31,7 @@ def cli(ctx, verbose):
       info           Show detailed statistics for a song
       transpose      Transpose a song to a different key
       replace        Replace song in existing setlist
+      label          Add, rename, or remove a setlist label
       pdf            Generate PDF from existing setlist
       markdown       Regenerate markdown from existing setlist
       youtube        Create YouTube playlist from existing setlist
@@ -191,6 +192,26 @@ def replace(ctx, moment, position, positions, replacement, date, label, output_d
     from cli.commands.replace import run
     run(moment, position, positions, replacement, date, output_dir, history_dir,
         verbose=ctx.obj.get("verbose", False), label=label)
+
+
+@cli.command()
+@click.option("--date", required=True, shell_complete=complete_history_dates, help="Target date (YYYY-MM-DD)")
+@click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Source label (omit for unlabeled)")
+@click.option("--to", "to_label", shell_complete=complete_history_labels, help="New label to assign")
+@click.option("--remove", is_flag=True, help="Remove the label (make unlabeled)")
+@click.option("--output-dir", help="Custom output directory")
+@click.option("--history-dir", help="Custom history directory")
+def label(date, label, to_label, remove, output_dir, history_dir):
+    """Add, rename, or remove a setlist label.
+
+    \b
+    Examples:
+      songbook label --date 2026-03-01 --to evening                # Add label
+      songbook label --date 2026-03-01 --label evening --to night  # Rename
+      songbook label --date 2026-03-01 --label evening --remove    # Remove
+    """
+    from cli.commands.label import run
+    run(date, label, to_label, remove, output_dir, history_dir)
 
 
 @cli.command()

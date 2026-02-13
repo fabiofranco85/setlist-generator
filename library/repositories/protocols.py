@@ -151,6 +151,18 @@ class HistoryRepository(Protocol):
         """
         ...
 
+    def delete(self, date: str, label: str = "") -> None:
+        """Delete a setlist by date and optional label.
+
+        Args:
+            date: Date string in YYYY-MM-DD format
+            label: Optional label for multiple setlists per date
+
+        Raises:
+            KeyError: If no setlist exists for the given date/label
+        """
+        ...
+
     def get_by_date_all(self, date: str) -> list[dict]:
         """Get all setlists for a date (all labels).
 
@@ -266,6 +278,18 @@ class OutputRepository(Protocol):
 
         Returns:
             Path where markdown file would be saved
+        """
+        ...
+
+    def delete_outputs(self, date: str, label: str = "") -> list[Path]:
+        """Delete markdown and PDF output files for a setlist.
+
+        Args:
+            date: Setlist date
+            label: Optional label for multiple setlists per date
+
+        Returns:
+            List of paths that were actually deleted (may be empty)
         """
         ...
 

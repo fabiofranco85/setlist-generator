@@ -84,6 +84,25 @@ class FilesystemOutputRepository:
         generate_setlist_pdf(setlist, songs, output_path)
         return output_path
 
+    def delete_outputs(self, date: str, label: str = "") -> list[Path]:
+        """Delete markdown and PDF output files for a setlist.
+
+        Args:
+            date: Setlist date
+            label: Optional label for multiple setlists per date
+
+        Returns:
+            List of paths that were actually deleted (may be empty)
+        """
+        setlist_id = self._make_setlist_id(date, label)
+        deleted = []
+        for ext in (".md", ".pdf"):
+            path = self.output_dir / f"{setlist_id}{ext}"
+            if path.exists():
+                path.unlink()
+                deleted.append(path)
+        return deleted
+
     def get_markdown_path(self, date: str, label: str = "") -> Path:
         """Get the path where markdown would be saved for a date.
 

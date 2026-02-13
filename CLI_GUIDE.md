@@ -11,6 +11,7 @@ Complete guide to all `songbook` CLI commands.
   - [view-setlist](#view-setlist---view-generated-setlists)
   - [view-song](#view-song---view-individual-songs)
   - [replace](#replace---replace-songs-in-setlists)
+  - [label](#label---manage-setlist-labels)
   - [info](#info---song-statistics)
   - [transpose](#transpose---transpose-chords)
   - [list-moments](#list-moments---list-service-moments)
@@ -490,6 +491,98 @@ Both files are completely regenerated to reflect the updated setlist.
 **"Setlist for date not found"**
 - The specified date doesn't exist in history
 - Solution: Check `history/` directory for available dates
+
+---
+
+### `label` - Manage Setlist Labels
+
+Add, rename, or remove labels on existing setlists. Labels allow multiple setlists per date (e.g., morning and evening services). This command safely renames all associated files (history JSON, output markdown) and regenerates the markdown header.
+
+**Add a Label:**
+
+Turn an unlabeled setlist into a labeled one:
+
+```bash
+songbook label --date 2026-03-01 --to evening
+```
+
+This renames:
+- `history/2026-03-01.json` → `history/2026-03-01_evening.json`
+- `output/2026-03-01.md` → `output/2026-03-01_evening.md`
+
+**Rename a Label:**
+
+Change an existing label:
+
+```bash
+songbook label --date 2026-03-01 --label evening --to night
+```
+
+**Remove a Label:**
+
+Strip the label from a setlist, making it unlabeled:
+
+```bash
+songbook label --date 2026-03-01 --label evening --remove
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--date YYYY-MM-DD` | Target date (required) |
+| `--label TEXT`, `-l` | Source label to operate on (omit for unlabeled) |
+| `--to TEXT` | New label to assign |
+| `--remove` | Remove the label (make unlabeled) |
+| `--output-dir DIR` | Custom output directory |
+| `--history-dir DIR` | Custom history directory |
+
+**How It Works:**
+
+1. Validates inputs (`--to` and `--remove` are mutually exclusive; one is required)
+2. Loads the source setlist
+3. Checks the target label doesn't already exist for the same date
+4. **Write-first, delete-second** (crash-safe):
+   - Saves new history JSON with updated label
+   - Regenerates and saves markdown with updated header
+   - Deletes old history JSON
+   - Deletes old output files (markdown and PDF if present)
+5. If an old PDF was deleted, prints a note suggesting `songbook pdf` to regenerate
+
+**Validation:**
+- Labels must be lowercase alphanumeric with hyphens/underscores
+- Labels must start with a letter or digit, max 30 characters
+- Source and target labels cannot be the same
+- Cannot remove a label from an already unlabeled setlist
+
+**Example Workflow:**
+
+```bash
+# Generate an unlabeled setlist
+songbook generate --date 2026-03-01
+
+# Realize it's for morning service, add a label
+songbook label --date 2026-03-01 --to morning
+
+# Generate an evening variant
+songbook generate --date 2026-03-01 --label evening
+
+# Rename "evening" to "night"
+songbook label --date 2026-03-01 --label evening --to night
+
+# View the renamed setlist
+songbook view-setlist --date 2026-03-01 --label night
+```
+
+**Troubleshooting:**
+
+**"A setlist already exists for date with label..."**
+- The target label is already taken for that date
+- Solution: Delete or rename the existing setlist first
+
+**"--remove requires --label"**
+- Cannot remove a label from an already unlabeled setlist
+- Solution: Use `--label` to specify which labeled setlist to make unlabeled
 
 ---
 

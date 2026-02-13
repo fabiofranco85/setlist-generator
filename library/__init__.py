@@ -11,6 +11,7 @@ from .config import (
     RECENCY_DECAY_DAYS,
 )
 from .formatter import format_setlist_markdown
+from .labeler import relabel_setlist
 from .generator import SetlistGenerator, generate_setlist
 from .loader import parse_tags
 from .selector import (
@@ -82,6 +83,8 @@ __all__ = [
     # Models
     "Song",
     "Setlist",
+    # Labeler
+    "relabel_setlist",
     # Core functions
     "parse_tags",
     "calculate_recency_scores",

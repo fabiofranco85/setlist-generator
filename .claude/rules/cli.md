@@ -33,6 +33,8 @@ songbook view-song "Oceanos"         # View song details
 songbook info "Oceanos"              # Song statistics and history
 songbook replace --moment louvor --position 2  # Replace song
 songbook replace --moment louvor --position 2 --label evening  # Replace in labeled
+songbook label --date 2026-03-01 --to evening  # Add label to setlist
+songbook label --date 2026-03-01 --label evening --to night  # Rename label
 songbook transpose "Oceanos" --to G  # Transpose chords (preview)
 songbook view-song "Oceanos" -t G    # View transposed (display-only)
 songbook pdf --date 2026-02-15       # Generate PDF
@@ -317,6 +319,41 @@ songbook replace --moment louvor --position 2 --date 2026-03-01 --label evening
 - **Batch mode** (`--positions`): Replaces multiple songs at once, ensures no duplicates
 
 **Note:** When neither `--position` nor `--positions` is specified, defaults to position 1.
+
+---
+
+### songbook label
+
+Add, rename, or remove a setlist label.
+
+**Usage:**
+```bash
+# Add label to an unlabeled setlist
+songbook label --date 2026-03-01 --to evening
+
+# Rename an existing label
+songbook label --date 2026-03-01 --label evening --to night
+
+# Remove a label (make unlabeled)
+songbook label --date 2026-03-01 --label evening --remove
+```
+
+**Options:**
+- `--date YYYY-MM-DD` - Required: Target date
+- `--label TEXT` or `-l` - Source label (omit for unlabeled setlist)
+- `--to TEXT` - New label to assign
+- `--remove` - Remove the label (make unlabeled)
+- `--output-dir PATH` - Custom output directory
+- `--history-dir PATH` - Custom history directory
+
+**Behavior:**
+- `--to` and `--remove` are mutually exclusive; one is required
+- Renames both history JSON and output markdown files
+- Regenerates markdown with the new label in the header
+- If the old setlist had a PDF, it is removed with a note to regenerate
+- **Crash-safe ordering**: new files are written before old files are deleted
+- Labels are validated: lowercase alphanumeric, hyphens, underscores, max 30 chars
+- Errors if the target label already exists for the same date
 
 ---
 
@@ -606,7 +643,8 @@ songbook generate --date 2026-03-01                          # Primary
 songbook generate --date 2026-03-01 --label evening          # Derive variant
 songbook generate --date 2026-03-01 --label evening --replace 3  # Replace exactly 3
 songbook view-setlist --date 2026-03-01 --label evening      # Review variant
-songbook pdf --date 2026-03-01 --label evening               # Generate PDF
+songbook label --date 2026-03-01 --label evening --to night  # Rename label
+songbook pdf --date 2026-03-01 --label night                 # Generate PDF
 ```
 
 **Replace and regenerate PDF:**

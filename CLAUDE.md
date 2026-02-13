@@ -49,6 +49,9 @@ songbook view-song "Oceanos"         # View song details
 songbook info "Oceanos"              # Song statistics and history
 songbook replace --moment louvor --position 2  # Replace song
 songbook replace --moment louvor --position 2 --label evening  # Replace in labeled
+songbook label --date 2026-03-01 --to evening  # Add label to setlist
+songbook label --date 2026-03-01 --label evening --to night  # Rename label
+songbook label --date 2026-03-01 --label evening --remove  # Remove label
 songbook transpose "Oceanos" --to G  # Transpose chords (preview)
 songbook transpose "Oceanos" --to G --save  # Transpose and persist
 songbook view-song "Oceanos" -t G    # View song transposed
@@ -87,6 +90,7 @@ This is a **setlist generator** for church worship services. It intelligently se
 │   ├── config.py               # Configuration constants
 │   ├── models.py               # Song and Setlist data structures
 │   ├── loader.py               # Data loading
+│   ├── labeler.py              # Setlist label management
 │   ├── selector.py             # Song selection algorithms
 │   ├── ordering.py             # Energy-based ordering
 │   ├── transposer.py           # Chord transposition (chromatic)
@@ -158,6 +162,13 @@ songbook replace --moment louvor --position 2 --with "Oceanos"  # Manual
 songbook replace --moment louvor --position 2 --label evening   # In labeled setlist
 ```
 
+**Manage labels:**
+```bash
+songbook label --date 2026-03-01 --to evening                  # Add label
+songbook label --date 2026-03-01 --label evening --to night    # Rename label
+songbook label --date 2026-03-01 --label evening --remove      # Remove label
+```
+
 **Song statistics:**
 ```bash
 songbook info "Oceanos"  # Metadata, recency, and usage history
@@ -221,9 +232,11 @@ for moment, song_list in setlist.moments.items():
 - `repos.history.get_by_date_all(date)` - Get all setlists for a date (all labels)
 - `repos.history.exists(date, label="")` - Check if setlist exists
 - `repos.history.update(date, data, label="")` - Update a setlist
+- `repos.history.delete(date, label="")` - Delete a setlist
 - `repos.output.save_markdown(date, content, label="")` - Save labeled markdown
 - `repos.output.get_markdown_path(date, label="")` - Get output path
 - `repos.output.get_pdf_path(date, label="")` - Get PDF path
+- `repos.output.delete_outputs(date, label="")` - Delete md + pdf files
 
 ## Configuration
 

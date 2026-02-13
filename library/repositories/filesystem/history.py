@@ -171,6 +171,25 @@ class FilesystemHistoryRepository:
         # Invalidate cache since we modified data
         self._invalidate_cache()
 
+    def delete(self, date: str, label: str = "") -> None:
+        """Delete a setlist by date and optional label.
+
+        Args:
+            date: Date string in YYYY-MM-DD format
+            label: Optional label for multiple setlists per date
+
+        Raises:
+            KeyError: If no setlist exists for the given date/label
+        """
+        setlist_id = self._make_setlist_id(date, label)
+        history_file = self.history_dir / f"{setlist_id}.json"
+
+        if not history_file.exists():
+            raise KeyError(f"No setlist found for: {setlist_id}")
+
+        history_file.unlink()
+        self._invalidate_cache()
+
     def exists(self, date: str, label: str = "") -> bool:
         """Check if a setlist exists for a date and optional label.
 

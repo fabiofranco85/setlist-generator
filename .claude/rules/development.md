@@ -78,6 +78,31 @@ class Setlist:
 
 **Note:** Data loading functions have been replaced by the repository pattern. Use `get_repositories()` for loading songs and history.
 
+### labeler.py
+**Purpose:** Setlist label management (add, rename, remove labels)
+
+**Contents:**
+- `relabel_setlist(setlist_dict, new_label)` - Create a new Setlist from a source dict with a different label
+
+**When to modify:**
+- Changing label transformation logic
+- Adding label validation at the library level
+
+**Usage:**
+```python
+from library import relabel_setlist
+
+# All three operations are the same transformation
+new_setlist = relabel_setlist(source_dict, "evening")  # Add label
+new_setlist = relabel_setlist(source_dict, "night")    # Rename label
+new_setlist = relabel_setlist(source_dict, "")         # Remove label
+```
+
+**Design notes:**
+- Uses `copy.deepcopy()` on moments (immutable data pattern)
+- Returns a `Setlist` object (not a dict)
+- Validation (source exists, target doesn't conflict) lives in the CLI layer
+
 ### repositories/ (New)
 **Purpose:** Data access abstraction layer
 

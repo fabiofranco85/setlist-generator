@@ -56,6 +56,7 @@ Where:
     ├── config.py            # Configuration constants
     ├── models.py            # Song and Setlist data structures (label + setlist_id)
     ├── loader.py            # Tag parsing utilities
+    ├── labeler.py           # Setlist label management (add/rename/remove)
     ├── selector.py          # Song selection algorithms
     ├── paths.py             # Path resolution utilities
     ├── ordering.py          # Energy-based ordering
@@ -85,6 +86,7 @@ The codebase is organized into focused modules for better maintainability and re
 - `config.py` - Configuration constants (moments, weights, energy rules)
 - `models.py` - Data structures (Song, Setlist with `label` + `setlist_id` property)
 - `loader.py` - Load songs from CSV and history from JSON
+- `labeler.py` - Setlist label management (`relabel_setlist()` — add, rename, or remove labels)
 - `selector.py` - Song selection algorithms (scoring, recency calculation, usage queries)
 - `ordering.py` - Energy-based ordering for emotional arcs
 - `transposer.py` - Deterministic chromatic chord transposition (pure functions, `re` only)
@@ -332,10 +334,12 @@ md_path, pdf_path = repos.output.save_from_setlist(setlist, repos.songs.get_all(
 - `repos.history.save(setlist)` - Save new setlist (uses `setlist.setlist_id` for filename)
 - `repos.history.exists(date, label="")` - Check if setlist exists
 - `repos.history.update(date, data, label="")` - Update setlist data
+- `repos.history.delete(date, label="")` - Delete a setlist (raises KeyError if missing)
 - `repos.config.get_moments_config()` - Get service moments
 - `repos.output.save_markdown(date, content, label="")` - Save markdown file
 - `repos.output.get_markdown_path(date, label="")` - Get markdown file path
 - `repos.output.get_pdf_path(date, label="")` - Get PDF file path
+- `repos.output.delete_outputs(date, label="")` - Delete md + pdf files (returns deleted paths)
 
 ### SetlistGenerator Class
 
