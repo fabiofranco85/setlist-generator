@@ -25,6 +25,7 @@ class MockCursor:
         self.params = []
         self._results = []
         self.rowcount = 0
+        self._rowcount_override = None
 
     def execute(self, query, params=None):
         self.queries.append(query)
@@ -335,7 +336,8 @@ class TestPostgresHistoryRepository:
         assert len(cursor.queries) == 1
         assert "INSERT" in cursor.queries[0]
         assert "ON CONFLICT" in cursor.queries[0]
-        assert cursor.params[0] == ("2026-02-15", "", {"louvor": ["A"]})
+        # Moments are JSON-serialized for the ::jsonb cast
+        assert cursor.params[0] == ("2026-02-15", "", '{"louvor": ["A"]}')
 
     def test_save_with_label(self, _import):
         Repo = _import
@@ -344,7 +346,7 @@ class TestPostgresHistoryRepository:
 
         setlist = Setlist(date="2026-02-15", moments={"louvor": ["A"]}, label="evening")
         repo.save(setlist)
-        assert cursor.params[0] == ("2026-02-15", "evening", {"louvor": ["A"]})
+        assert cursor.params[0] == ("2026-02-15", "evening", '{"louvor": ["A"]}')
 
     def test_update_success(self, _import):
         Repo = _import

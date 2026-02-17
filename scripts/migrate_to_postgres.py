@@ -112,6 +112,19 @@ def migrate_songs(conn, base_path: Path) -> int:
                         (title, moment, weight),
                     )
 
+                # Remove stale tags no longer in CSV
+                if tags:
+                    cur.execute(
+                        "DELETE FROM song_tags "
+                        "WHERE song_title = %s AND moment NOT IN %s",
+                        (title, tuple(tags.keys())),
+                    )
+                else:
+                    cur.execute(
+                        "DELETE FROM song_tags WHERE song_title = %s",
+                        (title,),
+                    )
+
             count += 1
 
     conn.commit()

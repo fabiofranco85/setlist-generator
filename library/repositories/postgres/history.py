@@ -4,6 +4,8 @@ Unlike the song repository, history is NOT cached — it changes frequently
 and the queries are indexed. Each method executes SQL directly.
 """
 
+import json
+
 from ...models import Setlist
 
 
@@ -105,9 +107,9 @@ class PostgresHistoryRepository:
             with conn.cursor() as cur:
                 cur.execute(
                     "INSERT INTO setlists (date, label, moments) "
-                    "VALUES (%s, %s, %s) "
+                    "VALUES (%s, %s, %s::jsonb) "
                     "ON CONFLICT (date, label) DO UPDATE SET moments = EXCLUDED.moments",
-                    (setlist.date, setlist.label, setlist.to_dict()["moments"]),
+                    (setlist.date, setlist.label, json.dumps(setlist.moments)),
                 )
                 conn.commit()
 
@@ -121,8 +123,8 @@ class PostgresHistoryRepository:
         with self._pool.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "UPDATE setlists SET moments = %s WHERE date = %s AND label = %s",
-                    (moments, date, label),
+                    "UPDATE setlists SET moments = %s::jsonb WHERE date = %s AND label = %s",
+                    (json.dumps(moments), date, label),
                 )
                 if cur.rowcount == 0:
                     setlist_id = f"{date}_{label}" if label else date
