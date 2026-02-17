@@ -29,6 +29,9 @@ dev = [
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
 ]
+postgres = [
+    "psycopg[binary,pool]>=3.1",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -38,6 +41,7 @@ markers = [
     "unit: fast isolated tests with no external dependencies",
     "integration: tests that interact with real or simulated external systems",
     "slow: tests that take more than a few seconds to run",
+    "postgres: tests that require a PostgreSQL database (DATABASE_URL env var)",
 ]
 filterwarnings = [
     "error",
@@ -47,7 +51,7 @@ filterwarnings = [
 [tool.coverage.run]
 source = ["library"]
 branch = true
-omit = ["library/pdf_formatter.py"]
+omit = ["library/pdf_formatter.py", "library/repositories/postgres/*"]
 
 [tool.coverage.report]
 fail_under = 80

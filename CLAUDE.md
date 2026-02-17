@@ -24,6 +24,9 @@ This project uses **path-scoped documentation** to keep context focused. Differe
 # Install with uv (recommended)
 uv sync
 
+# With PostgreSQL backend support
+uv sync --group postgres
+
 # Alternative: Using pip
 pip install -e .
 ```
@@ -98,7 +101,13 @@ This is a **setlist generator** for church worship services. It intelligently se
 │   ├── replacer.py             # Song replacement + derivation
 │   ├── formatter.py            # Output formatting
 │   ├── pdf_formatter.py        # PDF generation
-│   └── youtube.py              # YouTube playlist integration
+│   ├── youtube.py              # YouTube playlist integration
+│   └── repositories/           # Data access abstraction
+│       ├── filesystem/         # Default CSV+JSON backend
+│       └── postgres/           # PostgreSQL backend (optional)
+├── scripts/                     # Utilities
+│   ├── schema.sql              # PostgreSQL DDL + seed data
+│   └── migrate_to_postgres.py  # Filesystem → PostgreSQL migration
 └── cli/                         # CLI interface
     ├── main.py                 # Entry point
     └── commands/               # Command implementations
@@ -113,7 +122,7 @@ score = weight × (recency + 0.1) + random(0, 0.5)
 ```
 
 Where:
-- **weight**: From database.csv tags (e.g., `louvor(5)` → weight=5)
+- **weight**: From the song's tags (e.g., `louvor(5)` → weight=5)
 - **recency**: Time-based decay score (0.0 = just used, 1.0 = never used)
 - **random factor**: Adds variety to avoid deterministic selection
 
@@ -247,11 +256,36 @@ Key settings in `library/config.py`:
 - `ENERGY_ORDERING_ENABLED` - Enable/disable energy ordering (default: True)
 - `DEFAULT_WEIGHT` - Default tag weight (default: 3)
 
+### Storage Backend
+
+Set `STORAGE_BACKEND` environment variable to choose the data backend:
+
+```bash
+STORAGE_BACKEND=filesystem   # Default (CSV + JSON files)
+STORAGE_BACKEND=postgres     # PostgreSQL database
+```
+
+**PostgreSQL setup:**
+```bash
+# Install psycopg
+uv sync --group postgres
+
+# Apply schema
+psql $DATABASE_URL -f scripts/schema.sql
+
+# Migrate existing data
+python scripts/migrate_to_postgres.py --database-url $DATABASE_URL
+
+# Use postgres backend
+STORAGE_BACKEND=postgres DATABASE_URL=postgresql://user:pass@host/db songbook generate --date 2026-03-15
+```
+
 ## Dependencies
 
 - Python 3.12+
 - Standard library (no external dependencies for core functionality)
 - Optional: `reportlab` for PDF generation
+- Optional: `psycopg[binary,pool]>=3.1` for PostgreSQL backend
 - Optional: `uv` for package management
 
 ## Further Reading
@@ -263,4 +297,5 @@ For detailed documentation on specific areas, see the path-scoped documentation 
 - **Data maintenance** → `.claude/rules/data-maintenance.md`
 - **Development patterns** → `.claude/rules/development.md`
 - **Recency system** → `RECENCY_SYSTEM.md`
+- **Storage backends** → `STORAGE_BACKENDS.md`
 - **YouTube integration** → `YOUTUBE.md`

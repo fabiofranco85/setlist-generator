@@ -103,7 +103,7 @@ new_setlist = relabel_setlist(source_dict, "")         # Remove label
 - Returns a `Setlist` object (not a dict)
 - Validation (source exists, target doesn't conflict) lives in the CLI layer
 
-### repositories/ (New)
+### repositories/
 **Purpose:** Data access abstraction layer
 
 **Structure:**
@@ -112,12 +112,18 @@ repositories/
 ├── __init__.py         # Public exports + get_repositories()
 ├── protocols.py        # Protocol definitions (interfaces)
 ├── factory.py          # RepositoryFactory + RepositoryContainer
-└── filesystem/
-    ├── __init__.py     # FilesystemRepositoryContainer
-    ├── songs.py        # FilesystemSongRepository
-    ├── history.py      # FilesystemHistoryRepository
-    ├── config.py       # FilesystemConfigRepository
-    └── output.py       # FilesystemOutputRepository
+├── filesystem/         # Default backend (CSV + JSON)
+│   ├── __init__.py     # FilesystemRepositoryContainer
+│   ├── songs.py        # FilesystemSongRepository
+│   ├── history.py      # FilesystemHistoryRepository
+│   ├── config.py       # FilesystemConfigRepository
+│   └── output.py       # FilesystemOutputRepository
+└── postgres/           # Optional backend (requires psycopg)
+    ├── __init__.py     # PostgresRepositoryContainer
+    ├── connection.py   # create_pool() — shared connection pool
+    ├── songs.py        # PostgresSongRepository (cached)
+    ├── history.py      # PostgresHistoryRepository (no cache)
+    └── config.py       # PostgresConfigRepository (cached, fallback to Python constants)
 ```
 
 **Key Components:**
@@ -151,7 +157,7 @@ repos.output.save_markdown(setlist.date, markdown_content)
 **Environment Configuration:**
 ```bash
 STORAGE_BACKEND=filesystem  # Default (CSV + JSON files)
-STORAGE_BACKEND=postgres    # PostgreSQL/Supabase (future)
+STORAGE_BACKEND=postgres    # PostgreSQL (requires psycopg, set DATABASE_URL too)
 STORAGE_BACKEND=mongodb     # MongoDB (future)
 ```
 
@@ -159,6 +165,16 @@ STORAGE_BACKEND=mongodb     # MongoDB (future)
 - Adding new storage backends
 - Adding new repository methods
 - Changing caching behavior
+
+**PostgreSQL backend details:**
+- Install: `uv sync --group postgres` (adds `psycopg[binary,pool]>=3.1`)
+- Schema: `scripts/schema.sql` (run with `psql $DATABASE_URL -f scripts/schema.sql`)
+- Migration: `python scripts/migrate_to_postgres.py --database-url $DATABASE_URL`
+- Songs + tags are cached in memory (same as filesystem); history is NOT cached
+- Config falls back to Python constants for missing keys
+- Output always uses `FilesystemOutputRepository` (files are always local)
+- Connection pool: `create_pool()` in `postgres/connection.py`, shared across all repos
+- Optional dep guard: `try/except ImportError` in `repositories/__init__.py`
 
 ### selector.py
 **Purpose:** Song selection algorithms and usage queries

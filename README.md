@@ -21,6 +21,7 @@ An intelligent setlist generator for church worship services that automatically 
 - [How It Works](#how-it-works)
 - [Managing Songs](#managing-songs)
 - [Configuration](#configuration)
+- [Storage Backends](#storage-backends)
 - [Programmatic Usage](#programmatic-usage)
 - [Output Files](#output-files)
 - [Examples](#examples)
@@ -54,6 +55,8 @@ An intelligent setlist generator for church worship services that automatically 
    - ✓ Installs all dependencies
    - ✓ Installs the songbook package in editable mode
    - ✓ Creates an isolated virtual environment
+
+   For PostgreSQL backend support, add `--group postgres` (see [Storage Backends](./STORAGE_BACKENDS.md)).
 
 That's it! The `songbook` command is now available.
 
@@ -106,11 +109,11 @@ songbook generate
 ```
 
 This will:
-1. Load all songs from `database.csv` and `chords/` directory
+1. Load all songs from the configured [storage backend](#storage-backends) (default: `database.csv` + `chords/`)
 2. Analyze **all historical setlists** to calculate time-based recency scores
 3. Generate a new setlist with songs for each service moment
 4. Save the output to `output/YYYY-MM-DD.md` (markdown with chords)
-5. Save history to `history/YYYY-MM-DD.json` (for tracking)
+5. Save history for recency tracking
 
 **Common commands:**
 
@@ -552,13 +555,33 @@ DEFAULT_WEIGHT = 3  # Default weight when not specified in tags
    Lugar Secreto;4;meditação
    ```
 
+## Storage Backends
+
+By default, the generator stores all data as local files (CSV, JSON, markdown). For team or server deployments, a **PostgreSQL backend** is available.
+
+| Backend | Data Storage | Best For |
+|---------|-------------|----------|
+| `filesystem` (default) | CSV + JSON + `.md` files | Local use, single user |
+| `postgres` | PostgreSQL database | Teams, servers, web apps |
+
+**Quick setup (PostgreSQL):**
+
+```bash
+uv sync --group postgres
+psql $DATABASE_URL -f scripts/schema.sql
+python scripts/migrate_to_postgres.py --database-url $DATABASE_URL
+STORAGE_BACKEND=postgres DATABASE_URL=... songbook generate
+```
+
+For complete setup instructions, see **[Storage Backends Guide (STORAGE_BACKENDS.md)](./STORAGE_BACKENDS.md)**.
+
 ## Programmatic Usage
 
 The setlist generator can be used as a Python library in your own scripts, allowing you to integrate setlist generation into custom workflows, web applications, or automation tools.
 
 ### Using the Repository Pattern (Recommended)
 
-The repository pattern provides a clean abstraction for data access, enabling future backend flexibility (PostgreSQL, MongoDB, etc.):
+The repository pattern provides a clean abstraction for data access, enabling backend flexibility (see [Storage Backends](./STORAGE_BACKENDS.md)):
 
 ```python
 from library import get_repositories, SetlistGenerator
@@ -781,7 +804,7 @@ Machine-readable format for tracking which songs were used.
 }
 ```
 
-**Purpose**: The generator reads these files to avoid repeating songs too soon. Both labeled and unlabeled setlists contribute to recency scoring.
+**Purpose**: The generator reads this history to avoid repeating songs too soon. Both labeled and unlabeled setlists contribute to recency scoring. With the filesystem backend, history is stored as JSON files; with PostgreSQL, it's stored in the `setlists` table.
 
 ## Examples
 
@@ -943,7 +966,7 @@ songbook label --date 2026-03-01 --label night --remove      # Remove
 **Possible causes:**
 
 1. **Song was recently used**
-   - Check `history/*.json` files for recent usage
+   - Check recent usage with `songbook info "Song Name"`
    - Songs used within the last 30-45 days are heavily penalized
    - Use `--override` to force it if needed
 
@@ -1092,15 +1115,20 @@ Lugar Secreto;4;louvor(5)    # Powerful worship moment (energy unchanged)
 
 ### History Management
 
-The system automatically manages history in `history/*.json`. These files are small and should be kept for accurate variety tracking.
+The system automatically manages setlist history for accurate variety tracking.
 
-If you want to reset history (new year, etc.):
+**Filesystem backend:** History is stored in `history/*.json`. To reset:
 ```bash
 # Backup first
 cp -r history history_backup
 
 # Clear history
 rm history/*.json
+```
+
+**PostgreSQL backend:** History is stored in the `setlists` table. To reset:
+```bash
+psql $DATABASE_URL -c "DELETE FROM setlists"
 ```
 
 ## Advanced Workflows

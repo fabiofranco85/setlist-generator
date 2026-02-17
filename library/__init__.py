@@ -58,6 +58,18 @@ from .repositories import (
     FilesystemConfigRepository,
     FilesystemOutputRepository,
 )
+# Conditionally import PostgreSQL implementations
+try:
+    from .repositories.postgres import (
+        PostgresRepositoryContainer,
+        PostgresSongRepository,
+        PostgresHistoryRepository,
+        PostgresConfigRepository,
+    )
+
+    _has_postgres = True
+except ImportError:
+    _has_postgres = False
 from .observability import (
     Observability,
     LoggerPort,
@@ -130,6 +142,18 @@ __all__ = [
     "FilesystemHistoryRepository",
     "FilesystemConfigRepository",
     "FilesystemOutputRepository",
+]
+
+if _has_postgres:
+    __all__ += [
+        # PostgreSQL repositories
+        "PostgresRepositoryContainer",
+        "PostgresSongRepository",
+        "PostgresHistoryRepository",
+        "PostgresConfigRepository",
+    ]
+
+__all__ += [
     # Observability
     "Observability",
     "LoggerPort",

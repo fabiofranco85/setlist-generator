@@ -454,11 +454,11 @@ songbook replace --date 2025-12-25 --moment louvor --position 1
 3. Replaces song at specified position
 4. Reorders by energy
 
-**Files Updated:**
-- `output/YYYY-MM-DD.md` (markdown with chords)
-- `history/YYYY-MM-DD.json` (history tracking)
+**Data Updated:**
+- `output/YYYY-MM-DD.md` — markdown with chords (always filesystem)
+- Setlist history record (filesystem: `history/YYYY-MM-DD.json`; postgres: `setlists` table)
 
-Both files are completely regenerated to reflect the updated setlist.
+Both are completely regenerated to reflect the updated setlist.
 
 **Options:**
 
@@ -490,7 +490,7 @@ Both files are completely regenerated to reflect the updated setlist.
 
 **"Setlist for date not found"**
 - The specified date doesn't exist in history
-- Solution: Check `history/` directory for available dates
+- Solution: Use `songbook view-setlist` to list available dates, or check `history/` directory (filesystem backend)
 
 ---
 
@@ -779,7 +779,7 @@ songbook pdf --date 2026-01-25
 
 **How it works:**
 
-The `pdf` command reads the song list from `history/YYYY-MM-DD.json` and uses current chord files from `chords/*.md`. This means if you transpose a song or edit a chord sheet, you can regenerate the PDF without re-running the selection algorithm.
+The `pdf` command reads the song list from history and uses current chord data. This means if you transpose a song or edit a chord sheet, you can regenerate the PDF without re-running the selection algorithm.
 
 **Moment Name Mapping:**
 
@@ -818,7 +818,7 @@ songbook markdown --date 2026-01-25
 
 **How it works:**
 
-The `markdown` command reads the song list from `history/YYYY-MM-DD.json` and uses current chord files from `chords/*.md`. This means if you transpose a song or edit a chord sheet, you can regenerate the markdown without re-running the selection algorithm.
+The `markdown` command reads the song list from history and uses current chord data. This means if you transpose a song or edit a chord sheet, you can regenerate the markdown without re-running the selection algorithm.
 
 **Use cases:**
 - Update setlist after transposing a song
@@ -859,8 +859,8 @@ See [`YOUTUBE.md`](./YOUTUBE.md) for full setup instructions.
 
 **How it works:**
 
-1. Reads setlist from `history/YYYY-MM-DD.json`
-2. Extracts YouTube video IDs from `database.csv`
+1. Reads setlist from history (via the configured storage backend)
+2. Extracts YouTube video IDs from the song database
 3. Creates an unlisted playlist with format: "Culto DD.MM.YY" (e.g., "Culto 15.02.26")
 4. Adds videos in setlist order
 5. Returns the playlist URL

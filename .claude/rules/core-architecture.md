@@ -20,23 +20,23 @@ score = weight × (recency + 0.1) + random(0, 0.5)
 ```
 
 Where:
-- **weight**: From database.csv (e.g., `louvor(5)` → weight=5)
+- **weight**: From the song's tags (e.g., `louvor(5)` → weight=5)
 - **recency**: Time-based decay score (0.0 = just used, 1.0 = never used / very long ago)
 - **random factor**: Adds variety to avoid deterministic selection
 
 ## Data Flow
 
-1. **Load songs** from `database.csv` + `chords/*.md` files (includes energy metadata)
-2. **Load history** from `history/*.json` (sorted by date, most recent first; within same date, unlabeled before labeled)
+1. **Load songs** from the configured storage backend (default: `database.csv` + `chords/*.md`)
+2. **Load history** from the storage backend (sorted by date, most recent first; within same date, unlabeled before labeled)
 3. **Calculate recency scores** for all songs using time-based exponential decay (considers full history)
 4. **Generate setlist** by selecting songs for each moment using score-based algorithm
    - If `--label` specified and a base setlist exists for the date, **derive** from the base by replacing a subset of songs
 5. **Apply energy ordering** to multi-song moments (e.g., louvor: 1→4 progression)
-6. **Output** (filenames use `setlist_id` = `date_label` or just `date` when unlabeled):
+6. **Save results** (filenames use `setlist_id` = `date_label` or just `date` when unlabeled):
    - Terminal summary (song titles only)
-   - `output/YYYY-MM-DD[_label].md` (full markdown with chords)
-   - `output/YYYY-MM-DD[_label].pdf` (optional, with `--pdf` flag)
-   - `history/YYYY-MM-DD[_label].json` (history tracking)
+   - `output/YYYY-MM-DD[_label].md` (full markdown with chords — always filesystem)
+   - `output/YYYY-MM-DD[_label].pdf` (optional, with `--pdf` flag — always filesystem)
+   - History record (filesystem: `history/YYYY-MM-DD[_label].json`; postgres: `setlists` table)
 
 ## File Structure
 
@@ -66,7 +66,8 @@ Where:
     ├── repositories/        # Data access abstraction layer
     │   ├── protocols.py     # Repository interfaces (label-aware)
     │   ├── factory.py       # Backend factory + RepositoryContainer
-    │   └── filesystem/      # Filesystem backend implementation
+    │   ├── filesystem/      # Filesystem backend implementation
+    │   └── postgres/        # PostgreSQL backend (optional, requires psycopg)
     ├── formatter.py         # Output formatting (markdown, JSON)
     ├── pdf_formatter.py     # PDF generation (ReportLab)
     └── youtube.py           # YouTube playlist integration
@@ -85,7 +86,7 @@ The codebase is organized into focused modules for better maintainability and re
 **Module Responsibilities:**
 - `config.py` - Configuration constants (moments, weights, energy rules)
 - `models.py` - Data structures (Song, Setlist with `label` + `setlist_id` property)
-- `loader.py` - Load songs from CSV and history from JSON
+- `loader.py` - Tag parsing utilities (`parse_tags()`)
 - `labeler.py` - Setlist label management (`relabel_setlist()` — add, rename, or remove labels)
 - `selector.py` - Song selection algorithms (scoring, recency calculation, usage queries)
 - `ordering.py` - Energy-based ordering for emotional arcs
@@ -302,7 +303,15 @@ Edit `ENERGY_ORDERING_ENABLED` or `ENERGY_ORDERING_RULES` in `library/config.py`
 
 ### Repository Pattern (Recommended)
 
-The repository pattern provides a clean abstraction for data access, enabling future backend flexibility (PostgreSQL, MongoDB, etc.):
+The repository pattern provides a clean abstraction for data access with pluggable backends:
+
+- **filesystem** (default): CSV + JSON files, zero external dependencies
+- **postgres**: PostgreSQL database, requires `psycopg[binary,pool]>=3.1`
+
+Backend is selected via `STORAGE_BACKEND` env var (default: `filesystem`).
+PostgreSQL also requires `DATABASE_URL` env var.
+
+**Filesystem backend:**
 
 ```python
 from library import get_repositories, SetlistGenerator
@@ -323,6 +332,29 @@ setlist = generator.generate(
 repos.history.save(setlist)
 md_path, pdf_path = repos.output.save_from_setlist(setlist, repos.songs.get_all(), include_pdf=True)
 ```
+
+**PostgreSQL backend:**
+
+```python
+from library import get_repositories
+
+# Explicit postgres backend
+repos = get_repositories(backend="postgres", database_url="postgresql://user:pass@host/db")
+
+# Or via environment variables
+# STORAGE_BACKEND=postgres DATABASE_URL=postgresql://...
+repos = get_repositories()
+
+# Same API as filesystem — all code works identically
+songs = repos.songs.get_all()
+```
+
+**PostgreSQL architecture:**
+- `songs` + `song_tags` tables (normalized, indexed by moment)
+- `setlists` table with JSONB moments column (atomic read/write)
+- `config` table with JSONB values (seeded from `library/config.py` defaults)
+- Output files always use filesystem (`FilesystemOutputRepository`)
+- Connection pool shared across all repos (`psycopg_pool.ConnectionPool`)
 
 **Repository methods:**
 - `repos.songs.get_all()` - Get all songs
@@ -400,4 +432,5 @@ transposed = transpose_content(song.content, semitones, use_flats)
 - Python 3.12+
 - Standard library only (no external dependencies for core functionality)
 - Optional: `reportlab` for PDF generation
+- Optional: `psycopg[binary,pool]>=3.1` for PostgreSQL backend (`uv sync --group postgres`)
 - Optional: `uv` for package management

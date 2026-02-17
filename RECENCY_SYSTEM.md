@@ -43,7 +43,7 @@ Where:
 ## Key Benefits
 
 ### 1. **Considers Full History**
-Unlike the old system (which only looked at last 3 performances), the new system examines **all history files** to find when each song was last used.
+Unlike the old system (which only looked at last 3 performances), the new system examines **all historical setlists** to find when each song was last used.
 
 ### 2. **Time-Aware**
 Songs used 21 days ago get different scores than songs used 49 days ago, even if both are beyond the "last 3 services" window.
@@ -69,7 +69,7 @@ Setlist 4+: score 1.0 (all treated equally)
 No sharp cutoffs. Songs gradually become better candidates as time passes.
 
 ### 4. **No Configuration Pollution**
-Uses existing `history/*.json` files as source of truth. No need to modify `database.csv` or maintain separate state files.
+Uses existing setlist history as source of truth. No need to modify song data or maintain separate state files.
 
 ## Configuration
 
@@ -109,7 +109,7 @@ selection_score = weight × (recency + 0.1) + random(0, 0.5)
 ```
 
 Where:
-- `weight` = from database.csv (e.g., `louvor(5)` → weight 5, default 3)
+- `weight` = from the song's tags (e.g., `louvor(5)` → weight 5, default 3)
 - `recency` = time-based decay score (0.0-1.0)
 - `random` = small randomness to add variety
 
@@ -175,8 +175,8 @@ Verify good variety without excessive repetition.
 ### Backward Compatibility
 
 - ✅ No data migration required
-- ✅ Uses existing `history/*.json` files unchanged
-- ✅ `database.csv` format unchanged
+- ✅ Uses existing setlist history unchanged (works with any storage backend)
+- ✅ Song data format unchanged
 - ✅ Functional API (`generate_setlist()`) still works
 
 ### Edge Cases Handled
@@ -213,7 +213,7 @@ Verify good variety without excessive repetition.
 
 **Cons:**
 - ⚠️ Slightly more complex calculation
-- ⚠️ Requires date parsing from all history files
+- ⚠️ Requires date parsing from all historical setlists
 
 **Verdict:** Benefits far outweigh complexity. The calculation overhead is negligible (<100ms for typical history sizes).
 

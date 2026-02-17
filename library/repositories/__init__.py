@@ -49,6 +49,20 @@ from .filesystem import (
 # Register filesystem backend now that it's imported
 RepositoryFactory.register("filesystem", FilesystemRepositoryContainer)
 
+# Conditionally register PostgreSQL backend (requires psycopg)
+try:
+    from .postgres import (
+        PostgresRepositoryContainer,
+        PostgresSongRepository,
+        PostgresHistoryRepository,
+        PostgresConfigRepository,
+    )
+
+    RepositoryFactory.register("postgres", PostgresRepositoryContainer)
+    _has_postgres = True
+except ImportError:
+    _has_postgres = False
+
 
 __all__ = [
     # Protocols (interfaces)
@@ -67,3 +81,11 @@ __all__ = [
     "FilesystemConfigRepository",
     "FilesystemOutputRepository",
 ]
+
+if _has_postgres:
+    __all__ += [
+        "PostgresRepositoryContainer",
+        "PostgresSongRepository",
+        "PostgresHistoryRepository",
+        "PostgresConfigRepository",
+    ]

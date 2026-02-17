@@ -102,9 +102,9 @@ songbook generate --output-dir custom/output --history-dir custom/history
 
 **Output:**
 - Terminal: Summary with song titles
-- `output/YYYY-MM-DD[_label].md`: Full markdown with chords
-- `output/YYYY-MM-DD[_label].pdf`: PDF setlist (if `--pdf` flag used)
-- `history/YYYY-MM-DD[_label].json`: History tracking (unless `--no-save`)
+- `output/YYYY-MM-DD[_label].md`: Full markdown with chords (always filesystem)
+- `output/YYYY-MM-DD[_label].pdf`: PDF setlist (if `--pdf` flag used, always filesystem)
+- History record saved to configured backend (unless `--no-save`)
 
 ---
 
