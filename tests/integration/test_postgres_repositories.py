@@ -306,6 +306,10 @@ class TestGetRepositoriesPostgres:
         from library.repositories import get_repositories
 
         repos = get_repositories(backend="postgres", base_path=tmp_path)
-        # Should be able to use config repo
-        moments = repos.config.get_moments_config()
-        assert "louvor" in moments
+        try:
+            # Should be able to use config repo
+            moments = repos.config.get_moments_config()
+            assert "louvor" in moments
+        finally:
+            # Close the pool created by get_repositories to avoid GC warnings
+            repos.songs._pool.close()

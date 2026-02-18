@@ -4,7 +4,36 @@ Main CLI entry point for songbook.
 Provides a unified command-line interface for all songbook operations.
 """
 
+import os
+from pathlib import Path
+
 import click
+
+
+def _load_dotenv():
+    """Load .env file from the project root if it exists.
+
+    Only sets variables that are not already in the environment,
+    so explicit env vars always take precedence.
+    """
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    if not env_path.exists():
+        return
+
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip().strip("'\"")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+_load_dotenv()
 from cli.completions import (
     complete_song_names,
     complete_moment_names,

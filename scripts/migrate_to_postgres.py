@@ -116,8 +116,8 @@ def migrate_songs(conn, base_path: Path) -> int:
                 if tags:
                     cur.execute(
                         "DELETE FROM song_tags "
-                        "WHERE song_title = %s AND moment NOT IN %s",
-                        (title, tuple(tags.keys())),
+                        "WHERE song_title = %s AND NOT (moment = ANY(%s))",
+                        (title, list(tags.keys())),
                     )
                 else:
                     cur.execute(
