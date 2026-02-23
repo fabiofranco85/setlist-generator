@@ -113,10 +113,10 @@ def sample_setlist() -> Setlist:
         date="2026-02-15",
         moments={
             "prelúdio": ["Upbeat Song"],
-            "louvor": ["Upbeat Song", "Moderate Song", "Reflective Song", "Worship Song"],
             "ofertório": ["Reflective Song"],
             "saudação": ["Moderate Song"],
             "crianças": ["Upbeat Song"],
+            "louvor": ["Upbeat Song", "Moderate Song", "Reflective Song", "Worship Song"],
             "poslúdio": ["Worship Song"],
         },
     )

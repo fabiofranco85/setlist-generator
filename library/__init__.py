@@ -9,6 +9,7 @@ from .config import (
     ENERGY_ORDERING_RULES,
     MOMENTS_CONFIG,
     RECENCY_DECAY_DAYS,
+    canonical_moment_order,
 )
 from .event_type import (
     EventType,
@@ -101,6 +102,7 @@ __all__ = [
     "DEFAULT_ENERGY",
     "DEFAULT_OUTPUT_DIR",
     "DEFAULT_HISTORY_DIR",
+    "canonical_moment_order",
     # Event types
     "EventType",
     "DEFAULT_EVENT_TYPE_SLUG",

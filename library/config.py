@@ -30,6 +30,17 @@ DEFAULT_HISTORY_DIR = "history"    # JSON tracking directory
 ENV_OUTPUT_DIR = "SETLIST_OUTPUT_DIR"
 ENV_HISTORY_DIR = "SETLIST_HISTORY_DIR"
 
+def canonical_moment_order(moments: dict) -> list[str]:
+    """Return moment keys in canonical display order.
+
+    Moments in MOMENTS_CONFIG appear in MOMENTS_CONFIG order.
+    Extra moments (from custom event types) appended alphabetically.
+    """
+    ordered = [m for m in MOMENTS_CONFIG if m in moments]
+    extra = sorted(m for m in moments if m not in MOMENTS_CONFIG)
+    return ordered + extra
+
+
 # YouTube integration
 YOUTUBE_PLAYLIST_NAME_PATTERN = "Culto {DD.MM.YY}"
 YOUTUBE_PLAYLIST_PRIVACY = "unlisted"

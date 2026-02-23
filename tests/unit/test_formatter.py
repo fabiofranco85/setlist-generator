@@ -39,3 +39,42 @@ class TestFormatSetlistMarkdown:
         songs = {"Empty": make_song(title="Empty", content="")}
         md = format_setlist_markdown(setlist, songs)
         assert "*(Content not found)*" in md
+
+    def test_moments_in_canonical_order(self):
+        """Moments appear in MOMENTS_CONFIG order regardless of dict insertion order."""
+        setlist = Setlist(
+            date="2026-01-01",
+            moments={
+                "louvor": ["Song A"],
+                "poslúdio": ["Song B"],
+                "prelúdio": ["Song C"],
+            },
+        )
+        songs = {
+            "Song A": make_song(title="Song A"),
+            "Song B": make_song(title="Song B"),
+            "Song C": make_song(title="Song C"),
+        }
+        md = format_setlist_markdown(setlist, songs)
+        headers = [line for line in md.split("\n") if line.startswith("## ")]
+        assert headers == ["## Prelúdio", "## Louvor", "## Poslúdio"]
+
+    def test_moments_order_with_all_moments_scrambled(self, sample_songs):
+        """Full setlist with all 6 moments in wrong dict order still outputs correctly."""
+        setlist = Setlist(
+            date="2026-01-01",
+            moments={
+                "louvor": ["Upbeat Song", "Moderate Song", "Reflective Song", "Worship Song"],
+                "crianças": ["Upbeat Song"],
+                "poslúdio": ["Worship Song"],
+                "prelúdio": ["Upbeat Song"],
+                "ofertório": ["Reflective Song"],
+                "saudação": ["Moderate Song"],
+            },
+        )
+        md = format_setlist_markdown(setlist, sample_songs)
+        headers = [line for line in md.split("\n") if line.startswith("## ")]
+        assert headers == [
+            "## Prelúdio", "## Ofertório", "## Saudação",
+            "## Crianças", "## Louvor", "## Poslúdio",
+        ]

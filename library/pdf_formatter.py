@@ -20,7 +20,7 @@ from typing import Dict, List, Tuple
 from dataclasses import dataclass
 
 from .models import Setlist, Song
-from .config import MOMENTS_CONFIG
+from .config import MOMENTS_CONFIG, canonical_moment_order
 
 
 @dataclass
@@ -208,8 +208,8 @@ def build_toc_entries(
     """
     entries = []
 
-    # Iterate through moments in setlist order
-    for moment in setlist.moments.keys():
+    # Iterate through moments in canonical order
+    for moment in canonical_moment_order(setlist.moments):
         song_list = setlist.moments[moment]
         if not song_list:
             continue
@@ -413,7 +413,7 @@ def build_pdf_content(
     story.append(toc_table)
 
     # Content pages: Each moment starts on a new page
-    for moment in setlist.moments.keys():
+    for moment in canonical_moment_order(setlist.moments):
         song_list = setlist.moments[moment]
         if not song_list:
             continue
@@ -536,7 +536,7 @@ def generate_setlist_pdf(
     page_map = {}
     current_page = 2  # Page 1 is TOC
 
-    for moment in setlist.moments.keys():
+    for moment in canonical_moment_order(setlist.moments):
         song_list = setlist.moments[moment]
         if song_list:
             page_map[moment] = current_page

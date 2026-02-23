@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from .config import ENERGY_ORDERING_ENABLED, ENERGY_ORDERING_RULES, MOMENTS_CONFIG
+from .config import ENERGY_ORDERING_ENABLED, ENERGY_ORDERING_RULES, MOMENTS_CONFIG, canonical_moment_order
 from .event_type import filter_songs_for_event_type
 from .models import Song
 from .ordering import apply_energy_ordering
@@ -231,9 +231,9 @@ def replace_song_in_setlist(
     if setlist_dict.get("event_type"):
         new_setlist["event_type"] = setlist_dict["event_type"]
 
-    # Copy all moments
-    for m, song_list in setlist_dict["moments"].items():
-        new_setlist["moments"][m] = song_list.copy()
+    # Copy all moments in canonical order
+    for m in canonical_moment_order(setlist_dict["moments"]):
+        new_setlist["moments"][m] = setlist_dict["moments"][m].copy()
 
     # Replace the song at the specified position
     moment_songs = new_setlist["moments"][moment]
@@ -351,8 +351,8 @@ def replace_songs_batch(
     if setlist_dict.get("event_type"):
         new_setlist["event_type"] = setlist_dict["event_type"]
 
-    for m, song_list in setlist_dict["moments"].items():
-        new_setlist["moments"][m] = song_list.copy()
+    for m in canonical_moment_order(setlist_dict["moments"]):
+        new_setlist["moments"][m] = setlist_dict["moments"][m].copy()
 
     for moment, position, replacement in final_replacements:
         new_setlist["moments"][moment][position] = replacement
@@ -429,8 +429,8 @@ def derive_setlist(
             "date": base_setlist_dict["date"],
             "moments": {},
         }
-        for m, sl in base_setlist_dict["moments"].items():
-            new_setlist["moments"][m] = sl.copy()
+        for m in canonical_moment_order(base_setlist_dict["moments"]):
+            new_setlist["moments"][m] = base_setlist_dict["moments"][m].copy()
         return new_setlist
 
     # Randomly sample positions to replace
