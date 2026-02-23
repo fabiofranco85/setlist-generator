@@ -9,6 +9,7 @@ For saving setlists to history, use the repository pattern:
     >>> repos.history.save(setlist)
 """
 
+from .config import canonical_moment_order
 from .models import Song, Setlist
 
 
@@ -34,7 +35,8 @@ def format_setlist_markdown(
         header += f" ({setlist.label})"
     lines = [header, ""]
 
-    for moment, song_list in setlist.moments.items():
+    for moment in canonical_moment_order(setlist.moments):
+        song_list = setlist.moments[moment]
         lines.append(f"## {moment.capitalize()}")
         lines.append("")
 

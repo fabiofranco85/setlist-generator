@@ -317,3 +317,72 @@ class TestReplaceSongsBatch:
         # Should have replaced position 0 with some song
         assert result["moments"]["louvor"][0] != setlist_dict["moments"]["louvor"][0] \
             or result["moments"]["louvor"][0] in songs_dict
+
+
+# ---------------------------------------------------------------------------
+# Moment ordering preservation
+# ---------------------------------------------------------------------------
+
+CANONICAL_ORDER = [
+    "prelúdio", "ofertório", "saudação", "crianças", "louvor", "poslúdio"
+]
+
+
+class TestMomentOrdering:
+    def test_replace_song_preserves_canonical_order(self, setlist_dict, songs_dict):
+        """Replacing a song should not change moment ordering."""
+        result = replace_song_in_setlist(
+            setlist_dict, "louvor", 0, "Extra Song", songs_dict,
+            reorder_energy=False,
+        )
+        assert list(result["moments"].keys()) == CANONICAL_ORDER
+
+    def test_replace_song_reorders_scrambled_moments(self, songs_dict):
+        """Scrambled input moments should be normalized to canonical order."""
+        scrambled = {
+            "date": "2026-02-15",
+            "moments": {
+                "louvor": ["Upbeat Song", "Moderate Song", "Reflective Song", "Worship Song"],
+                "prelúdio": ["Upbeat Song"],
+                "ofertório": ["Reflective Song"],
+                "saudação": ["Moderate Song"],
+                "crianças": ["Upbeat Song"],
+                "poslúdio": ["Worship Song"],
+            },
+        }
+        result = replace_song_in_setlist(
+            scrambled, "louvor", 0, "Extra Song", songs_dict,
+            reorder_energy=False,
+        )
+        assert list(result["moments"].keys()) == CANONICAL_ORDER
+
+    def test_batch_replace_preserves_canonical_order(self, setlist_dict, songs_dict):
+        """Batch replacement should maintain canonical moment ordering."""
+        result = replace_songs_batch(
+            setlist_dict,
+            [("louvor", 0, "Extra Song")],
+            songs_dict,
+            [],
+        )
+        assert list(result["moments"].keys()) == CANONICAL_ORDER
+
+    def test_batch_replace_reorders_scrambled_moments(self, songs_dict):
+        """Scrambled input should be normalized after batch replace."""
+        scrambled = {
+            "date": "2026-02-15",
+            "moments": {
+                "louvor": ["Upbeat Song", "Moderate Song", "Reflective Song", "Worship Song"],
+                "prelúdio": ["Upbeat Song"],
+                "ofertório": ["Reflective Song"],
+                "saudação": ["Moderate Song"],
+                "crianças": ["Upbeat Song"],
+                "poslúdio": ["Worship Song"],
+            },
+        }
+        result = replace_songs_batch(
+            scrambled,
+            [("louvor", 0, "Extra Song")],
+            songs_dict,
+            [],
+        )
+        assert list(result["moments"].keys()) == CANONICAL_ORDER
