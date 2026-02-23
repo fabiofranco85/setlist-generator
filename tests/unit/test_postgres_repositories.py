@@ -102,7 +102,7 @@ class TestPostgresSongRepository:
 
     def test_get_all_loads_and_caches(self, _import):
         Repo = _import
-        songs_rows = [("Song A", 2.0, "chords A", ""), ("Song B", 3.0, "chords B", "https://youtu.be/x")]
+        songs_rows = [("Song A", 2.0, "chords A", "", []), ("Song B", 3.0, "chords B", "https://youtu.be/x", [])]
         tags_rows = [("Song A", "louvor", 5), ("Song A", "prelúdio", 3), ("Song B", "louvor", 4)]
 
         pool, cursor = make_pool(results=[songs_rows, tags_rows])
@@ -125,7 +125,7 @@ class TestPostgresSongRepository:
     def test_get_by_title_found(self, _import):
         Repo = _import
         pool, _ = make_pool(results=[
-            [("Song A", 2.0, "", "")],
+            [("Song A", 2.0, "", "", [])],
             [("Song A", "louvor", 3)],
         ])
         repo = Repo(pool)
@@ -142,7 +142,7 @@ class TestPostgresSongRepository:
     def test_search_case_insensitive(self, _import):
         Repo = _import
         pool, _ = make_pool(results=[
-            [("Hello World", 2.0, "", ""), ("Goodbye", 3.0, "", "")],
+            [("Hello World", 2.0, "", "", []), ("Goodbye", 3.0, "", "", [])],
             [],
         ])
         repo = Repo(pool)
@@ -153,7 +153,7 @@ class TestPostgresSongRepository:
     def test_exists_true(self, _import):
         Repo = _import
         pool, _ = make_pool(results=[
-            [("Song A", 2.0, "", "")],
+            [("Song A", 2.0, "", "", [])],
             [],
         ])
         repo = Repo(pool)
@@ -168,7 +168,7 @@ class TestPostgresSongRepository:
     def test_update_content_success(self, _import):
         Repo = _import
         pool, cursor = make_pool(results=[
-            [("Song A", 2.0, "old", "")],
+            [("Song A", 2.0, "old", "", [])],
             [("Song A", "louvor", 3)],
         ], rowcount=1)
         repo = Repo(pool)
@@ -194,8 +194,8 @@ class TestPostgresSongRepository:
     def test_invalidate_cache(self, _import):
         Repo = _import
         pool, cursor = make_pool(results=[
-            [("Song A", 2.0, "", "")], [],  # First load
-            [("Song A", 2.0, "", ""), ("Song B", 3.0, "", "")], [],  # Second load
+            [("Song A", 2.0, "", "", [])], [],  # First load
+            [("Song A", 2.0, "", "", []), ("Song B", 3.0, "", "", [])], [],  # Second load
         ])
         repo = Repo(pool)
 
@@ -211,7 +211,7 @@ class TestPostgresSongRepository:
     def test_default_energy_for_none(self, _import):
         Repo = _import
         pool, _ = make_pool(results=[
-            [("Song A", None, "", "")],
+            [("Song A", None, "", "", [])],
             [],
         ])
         repo = Repo(pool)
@@ -239,9 +239,9 @@ class TestPostgresHistoryRepository:
     def test_get_all_sorted(self, _import):
         Repo = _import
         rows = [
-            (Date(2026, 3, 1), "", {"louvor": ["A"]}),
-            (Date(2026, 2, 1), "", {"louvor": ["B"]}),
-            (Date(2026, 1, 1), "", {"louvor": ["C"]}),
+            (Date(2026, 3, 1), "", {"louvor": ["A"]}, ""),
+            (Date(2026, 2, 1), "", {"louvor": ["B"]}, ""),
+            (Date(2026, 1, 1), "", {"louvor": ["C"]}, ""),
         ]
         pool, _ = make_pool(results=[rows])
         repo = Repo(pool)
@@ -254,7 +254,7 @@ class TestPostgresHistoryRepository:
     def test_get_all_omits_label_when_empty(self, _import):
         Repo = _import
         pool, _ = make_pool(results=[
-            [(Date(2026, 1, 1), "", {"louvor": ["A"]})],
+            [(Date(2026, 1, 1), "", {"louvor": ["A"]}, "")],
         ])
         repo = Repo(pool)
         result = repo.get_all()
@@ -263,7 +263,7 @@ class TestPostgresHistoryRepository:
     def test_get_all_includes_label_when_set(self, _import):
         Repo = _import
         pool, _ = make_pool(results=[
-            [(Date(2026, 1, 1), "evening", {"louvor": ["A"]})],
+            [(Date(2026, 1, 1), "evening", {"louvor": ["A"]}, "")],
         ])
         repo = Repo(pool)
         result = repo.get_all()
@@ -272,7 +272,7 @@ class TestPostgresHistoryRepository:
     def test_get_by_date_found(self, _import):
         Repo = _import
         pool, _ = make_pool(results=[
-            [(Date(2026, 2, 15), "", {"louvor": ["A"]})],
+            [(Date(2026, 2, 15), "", {"louvor": ["A"]}, "")],
         ])
         repo = Repo(pool)
         result = repo.get_by_date("2026-02-15")
@@ -289,21 +289,21 @@ class TestPostgresHistoryRepository:
     def test_get_by_date_with_label(self, _import):
         Repo = _import
         pool, cursor = make_pool(results=[
-            [(Date(2026, 2, 15), "evening", {"louvor": ["A"]})],
+            [(Date(2026, 2, 15), "evening", {"louvor": ["A"]}, "")],
         ])
         repo = Repo(pool)
         result = repo.get_by_date("2026-02-15", label="evening")
         assert result is not None
         assert result["label"] == "evening"
-        # Verify label was passed to query
-        assert cursor.params[0] == ("2026-02-15", "evening")
+        # Verify label and event_type were passed to query
+        assert cursor.params[0] == ("2026-02-15", "evening", "")
 
     def test_get_by_date_all(self, _import):
         Repo = _import
         pool, _ = make_pool(results=[
             [
-                (Date(2026, 3, 1), "", {"louvor": ["A"]}),
-                (Date(2026, 3, 1), "evening", {"louvor": ["B"]}),
+                (Date(2026, 3, 1), "", {"louvor": ["A"]}, ""),
+                (Date(2026, 3, 1), "evening", {"louvor": ["B"]}, ""),
             ],
         ])
         repo = Repo(pool)
@@ -313,7 +313,7 @@ class TestPostgresHistoryRepository:
     def test_get_latest(self, _import):
         Repo = _import
         pool, _ = make_pool(results=[
-            [(Date(2026, 3, 1), "", {"louvor": ["A"]})],
+            [(Date(2026, 3, 1), "", {"louvor": ["A"]}, "")],
         ])
         repo = Repo(pool)
         result = repo.get_latest()
@@ -336,8 +336,8 @@ class TestPostgresHistoryRepository:
         assert len(cursor.queries) == 1
         assert "INSERT" in cursor.queries[0]
         assert "ON CONFLICT" in cursor.queries[0]
-        # Moments are JSON-serialized for the ::jsonb cast
-        assert cursor.params[0] == ("2026-02-15", "", '{"louvor": ["A"]}')
+        # Params: date, event_type, label, moments (JSON)
+        assert cursor.params[0] == ("2026-02-15", "", "", '{"louvor": ["A"]}')
 
     def test_save_with_label(self, _import):
         Repo = _import
@@ -346,7 +346,7 @@ class TestPostgresHistoryRepository:
 
         setlist = Setlist(date="2026-02-15", moments={"louvor": ["A"]}, label="evening")
         repo.save(setlist)
-        assert cursor.params[0] == ("2026-02-15", "evening", '{"louvor": ["A"]}')
+        assert cursor.params[0] == ("2026-02-15", "", "evening", '{"louvor": ["A"]}')
 
     def test_update_success(self, _import):
         Repo = _import

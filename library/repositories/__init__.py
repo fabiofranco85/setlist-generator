@@ -32,6 +32,7 @@ from .protocols import (
     HistoryRepository,
     ConfigRepository,
     OutputRepository,
+    EventTypeRepository,
 )
 from .factory import (
     RepositoryContainer,
@@ -44,6 +45,7 @@ from .filesystem import (
     FilesystemHistoryRepository,
     FilesystemConfigRepository,
     FilesystemOutputRepository,
+    FilesystemEventTypeRepository,
 )
 
 # Register filesystem backend now that it's imported
@@ -56,6 +58,7 @@ try:
         PostgresSongRepository,
         PostgresHistoryRepository,
         PostgresConfigRepository,
+        PostgresEventTypeRepository,
     )
 
     RepositoryFactory.register("postgres", PostgresRepositoryContainer)
@@ -70,6 +73,7 @@ __all__ = [
     "HistoryRepository",
     "ConfigRepository",
     "OutputRepository",
+    "EventTypeRepository",
     # Factory
     "RepositoryContainer",
     "RepositoryFactory",
@@ -80,6 +84,7 @@ __all__ = [
     "FilesystemHistoryRepository",
     "FilesystemConfigRepository",
     "FilesystemOutputRepository",
+    "FilesystemEventTypeRepository",
 ]
 
 if _has_postgres:
@@ -88,4 +93,5 @@ if _has_postgres:
         "PostgresSongRepository",
         "PostgresHistoryRepository",
         "PostgresConfigRepository",
+        "PostgresEventTypeRepository",
     ]

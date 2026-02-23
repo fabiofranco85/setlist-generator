@@ -1,13 +1,15 @@
 """Filesystem implementation of HistoryRepository.
 
 This module provides setlist history access using JSON files:
-- Each setlist is stored as history/{YYYY-MM-DD}.json
+- Default event type: history/{YYYY-MM-DD}.json
+- Non-default event types: history/{event_type}/{YYYY-MM-DD}.json
 - Files contain: {"date": "YYYY-MM-DD", "moments": {"moment": ["songs"]}}
 """
 
 import json
 from pathlib import Path
 
+from ...event_type import is_default_event_type
 from ...models import Setlist
 
 
@@ -20,8 +22,9 @@ class FilesystemHistoryRepository:
     """History repository backed by filesystem storage.
 
     Storage format:
-    - history/{date}.json: One JSON file per setlist date
-    - Format: {"date": "YYYY-MM-DD", "moments": {"moment_name": ["song1", "song2"]}}
+    - history/{date}.json: Default event type setlists
+    - history/{event_type}/{date}.json: Non-default event type setlists
+    - Format: {"date": "YYYY-MM-DD", "moments": {...}, "event_type": "..."}
 
     Attributes:
         history_dir: Directory containing history JSON files
@@ -43,25 +46,62 @@ class FilesystemHistoryRepository:
             return f"{date}_{label}"
         return date
 
+    def _resolve_dir(self, event_type: str = "") -> Path:
+        """Resolve the history directory for a given event type.
+
+        Default event type uses the root history directory.
+        Non-default types use a subdirectory.
+
+        Args:
+            event_type: Event type slug (empty or default slug = root)
+
+        Returns:
+            Resolved directory path
+        """
+        if is_default_event_type(event_type):
+            return self.history_dir
+        return self.history_dir / event_type
+
     def _load_history(self) -> list[dict]:
-        """Load all setlist history from JSON files.
+        """Load all setlist history from JSON files across all event types.
+
+        Scans root directory (default type) and subdirectories (non-default types).
 
         Returns:
             List of setlist dictionaries sorted by date (most recent first),
-            then by label (empty first, then alphabetical) within the same date.
+            then by event_type, then by label within the same date.
         """
         history = []
 
         if not self.history_dir.exists():
             return history
 
+        # Load from root directory (default event type)
         for file in self.history_dir.glob("*.json"):
             with open(file, "r", encoding="utf-8") as f:
                 data = json.load(f)
+                # Ensure event_type is set for sorting
+                if "event_type" not in data:
+                    data["event_type"] = ""
                 history.append(data)
 
-        # Sort by date descending, then label ascending (empty label first)
-        history.sort(key=lambda x: (-_date_sort_key(x.get("date", "")), x.get("label", "")))
+        # Load from subdirectories (non-default event types)
+        for subdir in self.history_dir.iterdir():
+            if subdir.is_dir() and not subdir.name.startswith("."):
+                for file in subdir.glob("*.json"):
+                    with open(file, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        # Set event_type from directory name if not in data
+                        if "event_type" not in data:
+                            data["event_type"] = subdir.name
+                        history.append(data)
+
+        # Sort by date desc, then event_type asc, then label asc
+        history.sort(key=lambda x: (
+            -_date_sort_key(x.get("date", "")),
+            x.get("event_type", ""),
+            x.get("label", ""),
+        ))
         return history
 
     def _ensure_loaded(self) -> list[dict]:
@@ -83,26 +123,30 @@ class FilesystemHistoryRepository:
         # Return a copy to prevent external mutation
         return [dict(entry) for entry in self._ensure_loaded()]
 
-    def get_by_date(self, date: str, label: str = "") -> dict | None:
-        """Get a setlist by date and optional label.
+    def get_by_date(self, date: str, label: str = "", event_type: str = "") -> dict | None:
+        """Get a setlist by date, optional label, and optional event type.
 
         Args:
             date: Date string in YYYY-MM-DD format
             label: Optional label for multiple setlists per date
+            event_type: Optional event type slug (empty = default type)
 
         Returns:
             Setlist dictionary if found, None otherwise
         """
         for entry in self._ensure_loaded():
-            if entry.get("date") == date and entry.get("label", "") == label:
+            if (entry.get("date") == date
+                    and entry.get("label", "") == label
+                    and entry.get("event_type", "") == event_type):
                 return dict(entry)
         return None
 
-    def get_by_date_all(self, date: str) -> list[dict]:
-        """Get all setlists for a date (all labels).
+    def get_by_date_all(self, date: str, event_type: str = "") -> list[dict]:
+        """Get all setlists for a date (all labels) within an event type.
 
         Args:
             date: Date string in YYYY-MM-DD format
+            event_type: Optional event type slug (empty = default type)
 
         Returns:
             List of setlist dictionaries for the given date,
@@ -110,7 +154,7 @@ class FilesystemHistoryRepository:
         """
         results = [
             dict(entry) for entry in self._ensure_loaded()
-            if entry.get("date") == date
+            if entry.get("date") == date and entry.get("event_type", "") == event_type
         ]
         results.sort(key=lambda x: x.get("label", ""))
         return results
@@ -133,13 +177,14 @@ class FilesystemHistoryRepository:
             setlist: Setlist object to save
 
         Note:
-            If a setlist with the same date/label exists, it will be overwritten.
+            If a setlist with the same date/label/event_type exists, it will be overwritten.
         """
-        # Ensure directory exists
-        self.history_dir.mkdir(exist_ok=True)
+        # Route to correct subdirectory based on event_type
+        target_dir = self._resolve_dir(setlist.event_type)
+        target_dir.mkdir(parents=True, exist_ok=True)
 
         # Save to file using setlist_id for filename
-        history_file = self.history_dir / f"{setlist.setlist_id}.json"
+        history_file = target_dir / f"{setlist.setlist_id}.json"
         data = setlist.to_dict()
 
         with open(history_file, "w", encoding="utf-8") as f:
@@ -148,19 +193,21 @@ class FilesystemHistoryRepository:
         # Invalidate cache since we modified data
         self._invalidate_cache()
 
-    def update(self, date: str, setlist_dict: dict, label: str = "") -> None:
+    def update(self, date: str, setlist_dict: dict, label: str = "", event_type: str = "") -> None:
         """Update an existing setlist in history.
 
         Args:
             date: Date string identifying the setlist
             setlist_dict: Updated setlist dictionary
             label: Optional label for multiple setlists per date
+            event_type: Optional event type slug (empty = default type)
 
         Raises:
-            KeyError: If no setlist exists for the given date/label
+            KeyError: If no setlist exists for the given date/label/event_type
         """
+        target_dir = self._resolve_dir(event_type)
         setlist_id = self._make_setlist_id(date, label)
-        history_file = self.history_dir / f"{setlist_id}.json"
+        history_file = target_dir / f"{setlist_id}.json"
 
         if not history_file.exists():
             raise KeyError(f"No setlist found for: {setlist_id}")
@@ -171,18 +218,20 @@ class FilesystemHistoryRepository:
         # Invalidate cache since we modified data
         self._invalidate_cache()
 
-    def delete(self, date: str, label: str = "") -> None:
-        """Delete a setlist by date and optional label.
+    def delete(self, date: str, label: str = "", event_type: str = "") -> None:
+        """Delete a setlist by date, optional label, and event type.
 
         Args:
             date: Date string in YYYY-MM-DD format
             label: Optional label for multiple setlists per date
+            event_type: Optional event type slug (empty = default type)
 
         Raises:
-            KeyError: If no setlist exists for the given date/label
+            KeyError: If no setlist exists for the given date/label/event_type
         """
+        target_dir = self._resolve_dir(event_type)
         setlist_id = self._make_setlist_id(date, label)
-        history_file = self.history_dir / f"{setlist_id}.json"
+        history_file = target_dir / f"{setlist_id}.json"
 
         if not history_file.exists():
             raise KeyError(f"No setlist found for: {setlist_id}")
@@ -190,18 +239,20 @@ class FilesystemHistoryRepository:
         history_file.unlink()
         self._invalidate_cache()
 
-    def exists(self, date: str, label: str = "") -> bool:
-        """Check if a setlist exists for a date and optional label.
+    def exists(self, date: str, label: str = "", event_type: str = "") -> bool:
+        """Check if a setlist exists for a date, optional label, and event type.
 
         Args:
             date: Date string in YYYY-MM-DD format
             label: Optional label for multiple setlists per date
+            event_type: Optional event type slug (empty = default type)
 
         Returns:
             True if setlist exists, False otherwise
         """
+        target_dir = self._resolve_dir(event_type)
         setlist_id = self._make_setlist_id(date, label)
-        history_file = self.history_dir / f"{setlist_id}.json"
+        history_file = target_dir / f"{setlist_id}.json"
         return history_file.exists()
 
     def invalidate_cache(self) -> None:

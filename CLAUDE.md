@@ -63,6 +63,10 @@ songbook pdf --label evening         # Generate PDF for labeled setlist
 songbook markdown --date 2026-02-15  # Regenerate markdown from history
 songbook youtube --date 2026-02-15   # Create YouTube playlist from setlist
 songbook list-moments                # List available moments
+songbook list-moments -e youth       # List moments for event type
+songbook event-type list             # List event types
+songbook event-type add youth --name "Youth Service"  # Add event type
+songbook generate -e youth           # Generate for event type
 songbook cleanup                     # Data quality checks
 ```
 
@@ -71,6 +75,7 @@ songbook cleanup                     # Data quality checks
 This is a **setlist generator** for church worship services. It intelligently selects songs based on:
 
 - **Moments/Tags**: Songs categorized into service moments (prelúdio, louvor, ofertório, saudação, crianças, poslúdio)
+- **Event Types**: Different service types (main, youth, Christmas) with independent moment configurations and song filtering
 - **Weighted preferences**: Each song-moment association can have a weight (1-10, default 3)
 - **Energy-based sequencing**: Songs ordered by energy level (1-4) to create emotional arcs
 - **Recency tracking**: Avoids recently used songs using time-based exponential decay (45-day default)
@@ -81,17 +86,23 @@ This is a **setlist generator** for church worship services. It intelligently se
 ```
 .
 ├── database.csv                 # Song database: "song;energy;tags;youtube"
+├── event_types.json             # Event type definitions (auto-created)
 ├── chords/                      # Individual song files with chords
 │   └── <Song Name>.md
 ├── output/                      # Generated markdown/PDF setlists
-│   ├── YYYY-MM-DD.md           # Unlabeled setlist
-│   └── YYYY-MM-DD_label.md     # Labeled setlist (e.g. 2026-03-01_evening.md)
+│   ├── YYYY-MM-DD.md           # Default event type (root)
+│   ├── YYYY-MM-DD_label.md     # Labeled setlist
+│   └── <event-type>/           # Non-default event types (subdirectory)
+│       └── YYYY-MM-DD.md
 ├── history/                     # JSON history tracking
-│   ├── YYYY-MM-DD.json         # Unlabeled setlist
-│   └── YYYY-MM-DD_label.json   # Labeled setlist (e.g. 2026-03-01_evening.json)
+│   ├── YYYY-MM-DD.json         # Default event type (root)
+│   ├── YYYY-MM-DD_label.json   # Labeled setlist
+│   └── <event-type>/           # Non-default event types (subdirectory)
+│       └── YYYY-MM-DD.json
 ├── library/                     # Core package (modular architecture)
 │   ├── config.py               # Configuration constants
 │   ├── models.py               # Song and Setlist data structures
+│   ├── event_type.py           # Event type definitions and filtering
 │   ├── loader.py               # Data loading
 │   ├── labeler.py              # Setlist label management
 │   ├── selector.py             # Song selection algorithms
@@ -107,6 +118,7 @@ This is a **setlist generator** for church worship services. It intelligently se
 │       └── postgres/           # PostgreSQL backend (optional)
 ├── scripts/                     # Utilities
 │   ├── schema.sql              # PostgreSQL DDL + seed data
+│   ├── migrate_event_types.sql # Event types migration (existing DBs)
 │   └── migrate_to_postgres.py  # Filesystem → PostgreSQL migration
 └── cli/                         # CLI interface
     ├── main.py                 # Entry point
@@ -154,6 +166,7 @@ Where:
 ```bash
 songbook generate --date 2026-02-15
 songbook generate --pdf  # Include PDF output
+songbook generate -e youth --date 2026-03-20  # Generate for event type
 ```
 
 **Multiple setlists per date (labels):**
@@ -176,6 +189,16 @@ songbook replace --moment louvor --position 2 --label evening   # In labeled set
 songbook label --date 2026-03-01 --to evening                  # Add label
 songbook label --date 2026-03-01 --label evening --to night    # Rename label
 songbook label --date 2026-03-01 --label evening --remove      # Remove label
+```
+
+**Manage event types:**
+```bash
+songbook event-type list                                       # List all event types
+songbook event-type add youth --name "Youth Service"           # Add event type
+songbook event-type edit youth --description "Friday evening"  # Edit event type
+songbook event-type moments youth --set "louvor=5,prelúdio=1"  # Set moments
+songbook event-type remove youth                               # Remove event type
+songbook event-type default --name "Sunday Worship"            # Edit default type
 ```
 
 **Song statistics:**
@@ -221,6 +244,16 @@ setlist = generator.generate(
 # Generate labeled setlist (for multiple services on same date)
 evening = generator.generate(date="2026-02-15", label="evening")
 
+# Generate for a specific event type (uses its moments config)
+from library import filter_songs_for_event_type
+et = repos.event_types.get("youth")
+youth_songs = filter_songs_for_event_type(repos.songs.get_all(), "youth")
+setlist = generator.generate(
+    date="2026-03-20",
+    event_type="youth",
+    moments_config=et.moments,
+)
+
 # Derive a labeled variant from an existing setlist
 from library import derive_setlist
 songs = repos.songs.get_all()
@@ -236,16 +269,21 @@ for moment, song_list in setlist.moments.items():
     print(f"{moment}: {', '.join(song_list)}")
 ```
 
-**Key repository methods (label-aware):**
-- `repos.history.get_by_date(date, label="")` - Get specific setlist by date+label
-- `repos.history.get_by_date_all(date)` - Get all setlists for a date (all labels)
-- `repos.history.exists(date, label="")` - Check if setlist exists
-- `repos.history.update(date, data, label="")` - Update a setlist
-- `repos.history.delete(date, label="")` - Delete a setlist
-- `repos.output.save_markdown(date, content, label="")` - Save labeled markdown
-- `repos.output.get_markdown_path(date, label="")` - Get output path
-- `repos.output.get_pdf_path(date, label="")` - Get PDF path
-- `repos.output.delete_outputs(date, label="")` - Delete md + pdf files
+**Key repository methods (label-aware and event-type-aware):**
+- `repos.history.get_by_date(date, label="", event_type="")` - Get specific setlist
+- `repos.history.get_by_date_all(date)` - Get all setlists for a date (all labels/types)
+- `repos.history.exists(date, label="", event_type="")` - Check if setlist exists
+- `repos.history.update(date, data, label="", event_type="")` - Update a setlist
+- `repos.history.delete(date, label="", event_type="")` - Delete a setlist
+- `repos.output.save_markdown(date, content, label="", event_type="")` - Save markdown
+- `repos.output.get_markdown_path(date, label="", event_type="")` - Get output path
+- `repos.output.get_pdf_path(date, label="", event_type="")` - Get PDF path
+- `repos.output.delete_outputs(date, label="", event_type="")` - Delete md + pdf files
+- `repos.event_types.get_all()` - Get all event types
+- `repos.event_types.get(slug)` - Get event type by slug
+- `repos.event_types.add(event_type)` - Add new event type
+- `repos.event_types.update(slug, **kwargs)` - Update event type
+- `repos.event_types.remove(slug)` - Remove event type (not default)
 
 ## Configuration
 

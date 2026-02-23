@@ -4,13 +4,11 @@ Pure functions for URL parsing and playlist name formatting,
 plus API functions for OAuth and playlist management.
 """
 
-import re
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from .config import (
-    MOMENTS_CONFIG,
     YOUTUBE_CLIENT_SECRETS_FILE,
     YOUTUBE_PLAYLIST_NAME_PATTERN,
     YOUTUBE_PLAYLIST_PRIVACY,
@@ -63,7 +61,11 @@ def extract_video_id(url: str) -> str | None:
     return None
 
 
-def format_playlist_name(date_str: str, pattern: str = YOUTUBE_PLAYLIST_NAME_PATTERN) -> str:
+def format_playlist_name(
+    date_str: str,
+    pattern: str = YOUTUBE_PLAYLIST_NAME_PATTERN,
+    event_type_name: str = "",
+) -> str:
     """Format playlist title from date string and pattern.
 
     Pattern placeholders:
@@ -74,6 +76,7 @@ def format_playlist_name(date_str: str, pattern: str = YOUTUBE_PLAYLIST_NAME_PAT
     Args:
         date_str: Date in YYYY-MM-DD format
         pattern: Name pattern with placeholders
+        event_type_name: Optional event type display name
 
     Returns:
         Formatted playlist name
@@ -85,6 +88,9 @@ def format_playlist_name(date_str: str, pattern: str = YOUTUBE_PLAYLIST_NAME_PAT
     result = result.replace("{DD.MM.YYYY}", dt.strftime("%d.%m.%Y"))
     result = result.replace("{YYYY-MM-DD}", date_str)
 
+    if event_type_name:
+        result += f" - {event_type_name}"
+
     return result
 
 
@@ -92,7 +98,7 @@ def resolve_setlist_videos(
     setlist_dict: dict,
     songs: dict,
 ) -> list[tuple[str, str | None]]:
-    """Map setlist songs to (title, video_id_or_none) in MOMENTS_CONFIG order.
+    """Map setlist songs to (title, video_id_or_none) in setlist moment order.
 
     Args:
         setlist_dict: Setlist dict with "moments" key
@@ -103,8 +109,8 @@ def resolve_setlist_videos(
     """
     result = []
 
-    for moment in MOMENTS_CONFIG:
-        song_titles = setlist_dict.get("moments", {}).get(moment, [])
+    for moment in setlist_dict.get("moments", {}):
+        song_titles = setlist_dict["moments"].get(moment, [])
         for title in song_titles:
             song = songs.get(title)
             video_id = None
@@ -241,6 +247,7 @@ def create_setlist_playlist(
     credentials,
     playlist_name_pattern: str = YOUTUBE_PLAYLIST_NAME_PATTERN,
     privacy: str = YOUTUBE_PLAYLIST_PRIVACY,
+    event_type_name: str = "",
 ) -> tuple[str, list[str], list[str]]:
     """Create a YouTube playlist from a setlist.
 
@@ -253,6 +260,7 @@ def create_setlist_playlist(
         credentials: OAuth 2.0 credentials
         playlist_name_pattern: Pattern for playlist title
         privacy: Privacy status for the playlist
+        event_type_name: Optional event type display name for playlist title
 
     Returns:
         Tuple of (playlist_url, added_songs, skipped_songs)
@@ -262,7 +270,7 @@ def create_setlist_playlist(
     """
     date_str = setlist_dict["date"]
     label = setlist_dict.get("label", "")
-    playlist_title = format_playlist_name(date_str, playlist_name_pattern)
+    playlist_title = format_playlist_name(date_str, playlist_name_pattern, event_type_name=event_type_name)
     if label:
         playlist_title += f" ({label})"
 

@@ -32,8 +32,8 @@ The `library/` package is organized into focused modules:
 **Purpose:** Data structures
 
 **Contents:**
-- `Song` dataclass - Represents a song with name, key, tags, energy, chords
-- `Setlist` dataclass - Represents a generated setlist with date, moments, and optional label
+- `Song` dataclass - Represents a song with name, key, tags, energy, chords, event_types
+- `Setlist` dataclass - Represents a generated setlist with date, moments, optional label and event_type
 
 **When to modify:**
 - Adding new song metadata fields
@@ -46,21 +46,26 @@ The `library/` package is organized into focused modules:
 class Song:
     name: str
     key: str
-    tags: Dict[str, int]  # moment → weight
-    energy: int           # 1-4 scale
-    chords: str          # Markdown content
+    tags: Dict[str, int]       # moment → weight
+    energy: int                # 1-4 scale
+    chords: str                # Markdown content
+    event_types: list[str] = field(default_factory=list)  # Bound to these types (empty = all)
+
+    def is_available_for_event_type(self, slug: str) -> bool:
+        return not self.event_types or slug in self.event_types
 
 @dataclass
 class Setlist:
     date: str                      # YYYY-MM-DD
     moments: Dict[str, List[str]]  # moment → [song names]
     label: str = ""                # Optional label (e.g. "evening", "morning")
+    event_type: str = ""           # Optional event type slug (e.g. "youth")
 
     @property
     def setlist_id(self) -> str:   # "YYYY-MM-DD_label" or just "YYYY-MM-DD"
-        ...
+        ...                        # Intentionally excludes event_type (subdirs handle routing)
 
-    def to_dict(self) -> dict:     # Omits "label" key when empty
+    def to_dict(self) -> dict:     # Omits "label"/"event_type" keys when empty
         ...
 ```
 
@@ -69,6 +74,36 @@ class Setlist:
 - `setlist_id` = `"{date}_{label}"` if labeled, `"{date}"` if unlabeled
 - `to_dict()` omits `"label"` key when empty (backward compat)
 - Old JSON files without `"label"` key are treated as `label=""`
+
+**Event type conventions:**
+- `event_type=""` (default) — default event type (main)
+- `setlist_id` intentionally excludes `event_type` — subdirectories handle routing
+- `to_dict()` omits `"event_type"` key when empty (backward compat)
+- Song `event_types=[]` means unbound (available for all types)
+
+### event_type.py
+**Purpose:** Event type model, validation, song filtering, and persistence
+
+**Contents:**
+- `EventType` dataclass - Event type with slug, name, description, moments config
+- `DEFAULT_EVENT_TYPE_SLUG` / `DEFAULT_EVENT_TYPE_NAME` - Constants for the default type
+- `validate_event_type_slug(slug)` - Validates and normalizes slug (lowercase alphanumeric + hyphens)
+- `is_default_event_type(slug)` - Returns True for default slug or empty string
+- `filter_songs_for_event_type(songs, slug)` - Returns unbound + bound-to-slug songs
+- `load_event_types(path)` - Reads `event_types.json`, returns defaults if missing
+- `save_event_types(data, path)` - Writes `event_types.json`
+- `create_default_event_types()` - Creates structure with default type only
+
+**Key design decisions:**
+- `EventType.moments` defaults to `dict(MOMENTS_CONFIG)` via `__post_init__`
+- `filter_songs_for_event_type("")` returns only unbound songs
+- `load_event_types()` does NOT create the file (repo's job on first access)
+- Slug validation: `^[a-z0-9][a-z0-9-]*$`, max 30 chars
+
+**When to modify:**
+- Adding new event type properties
+- Changing slug validation rules
+- Modifying song filtering logic
 
 ### loader.py
 **Purpose:** Tag parsing utilities
@@ -115,21 +150,23 @@ repositories/
 ├── filesystem/         # Default backend (CSV + JSON)
 │   ├── __init__.py     # FilesystemRepositoryContainer
 │   ├── songs.py        # FilesystemSongRepository
-│   ├── history.py      # FilesystemHistoryRepository
+│   ├── history.py      # FilesystemHistoryRepository (subdirectory routing)
 │   ├── config.py       # FilesystemConfigRepository
-│   └── output.py       # FilesystemOutputRepository
+│   ├── output.py       # FilesystemOutputRepository (subdirectory routing)
+│   └── event_types.py  # FilesystemEventTypeRepository
 └── postgres/           # Optional backend (requires psycopg)
     ├── __init__.py     # PostgresRepositoryContainer
     ├── connection.py   # create_pool() — shared connection pool
-    ├── songs.py        # PostgresSongRepository (cached)
-    ├── history.py      # PostgresHistoryRepository (no cache)
-    └── config.py       # PostgresConfigRepository (cached, fallback to Python constants)
+    ├── songs.py        # PostgresSongRepository (cached, loads event_types)
+    ├── history.py      # PostgresHistoryRepository (no cache, event_type in WHERE)
+    ├── config.py       # PostgresConfigRepository (cached, fallback to Python constants)
+    └── event_types.py  # PostgresEventTypeRepository (cached)
 ```
 
 **Key Components:**
 - `get_repositories()` - Factory function, reads STORAGE_BACKEND env var
-- `RepositoryContainer` - Bundles all repository instances
-- Protocols: `SongRepository`, `HistoryRepository`, `ConfigRepository`, `OutputRepository`
+- `RepositoryContainer` - Bundles all repository instances (including `event_types`)
+- Protocols: `SongRepository`, `HistoryRepository`, `ConfigRepository`, `OutputRepository`, `EventTypeRepository`
 
 **Usage:**
 ```python

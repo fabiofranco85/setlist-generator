@@ -10,6 +10,14 @@ from .config import (
     MOMENTS_CONFIG,
     RECENCY_DECAY_DAYS,
 )
+from .event_type import (
+    EventType,
+    DEFAULT_EVENT_TYPE_SLUG,
+    DEFAULT_EVENT_TYPE_NAME,
+    filter_songs_for_event_type,
+    validate_event_type_slug,
+    is_default_event_type,
+)
 from .formatter import format_setlist_markdown
 from .labeler import relabel_setlist
 from .generator import SetlistGenerator, generate_setlist
@@ -65,6 +73,7 @@ try:
         PostgresSongRepository,
         PostgresHistoryRepository,
         PostgresConfigRepository,
+        PostgresEventTypeRepository,
     )
 
     _has_postgres = True
@@ -92,6 +101,13 @@ __all__ = [
     "DEFAULT_ENERGY",
     "DEFAULT_OUTPUT_DIR",
     "DEFAULT_HISTORY_DIR",
+    # Event types
+    "EventType",
+    "DEFAULT_EVENT_TYPE_SLUG",
+    "DEFAULT_EVENT_TYPE_NAME",
+    "filter_songs_for_event_type",
+    "validate_event_type_slug",
+    "is_default_event_type",
     # Models
     "Song",
     "Setlist",
@@ -151,6 +167,7 @@ if _has_postgres:
         "PostgresSongRepository",
         "PostgresHistoryRepository",
         "PostgresConfigRepository",
+        "PostgresEventTypeRepository",
     ]
 
 __all__ += [

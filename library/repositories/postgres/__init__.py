@@ -19,6 +19,7 @@ from .connection import create_pool
 from .songs import PostgresSongRepository
 from .history import PostgresHistoryRepository
 from .config import PostgresConfigRepository
+from .event_types import PostgresEventTypeRepository
 
 
 class PostgresRepositoryContainer:
@@ -69,6 +70,7 @@ class PostgresRepositoryContainer:
             history=PostgresHistoryRepository(pool),
             config=PostgresConfigRepository(pool),
             output=FilesystemOutputRepository(paths.output_dir),
+            event_types=PostgresEventTypeRepository(pool),
         )
 
 
@@ -77,5 +79,6 @@ __all__ = [
     "PostgresSongRepository",
     "PostgresHistoryRepository",
     "PostgresConfigRepository",
+    "PostgresEventTypeRepository",
     "create_pool",
 ]

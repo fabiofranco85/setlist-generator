@@ -1,12 +1,13 @@
 """Filesystem implementation of OutputRepository.
 
 This module provides output file generation to the local filesystem:
-- Markdown setlists: output/{YYYY-MM-DD}.md
-- PDF setlists: output/{YYYY-MM-DD}.pdf
+- Default event type: output/{YYYY-MM-DD}.md
+- Non-default event types: output/{event_type}/{YYYY-MM-DD}.md
 """
 
 from pathlib import Path
 
+from ...event_type import is_default_event_type
 from ...models import Song, Setlist
 from ...formatter import format_setlist_markdown
 
@@ -15,8 +16,9 @@ class FilesystemOutputRepository:
     """Output repository backed by filesystem storage.
 
     Storage format:
-    - output/{date}.md: Markdown setlist with chords
-    - output/{date}.pdf: PDF setlist with table of contents
+    - output/{date}.md: Default event type markdown
+    - output/{event_type}/{date}.md: Non-default event type markdown
+    - Same pattern for .pdf files
 
     Attributes:
         output_dir: Directory for output files
@@ -30,9 +32,19 @@ class FilesystemOutputRepository:
         """
         self.output_dir = output_dir
 
-    def _ensure_dir(self) -> None:
-        """Ensure output directory exists."""
-        self.output_dir.mkdir(exist_ok=True)
+    def _resolve_dir(self, event_type: str = "") -> Path:
+        """Resolve the output directory for a given event type.
+
+        Default event type uses the root output directory.
+        Non-default types use a subdirectory.
+        """
+        if is_default_event_type(event_type):
+            return self.output_dir
+        return self.output_dir / event_type
+
+    def _ensure_dir(self, event_type: str = "") -> None:
+        """Ensure output directory exists for the event type."""
+        self._resolve_dir(event_type).mkdir(parents=True, exist_ok=True)
 
     @staticmethod
     def _make_setlist_id(date: str, label: str = "") -> str:
@@ -41,20 +53,22 @@ class FilesystemOutputRepository:
             return f"{date}_{label}"
         return date
 
-    def save_markdown(self, date: str, content: str, label: str = "") -> Path:
+    def save_markdown(self, date: str, content: str, label: str = "", event_type: str = "") -> Path:
         """Save setlist as markdown file.
 
         Args:
             date: Setlist date (used for filename)
             content: Markdown content to save
             label: Optional label for multiple setlists per date
+            event_type: Optional event type slug (empty = default type)
 
         Returns:
             Path to the saved file
         """
-        self._ensure_dir()
+        self._ensure_dir(event_type)
         setlist_id = self._make_setlist_id(date, label)
-        output_path = self.output_dir / f"{setlist_id}.md"
+        target_dir = self._resolve_dir(event_type)
+        output_path = target_dir / f"{setlist_id}.md"
         output_path.write_text(content, encoding="utf-8")
         return output_path
 
@@ -79,55 +93,61 @@ class FilesystemOutputRepository:
                 "Install with: pip install reportlab"
             ) from e
 
-        self._ensure_dir()
-        output_path = self.output_dir / f"{setlist.setlist_id}.pdf"
+        event_type = setlist.event_type
+        self._ensure_dir(event_type)
+        target_dir = self._resolve_dir(event_type)
+        output_path = target_dir / f"{setlist.setlist_id}.pdf"
         generate_setlist_pdf(setlist, songs, output_path)
         return output_path
 
-    def delete_outputs(self, date: str, label: str = "") -> list[Path]:
+    def delete_outputs(self, date: str, label: str = "", event_type: str = "") -> list[Path]:
         """Delete markdown and PDF output files for a setlist.
 
         Args:
             date: Setlist date
             label: Optional label for multiple setlists per date
+            event_type: Optional event type slug (empty = default type)
 
         Returns:
             List of paths that were actually deleted (may be empty)
         """
         setlist_id = self._make_setlist_id(date, label)
+        target_dir = self._resolve_dir(event_type)
         deleted = []
         for ext in (".md", ".pdf"):
-            path = self.output_dir / f"{setlist_id}{ext}"
+            path = target_dir / f"{setlist_id}{ext}"
             if path.exists():
                 path.unlink()
                 deleted.append(path)
         return deleted
 
-    def get_markdown_path(self, date: str, label: str = "") -> Path:
+    def get_markdown_path(self, date: str, label: str = "", event_type: str = "") -> Path:
         """Get the path where markdown would be saved for a date.
 
         Args:
             date: Setlist date
             label: Optional label for multiple setlists per date
+            event_type: Optional event type slug (empty = default type)
 
         Returns:
             Path where markdown file would be saved
         """
         setlist_id = self._make_setlist_id(date, label)
-        return self.output_dir / f"{setlist_id}.md"
+        return self._resolve_dir(event_type) / f"{setlist_id}.md"
 
-    def get_pdf_path(self, date: str, label: str = "") -> Path:
+    def get_pdf_path(self, date: str, label: str = "", event_type: str = "") -> Path:
         """Get the path where PDF would be saved for a date.
 
         Args:
             date: Setlist date
             label: Optional label for multiple setlists per date
+            event_type: Optional event type slug (empty = default type)
 
         Returns:
             Path where PDF file would be saved
         """
         setlist_id = self._make_setlist_id(date, label)
-        return self.output_dir / f"{setlist_id}.pdf"
+        return self._resolve_dir(event_type) / f"{setlist_id}.pdf"
 
     def save_from_setlist(
         self, setlist: Setlist, songs: dict[str, Song], include_pdf: bool = False
@@ -144,7 +164,10 @@ class FilesystemOutputRepository:
         """
         # Generate and save markdown
         markdown_content = format_setlist_markdown(setlist, songs)
-        md_path = self.save_markdown(setlist.date, markdown_content, label=setlist.label)
+        md_path = self.save_markdown(
+            setlist.date, markdown_content,
+            label=setlist.label, event_type=setlist.event_type,
+        )
 
         # Optionally generate PDF
         pdf_path = None

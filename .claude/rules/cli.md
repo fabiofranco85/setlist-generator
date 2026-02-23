@@ -27,6 +27,7 @@ songbook --help                      # Main help
 songbook generate --date 2026-02-15  # Generate setlist
 songbook generate --label evening    # Derive labeled variant from primary
 songbook generate --label evening --replace 3  # Derive replacing 3 songs
+songbook generate -e youth           # Generate for event type
 songbook view-setlist --keys         # View setlist with keys
 songbook view-setlist --label evening  # View labeled setlist
 songbook view-song "Oceanos"         # View song details
@@ -42,6 +43,9 @@ songbook pdf --label evening         # Generate PDF for labeled setlist
 songbook markdown --date 2026-02-15  # Regenerate markdown from history
 songbook youtube --date 2026-02-15   # Create YouTube playlist from setlist
 songbook list-moments                # List available moments
+songbook list-moments -e youth       # List moments for event type
+songbook event-type list             # List event types
+songbook event-type add youth --name "Youth Service"  # Add event type
 songbook cleanup                     # Data quality checks
 ```
 
@@ -63,10 +67,17 @@ songbook generate --date 2026-02-15
 songbook generate --pdf
 songbook generate --date 2026-02-15 --pdf
 
+# Generate for a specific event type
+songbook generate -e youth --date 2026-03-20
+songbook generate --event-type youth --pdf
+
 # Derive labeled variant (from existing primary setlist)
 songbook generate --date 2026-03-01 --label evening
 songbook generate --label evening --replace 3      # Replace exactly 3 songs
 songbook generate --label evening --replace all    # Replace all songs
+
+# Combine event type + label
+songbook generate -e youth --label evening --date 2026-03-20
 
 # Override specific moments
 songbook generate --override "louvor:Oceanos,Santo Pra Sempre"
@@ -81,6 +92,7 @@ songbook generate --output-dir custom/output --history-dir custom/history
 
 **Options:**
 - `--date YYYY-MM-DD` - Target date (default: today)
+- `--event-type TEXT` or `-e` - Event type slug (e.g., "youth"). Uses the type's moments config and filters songs
 - `--label TEXT` or `-l` - Setlist label for multiple setlists per date (e.g., "evening", "morning")
 - `--replace N` or `-r` - Songs to replace when deriving (number or "all", default: random). Only valid with `--label`
 - `--override "moment:song1,song2"` - Force specific songs for a moment (can be used multiple times)
@@ -100,10 +112,16 @@ songbook generate --output-dir custom/output --history-dir custom/history
 - Multiple songs: `--override "louvor:Oceanos,Santo Pra Sempre,Hosana"`
 - Multiple moments: Use multiple `--override` flags
 
+**Event type behavior:**
+- When `-e youth` is specified, uses the youth event type's moments config and filters songs
+- Output files route to `output/youth/` and `history/youth/` subdirectories
+- Event type name appears in markdown header, PDF subtitle, and YouTube playlist title
+- Event type and label are orthogonal — can be combined freely
+
 **Output:**
 - Terminal: Summary with song titles
-- `output/YYYY-MM-DD[_label].md`: Full markdown with chords (always filesystem)
-- `output/YYYY-MM-DD[_label].pdf`: PDF setlist (if `--pdf` flag used, always filesystem)
+- `output/[<event-type>/]YYYY-MM-DD[_label].md`: Full markdown with chords (subdirectory for non-default types)
+- `output/[<event-type>/]YYYY-MM-DD[_label].pdf`: PDF setlist (if `--pdf` flag used)
 - History record saved to configured backend (unless `--no-save`)
 
 ---
@@ -123,6 +141,9 @@ songbook view-setlist --date 2026-02-15
 # View a labeled setlist
 songbook view-setlist --date 2026-03-01 --label evening
 
+# View an event-type-specific setlist
+songbook view-setlist --date 2026-03-20 -e youth
+
 # View with song keys
 songbook view-setlist --keys
 songbook view-setlist --date 2026-02-15 --keys
@@ -133,6 +154,7 @@ songbook view-setlist --history-dir custom/history
 
 **Options:**
 - `--date YYYY-MM-DD` - View specific date (default: latest)
+- `--event-type TEXT` or `-e` - Event type slug
 - `--label TEXT` or `-l` - Setlist label
 - `--keys` - Show song keys alongside titles
 - `--history-dir PATH` - Custom history directory
@@ -300,6 +322,9 @@ songbook replace --date 2026-03-15 --moment louvor --position 2
 
 # Replace in a labeled setlist
 songbook replace --moment louvor --position 2 --date 2026-03-01 --label evening
+
+# Replace in an event-type-specific setlist
+songbook replace --moment louvor --position 2 -e youth
 ```
 
 **Options:**
@@ -308,6 +333,7 @@ songbook replace --moment louvor --position 2 --date 2026-03-01 --label evening
 - `--positions N,N` - Multiple positions (comma-separated). Cannot be used with `--position`
 - `--with SONG` - Manual replacement song (auto-select if omitted)
 - `--date YYYY-MM-DD` - Target date (default: latest)
+- `--event-type TEXT` or `-e` - Event type slug
 - `--label TEXT` or `-l` - Setlist label
 - `--output-dir PATH` - Custom output directory
 - `--history-dir PATH` - Custom history directory
@@ -336,10 +362,14 @@ songbook label --date 2026-03-01 --label evening --to night
 
 # Remove a label (make unlabeled)
 songbook label --date 2026-03-01 --label evening --remove
+
+# Label an event-type-specific setlist
+songbook label --date 2026-03-20 -e youth --to evening
 ```
 
 **Options:**
 - `--date YYYY-MM-DD` - Required: Target date
+- `--event-type TEXT` or `-e` - Event type slug
 - `--label TEXT` or `-l` - Source label (omit for unlabeled setlist)
 - `--to TEXT` - New label to assign
 - `--remove` - Remove the label (make unlabeled)
@@ -369,10 +399,14 @@ songbook pdf --date 2026-02-15
 
 # Generate PDF for a labeled setlist
 songbook pdf --date 2026-03-01 --label evening
+
+# Generate PDF for an event-type-specific setlist
+songbook pdf --date 2026-03-20 -e youth
 ```
 
 **Options:**
 - `--date YYYY-MM-DD` - Target date (default: today)
+- `--event-type TEXT` or `-e` - Event type slug
 - `--label TEXT` or `-l` - Setlist label
 
 **PDF Format:**
@@ -418,10 +452,14 @@ songbook markdown --date 2026-02-15
 
 # Regenerate for a labeled setlist
 songbook markdown --date 2026-03-01 --label evening
+
+# Regenerate for an event-type-specific setlist
+songbook markdown --date 2026-03-20 -e youth
 ```
 
 **Options:**
 - `--date YYYY-MM-DD` - Target date (default: latest)
+- `--event-type TEXT` or `-e` - Event type slug
 - `--label TEXT` or `-l` - Setlist label
 - `--output-dir PATH` - Custom output directory
 - `--history-dir PATH` - Custom history directory
@@ -452,10 +490,14 @@ songbook youtube --date 2026-02-15
 
 # Create playlist for a labeled setlist
 songbook youtube --date 2026-03-01 --label evening
+
+# Create playlist for an event-type-specific setlist
+songbook youtube --date 2026-03-20 -e youth
 ```
 
 **Options:**
 - `--date YYYY-MM-DD` - Target date (default: latest)
+- `--event-type TEXT` or `-e` - Event type slug
 - `--label TEXT` or `-l` - Setlist label
 - `--output-dir PATH` - Custom output directory
 - `--history-dir PATH` - Custom history directory
@@ -488,8 +530,16 @@ Display all available service moments.
 
 **Usage:**
 ```bash
+# Show global moments config
 songbook list-moments
+
+# Show moments for a specific event type
+songbook list-moments -e youth
+songbook list-moments --event-type youth
 ```
+
+**Options:**
+- `--event-type TEXT` or `-e` - Event type slug (shows that type's moments config instead of global)
 
 **Output:**
 Shows all available moments with their song counts and descriptions. Useful for knowing what values to use with `--moment` arguments in other commands.
@@ -504,6 +554,63 @@ Available service moments:
   louvor      (4 songs) - Main worship block
   poslúdio    (1 song)  - Closing song
 ```
+
+---
+
+### songbook event-type
+
+Manage event types for different service formats.
+
+**Usage:**
+```bash
+# List all event types
+songbook event-type list
+
+# Add a new event type
+songbook event-type add youth --name "Youth Service"
+songbook event-type add youth --name "Youth Service" --description "Friday evening"
+
+# Edit an existing event type
+songbook event-type edit youth --name "Friday Youth" --description "Every Friday"
+
+# Configure moments for an event type
+songbook event-type moments youth                              # View current moments
+songbook event-type moments youth --set "louvor=5,prelúdio=1,poslúdio=1"  # Set moments
+
+# Remove an event type (cannot remove default)
+songbook event-type remove youth
+
+# View/edit the default event type
+songbook event-type default                              # Show default type info
+songbook event-type default --name "Sunday Worship"      # Update default name
+songbook event-type default --description "Main service" # Update default description
+```
+
+**Subcommands:**
+
+- `list` - Display all configured event types with their moments
+- `add <slug>` - Add a new event type (copies moments from default unless `--moments` specified)
+  - `--name TEXT` - Required: Display name
+  - `--description TEXT` - Optional: Description
+- `edit <slug>` - Edit an existing event type
+  - `--name TEXT` - New display name
+  - `--description TEXT` - New description
+- `moments <slug>` - View or set moment configuration
+  - `--set "moment=count,..."` - Set moments (replaces all moments)
+- `remove <slug>` - Remove an event type (cannot remove the default type)
+- `default` - View or edit the default event type
+  - `--name TEXT` - New display name for default type
+  - `--description TEXT` - New description for default type
+
+**Slug validation:**
+- Lowercase alphanumeric and hyphens only (e.g., `youth`, `christmas-eve`)
+- 1-30 characters, must start with a letter or number
+- Automatically lowercased on input
+
+**Notes:**
+- The default event type (`main`) cannot be removed
+- New event types copy the default type's moments config unless `--set` is used with `moments`
+- Event types are stored in `event_types.json` (filesystem) or `event_types` table (PostgreSQL)
 
 ---
 
@@ -651,6 +758,16 @@ songbook pdf --date 2026-03-01 --label night                 # Generate PDF
 ```bash
 songbook replace --moment louvor --position 2 --with "Oceanos"
 songbook pdf --date 2026-02-15
+```
+
+**Event type workflows:**
+```bash
+songbook event-type add youth --name "Youth Service"          # Create event type
+songbook event-type moments youth --set "louvor=5,prelúdio=1" # Set custom moments
+songbook generate -e youth --date 2026-03-20                  # Generate
+songbook view-setlist -e youth --date 2026-03-20 --keys       # Review
+songbook pdf -e youth --date 2026-03-20                       # Generate PDF
+songbook replace -e youth --moment louvor --position 2        # Replace song
 ```
 
 **Data quality maintenance:**

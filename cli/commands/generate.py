@@ -47,7 +47,7 @@ def parse_overrides(override_args: tuple[str, ...] | None) -> dict[str, list[str
 
 
 def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=False,
-        label="", replace_count=None):
+        label="", replace_count=None, event_type=""):
     """
     Generate a setlist for a service date.
 
@@ -62,8 +62,9 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
         verbose: Whether to enable debug-level observability output
         label: Optional label for multiple setlists per date
         replace_count: Songs to replace when deriving (number string, "all", or None)
+        event_type: Optional event type slug
     """
-    from cli.cli_utils import resolve_paths, print_metrics_summary, validate_label, handle_error
+    from cli.cli_utils import resolve_paths, print_metrics_summary, validate_label, handle_error, resolve_event_type
     from library.observability import Observability
     from library.replacer import derive_setlist
     from library.models import Setlist
@@ -89,6 +90,12 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
     # Load data via repositories
     repos = get_repositories(history_dir=history_dir_path, output_dir=output_dir_path)
 
+    # Resolve event type
+    et = resolve_event_type(repos, event_type)
+    et_slug = event_type
+    et_name = et.name if et and not (et_slug == "" or et_slug == "main") else ""
+    moments_config = et.moments if et else None
+
     print("Loading songs...")
     songs = repos.songs.get_all()
     print(f"Loaded {len(songs)} songs")
@@ -104,7 +111,7 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
 
     # Derivation path: when label is provided and a base setlist exists
     if label:
-        existing = repos.history.get_by_date_all(date)
+        existing = repos.history.get_by_date_all(date, event_type=et_slug)
         if existing:
             # Derive from primary (first by label sort: unlabeled first)
             base = existing[0]
@@ -124,29 +131,40 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
                     except ValueError:
                         handle_error(f"Invalid --replace value: '{replace_count}'. Use a number or 'all'.")
 
-            new_dict = derive_setlist(base, songs, history, replace_count=parsed_count)
+            new_dict = derive_setlist(base, songs, history, replace_count=parsed_count, event_type=et_slug)
 
-            # Set label on the derived setlist
+            # Set label and event_type on the derived setlist
             new_dict["label"] = label
+            if et_slug:
+                new_dict["event_type"] = et_slug
 
             setlist = Setlist(
                 date=new_dict["date"],
                 moments=new_dict["moments"],
                 label=label,
+                event_type=et_slug,
             )
         else:
             # No base exists — generate fresh with label
             print(f"\nNo existing setlist for {date} — generating fresh with label '{label}'.")
-            setlist = generate_setlist(songs, history, date, overrides, obs=obs, label=label)
+            setlist = generate_setlist(
+                songs, history, date, overrides, obs=obs, label=label,
+                event_type=et_slug, moments_config=moments_config,
+            )
     else:
         # Standard generation (no label)
         print("\nGenerating setlist...")
-        setlist = generate_setlist(songs, history, date, overrides, obs=obs)
+        setlist = generate_setlist(
+            songs, history, date, overrides, obs=obs,
+            event_type=et_slug, moments_config=moments_config,
+        )
 
     # Display summary
     setlist_id = setlist.setlist_id
     print(f"\n{'=' * 50}")
     header = f"SETLIST FOR {date}"
+    if et_name:
+        header += f" | {et_name}"
     if label:
         header += f" ({label})"
     print(header)
@@ -157,7 +175,7 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
             print(f"  - {song}")
 
     # Generate markdown
-    markdown = format_setlist_markdown(setlist, songs)
+    markdown = format_setlist_markdown(setlist, songs, event_type_name=et_name)
 
     # Save files
     output_path = Path(output) if output else output_dir_path / f"{setlist_id}.md"
@@ -178,7 +196,7 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
         pdf_path = output_dir_path / f"{setlist_id}.pdf"
         print(f"\nGenerating PDF...")
         try:
-            generate_setlist_pdf(setlist, songs, pdf_path)
+            generate_setlist_pdf(setlist, songs, pdf_path, event_type_name=et_name)
             print(f"PDF saved to: {pdf_path}")
         except ImportError:
             print("Error: ReportLab library not installed.")

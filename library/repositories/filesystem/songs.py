@@ -77,12 +77,19 @@ class FilesystemSongRepository:
                 # Parse YouTube URL (optional column)
                 youtube_url = (row.get("youtube") or "").strip()
 
+                # Parse event types (optional column)
+                event_types_str = (row.get("event_types") or "").strip()
+                event_types = [
+                    et.strip() for et in event_types_str.split(",") if et.strip()
+                ] if event_types_str else []
+
                 songs[title] = Song(
                     title=title,
                     tags=tags,
                     energy=energy,
                     content=content,
                     youtube_url=youtube_url,
+                    event_types=event_types,
                 )
 
         return songs

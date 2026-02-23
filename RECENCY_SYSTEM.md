@@ -187,6 +187,7 @@ Verify good variety without excessive repetition.
 - **Future dates in history:** Handled as 0.0 score
 - **Never-used songs:** Score = 1.0 (maximum)
 - **Multiple setlists per date (labels):** All setlists for a date share the same `date` field, so songs used in any labeled variant receive the same recency penalty. This is intentional — a song used at the morning service is equally "recently used" for the evening service.
+- **Cross-event-type recency (global):** Recency scores are computed across ALL event types. A song used in a youth service last week is equally "recently used" when generating a main service setlist. This prevents the same songs from appearing across different service types within a short window.
 
 ## Comparison with Old System
 

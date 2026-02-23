@@ -117,8 +117,47 @@ def validate_label(label: str) -> str:
     return label
 
 
-def find_setlist_or_fail(repos, date, label=""):
-    """Find a setlist by date and label, or exit with error.
+def resolve_event_type(repos, slug):
+    """Resolve an event type slug to an EventType object.
+
+    If slug is empty, returns the default event type.
+    Validates that the slug exists in the repository.
+
+    Args:
+        repos: RepositoryContainer with event_types access
+        slug: Event type slug (empty = default)
+
+    Returns:
+        EventType object
+
+    Raises:
+        SystemExit: If event type not found or not supported
+    """
+    if repos.event_types is None:
+        if slug:
+            handle_error("Event types not supported by current backend")
+        return None
+
+    if not slug:
+        default_slug = repos.event_types.get_default_slug()
+        et = repos.event_types.get(default_slug)
+        if et is None:
+            handle_error("Default event type not found")
+        return et
+
+    et = repos.event_types.get(slug)
+    if et is None:
+        available = repos.event_types.get_all()
+        slugs = ", ".join(available.keys()) if available else "(none)"
+        handle_error(
+            f"Event type '{slug}' not found.\n"
+            f"Available event types: {slugs}"
+        )
+    return et
+
+
+def find_setlist_or_fail(repos, date, label="", event_type=""):
+    """Find a setlist by date, label, and event type, or exit with error.
 
     Provides helpful error messages listing available dates/labels.
 
@@ -126,6 +165,7 @@ def find_setlist_or_fail(repos, date, label=""):
         repos: RepositoryContainer with history access
         date: Target date (YYYY-MM-DD) or None for latest
         label: Optional label for multiple setlists per date
+        event_type: Optional event type slug
 
     Returns:
         Setlist dictionary
@@ -134,12 +174,12 @@ def find_setlist_or_fail(repos, date, label=""):
         SystemExit: If setlist not found
     """
     if date:
-        setlist = repos.history.get_by_date(date, label=label)
+        setlist = repos.history.get_by_date(date, label=label, event_type=event_type)
         if setlist:
             return setlist
 
         # Not found — provide helpful message
-        all_for_date = repos.history.get_by_date_all(date)
+        all_for_date = repos.history.get_by_date_all(date, event_type=event_type)
         if all_for_date and label:
             available_labels = [s.get("label", "") or "(unlabeled)" for s in all_for_date]
             handle_error(
@@ -148,6 +188,9 @@ def find_setlist_or_fail(repos, date, label=""):
             )
         elif not all_for_date:
             history = repos.history.get_all()
+            # Filter by event_type if specified
+            if event_type:
+                history = [h for h in history if h.get("event_type", "") == event_type]
             dates = [s["date"] for s in history[:10]]
             handle_error(
                 f"No setlist found for date: {date}\n"
@@ -164,10 +207,17 @@ def find_setlist_or_fail(repos, date, label=""):
         history = repos.history.get_all()
         if not history:
             handle_error("No setlists found in history")
-        # If label specified, filter
+        # Filter by event_type and label
+        for entry in history:
+            if event_type and entry.get("event_type", "") != event_type:
+                continue
+            if label and entry.get("label", "") != label:
+                continue
+            return entry
+        parts = []
+        if event_type:
+            parts.append(f"event type '{event_type}'")
         if label:
-            for entry in history:
-                if entry.get("label", "") == label:
-                    return entry
-            handle_error(f"No setlist found with label '{label}'")
-        return history[0]
+            parts.append(f"label '{label}'")
+        filter_desc = " with " + " and ".join(parts) if parts else ""
+        handle_error(f"No setlist found{filter_desc}")

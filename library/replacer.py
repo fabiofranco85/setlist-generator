@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from .config import ENERGY_ORDERING_ENABLED, ENERGY_ORDERING_RULES, MOMENTS_CONFIG
+from .event_type import filter_songs_for_event_type
 from .models import Song
 from .ordering import apply_energy_ordering
 from .selector import calculate_recency_scores, select_songs_for_moment
@@ -22,6 +23,7 @@ def find_target_setlist(
     history: list[dict[str, Any]],
     target_date: str | None = None,
     target_label: str = "",
+    event_type: str = "",
 ) -> dict[str, Any]:
     """
     Find the setlist to modify.
@@ -30,26 +32,35 @@ def find_target_setlist(
         history: List of all historical setlists (sorted by date, most recent first)
         target_date: Specific date (YYYY-MM-DD), or None for latest
         target_label: Optional label for multiple setlists per date
+        event_type: Optional event type slug to filter by
 
     Returns:
         Setlist dict: {"date": "...", "moments": {...}}
 
     Raises:
-        ValueError: If date/label not found or no history exists
+        ValueError: If date/label/event_type not found or no history exists
     """
     if not history:
         raise ValueError("No setlists found in history")
 
     if target_date is None:
+        # Filter by event_type if specified
+        if event_type:
+            for setlist in history:
+                if setlist.get("event_type", "") == event_type:
+                    return setlist
+            raise ValueError(f"No setlists found for event type '{event_type}'")
         return history[0]  # Already sorted by date (most recent first)
 
     for setlist in history:
         if (setlist.get("date") == target_date
-                and setlist.get("label", "") == target_label):
+                and setlist.get("label", "") == target_label
+                and setlist.get("event_type", "") == event_type):
             return setlist
 
     label_suffix = f" (label: {target_label})" if target_label else ""
-    raise ValueError(f"Setlist for date {target_date}{label_suffix} not found")
+    type_suffix = f" (event type: {event_type})" if event_type else ""
+    raise ValueError(f"Setlist for date {target_date}{label_suffix}{type_suffix} not found")
 
 
 def validate_replacement_request(
@@ -57,7 +68,8 @@ def validate_replacement_request(
     moment: str,
     position: int,
     replacement_song: str | None,
-    songs: dict[str, Song]
+    songs: dict[str, Song],
+    moments_config: dict[str, int] | None = None,
 ) -> None:
     """
     Validate the replacement request.
@@ -68,13 +80,15 @@ def validate_replacement_request(
         position: Position to replace (0-indexed)
         replacement_song: Manual replacement song, or None for auto
         songs: All available songs
+        moments_config: Optional moments config (defaults to MOMENTS_CONFIG)
 
     Raises:
         ValueError: If validation fails with descriptive message
     """
+    config = moments_config or MOMENTS_CONFIG
     # Validate moment exists
-    if moment not in MOMENTS_CONFIG:
-        valid = ", ".join(MOMENTS_CONFIG.keys())
+    if moment not in config:
+        valid = ", ".join(config.keys())
         raise ValueError(f"Invalid moment '{moment}'. Valid: {valid}")
 
     # Validate position
@@ -214,6 +228,8 @@ def replace_song_in_setlist(
     }
     if setlist_dict.get("label"):
         new_setlist["label"] = setlist_dict["label"]
+    if setlist_dict.get("event_type"):
+        new_setlist["event_type"] = setlist_dict["event_type"]
 
     # Copy all moments
     for m, song_list in setlist_dict["moments"].items():
@@ -332,6 +348,8 @@ def replace_songs_batch(
     }
     if setlist_dict.get("label"):
         new_setlist["label"] = setlist_dict["label"]
+    if setlist_dict.get("event_type"):
+        new_setlist["event_type"] = setlist_dict["event_type"]
 
     for m, song_list in setlist_dict["moments"].items():
         new_setlist["moments"][m] = song_list.copy()
@@ -365,6 +383,7 @@ def derive_setlist(
     songs: dict[str, Song],
     history: list[dict[str, Any]],
     replace_count: int | None = None,
+    event_type: str = "",
 ) -> dict[str, Any]:
     """
     Derive a new setlist by replacing songs from a base setlist.
@@ -378,11 +397,15 @@ def derive_setlist(
         history: Historical setlists for recency
         replace_count: Number of songs to replace.
             None = random (1 to total_songs).
+        event_type: Optional event type slug for song filtering
 
     Returns:
         New setlist dict with replaced songs (caller sets label)
     """
     import random
+
+    # Filter songs by event type if specified
+    available = filter_songs_for_event_type(songs, event_type) if event_type else songs
 
     # Enumerate all (moment, position) pairs
     all_positions = []
@@ -423,6 +446,6 @@ def derive_setlist(
     return replace_songs_batch(
         setlist_dict=base_setlist_dict,
         replacements=replacements,
-        songs=songs,
+        songs=available,
         history=history,
     )

@@ -91,7 +91,7 @@ def display_setlist(setlist_dict: dict, songs: dict, show_keys: bool = False, ou
     print()
 
 
-def run(date, keys, output_dir, history_dir, label=""):
+def run(date, keys, output_dir, history_dir, label="", event_type=""):
     """
     View generated setlist (latest or specific date).
 
@@ -101,8 +101,9 @@ def run(date, keys, output_dir, history_dir, label=""):
         output_dir: Custom output directory
         history_dir: Custom history directory
         label: Optional label for multiple setlists per date
+        event_type: Optional event type slug
     """
-    from cli.cli_utils import resolve_paths, find_setlist_or_fail, validate_label
+    from cli.cli_utils import resolve_paths, find_setlist_or_fail, validate_label, resolve_event_type
 
     label = validate_label(label)
 
@@ -114,8 +115,11 @@ def run(date, keys, output_dir, history_dir, label=""):
     # Load data via repositories
     repos = get_repositories(history_dir=history_dir_path, output_dir=output_dir_path)
 
+    # Resolve event type for display name
+    et = resolve_event_type(repos, event_type)
+
     # Find target setlist (handles errors internally)
-    target_setlist = find_setlist_or_fail(repos, date, label)
+    target_setlist = find_setlist_or_fail(repos, date, label, event_type=event_type)
 
     # Load songs if showing keys
     songs = {}

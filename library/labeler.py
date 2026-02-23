@@ -29,4 +29,5 @@ def relabel_setlist(setlist_dict: dict, new_label: str) -> Setlist:
         date=setlist_dict["date"],
         moments=copy.deepcopy(setlist_dict["moments"]),
         label=new_label,
+        event_type=setlist_dict.get("event_type", ""),
     )

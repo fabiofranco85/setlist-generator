@@ -8,7 +8,7 @@ from library import (
 )
 
 
-def run(date, output_dir, history_dir, label=""):
+def run(date, output_dir, history_dir, label="", event_type=""):
     """
     Create a YouTube playlist from an existing setlist.
 
@@ -17,8 +17,9 @@ def run(date, output_dir, history_dir, label=""):
         output_dir: Custom output directory
         history_dir: Custom history directory
         label: Optional label for multiple setlists per date
+        event_type: Optional event type slug
     """
-    from cli.cli_utils import resolve_paths, handle_error, validate_label, find_setlist_or_fail
+    from cli.cli_utils import resolve_paths, handle_error, validate_label, find_setlist_or_fail, resolve_event_type
 
     label = validate_label(label)
 
@@ -29,18 +30,25 @@ def run(date, output_dir, history_dir, label=""):
     # Load data via repositories
     repos = get_repositories(history_dir=history_dir_path)
 
+    # Resolve event type
+    et = resolve_event_type(repos, event_type)
+    et_slug = event_type
+    et_name = et.name if et and not (et_slug == "" or et_slug == "main") else ""
+
     print("Loading songs...")
     songs = repos.songs.get_all()
     print(f"Loaded {len(songs)} songs")
 
     # Find target setlist
-    target_setlist = find_setlist_or_fail(repos, date, label)
+    target_setlist = find_setlist_or_fail(repos, date, label, event_type=et_slug)
 
     target_date = target_setlist["date"]
     target_label = target_setlist.get("label", "")
 
     # Display setlist
     header = f"\nCreating YouTube playlist for {target_date}"
+    if et_name:
+        header += f" | {et_name}"
     if target_label:
         header += f" ({target_label})"
     print(header + "...")
@@ -102,6 +110,7 @@ def run(date, output_dir, history_dir, label=""):
             setlist_dict=target_setlist,
             songs=songs,
             credentials=credentials,
+            event_type_name=et_name,
         )
     except Exception as e:
         handle_error(f"Creating playlist: {e}")

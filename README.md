@@ -5,6 +5,7 @@ An intelligent setlist generator for church worship services that automatically 
 ## 🎵 Features
 
 - **Smart Song Selection**: Automatically picks songs based on configurable weights and preferences
+- **Event Types**: Different service formats (main, youth, Christmas) with independent moment configs and song pools
 - **Energy-Based Sequencing**: Creates emotional arcs by ordering songs from upbeat to contemplative worship
 - **Variety Guaranteed**: Tracks song history and avoids repeating songs too frequently
 - **Service Structure**: Organizes songs into worship moments (prelúdio, louvor, ofertório, etc.)
@@ -19,6 +20,7 @@ An intelligent setlist generator for church worship services that automatically 
 - [Quick Start](#quick-start)
 - [CLI Commands](#cli-commands)
 - [How It Works](#how-it-works)
+- [Event Types](#event-types)
 - [Managing Songs](#managing-songs)
 - [Configuration](#configuration)
 - [Storage Backends](#storage-backends)
@@ -129,6 +131,9 @@ songbook label --date 2026-03-01 --to evening  # Add/rename/remove label
 songbook transpose "Oceanos" --to G  # Transpose chords (preview)
 songbook pdf                         # Generate PDF from existing setlist
 songbook youtube                     # Create YouTube playlist
+songbook event-type list             # List event types
+songbook event-type add youth --name "Youth Service"  # Add event type
+songbook generate -e youth           # Generate for event type
 ```
 
 ## CLI Commands
@@ -208,6 +213,62 @@ For the "louvor" moment, if we have:
 - **A Casa é Sua**: weight=3, never used → medium-high score
 
 The generator will likely pick: Oceanos, A Casa é Sua, and two other high-scoring songs.
+
+## Event Types
+
+Event types let you run different service formats (e.g., main Sunday service, youth service, Christmas celebration) with independent moment configurations and song pools.
+
+### Quick Start
+
+```bash
+# Create a new event type
+songbook event-type add youth --name "Youth Service" --description "Friday evening"
+
+# Set custom moments (fewer moments, more louvor songs)
+songbook event-type moments youth --set "louvor=5,prelúdio=1,poslúdio=1"
+
+# Generate a setlist for the youth service
+songbook generate -e youth --date 2026-03-20
+
+# All other commands accept -e / --event-type
+songbook view-setlist -e youth --date 2026-03-20 --keys
+songbook replace -e youth --moment louvor --position 2
+songbook pdf -e youth --date 2026-03-20
+```
+
+### How It Works
+
+- **Default event type** (`main`): Uses the global `MOMENTS_CONFIG`. Files are saved at root (`history/`, `output/`) for backward compatibility.
+- **Non-default types** (e.g., `youth`): Have their own moments config. Files save to subdirectories (`history/youth/`, `output/youth/`).
+- **Song binding**: By default, all songs are available for all event types. You can restrict songs to specific types by adding an `event_types` column to `database.csv`.
+- **Global recency**: Song recency is computed across ALL event types, so a song used in the youth service affects its freshness for the main service too.
+- **Labels still work**: Event type and label are orthogonal — you can combine them: `songbook generate -e youth --label evening`.
+
+### Managing Event Types
+
+```bash
+songbook event-type list                                       # List all types
+songbook event-type add christmas --name "Christmas Eve"       # Add new type
+songbook event-type edit christmas --description "Dec 24"      # Edit description
+songbook event-type moments christmas --set "louvor=6"         # Set moments
+songbook event-type remove christmas                           # Remove type
+songbook event-type default --name "Sunday Worship"            # Edit default type
+```
+
+### Binding Songs to Event Types
+
+To restrict a song to specific event types, add an `event_types` column to `database.csv`:
+
+```csv
+song;energy;tags;youtube;event_types
+Youth Song;1;louvor(4);;youth
+Christmas Carol;3;louvor(5);;christmas
+General Song;2;louvor(3);;
+```
+
+- Empty `event_types` = song available for all types (unbound)
+- `event_types=youth` = only available for youth type
+- `event_types=youth,christmas` = available for both
 
 ## Managing Songs
 
@@ -623,15 +684,18 @@ setlist3 = generator.generate("2026-03-29")
 - `repos.songs.get_all()` - Get all songs
 - `repos.songs.get_by_title(title)` - Get single song
 - `repos.songs.search(query)` - Search by title
-- `repos.history.get_all()` - Get all history (most recent first)
-- `repos.history.get_by_date(date, label="")` - Get specific setlist by date+label
-- `repos.history.get_by_date_all(date)` - Get all setlists for a date (all labels)
-- `repos.history.save(setlist)` - Save new setlist
-- `repos.history.exists(date, label="")` - Check if setlist exists
-- `repos.history.delete(date, label="")` - Delete a setlist
+- `repos.history.get_all()` - Get all history (most recent first, all event types)
+- `repos.history.get_by_date(date, label="", event_type="")` - Get specific setlist
+- `repos.history.get_by_date_all(date)` - Get all setlists for a date (all labels/types)
+- `repos.history.save(setlist)` - Save new setlist (routes by event_type)
+- `repos.history.exists(date, label="", event_type="")` - Check if setlist exists
+- `repos.history.delete(date, label="", event_type="")` - Delete a setlist
 - `repos.config.get_moments_config()` - Get service moments
-- `repos.output.save_markdown(date, content, label="")` - Save markdown file
-- `repos.output.delete_outputs(date, label="")` - Delete md + pdf files
+- `repos.output.save_markdown(date, content, label="", event_type="")` - Save markdown
+- `repos.output.delete_outputs(date, label="", event_type="")` - Delete md + pdf files
+- `repos.event_types.get_all()` - Get all event types
+- `repos.event_types.get(slug)` - Get event type by slug
+- `repos.event_types.add(event_type)` - Add new event type
 
 ### Custom Formatting and Saving
 
@@ -924,7 +988,30 @@ songbook generate --date 2026-03-01
 
 Each service will automatically avoid songs used in previous services.
 
-### Example 6: Multiple Services on the Same Day (Labels)
+### Example 6: Event-Type-Specific Service
+
+Generate setlists for a youth service with a custom moments config:
+
+```bash
+# Set up the event type (one-time)
+songbook event-type add youth --name "Youth Service"
+songbook event-type moments youth --set "louvor=5,prelúdio=1,poslúdio=1"
+
+# Generate setlist
+songbook generate -e youth --date 2026-03-20
+
+# View, replace, generate PDF
+songbook view-setlist -e youth --date 2026-03-20 --keys
+songbook replace -e youth --moment louvor --position 3
+songbook pdf -e youth --date 2026-03-20
+```
+
+Output files are saved to subdirectories:
+- `history/youth/2026-03-20.json`
+- `output/youth/2026-03-20.md`
+- `output/youth/2026-03-20.pdf`
+
+### Example 7: Multiple Services on the Same Day (Labels)
 
 When you have morning and evening services on the same date:
 
