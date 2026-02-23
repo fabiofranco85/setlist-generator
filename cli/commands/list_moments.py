@@ -5,10 +5,27 @@ List moments command - display available service moments.
 from library.config import MOMENTS_CONFIG
 
 
-def run():
-    """Display all available service moments."""
+def run(event_type=""):
+    """Display all available service moments.
+
+    Args:
+        event_type: Optional event type slug (shows that type's moments)
+    """
+    # Resolve moments config
+    if event_type:
+        from library import get_repositories
+        from cli.cli_utils import resolve_event_type
+
+        repos = get_repositories()
+        et = resolve_event_type(repos, event_type)
+        moments = et.moments
+        type_label = f" ({et.name})"
+    else:
+        moments = MOMENTS_CONFIG
+        type_label = ""
+
     print("\n" + "=" * 60)
-    print("AVAILABLE SERVICE MOMENTS")
+    print(f"AVAILABLE SERVICE MOMENTS{type_label}")
     print("=" * 60)
     print()
     print(f"{'Moment':<15} {'Songs':<8} {'Description'}")
@@ -23,7 +40,7 @@ def run():
         "poslúdio": "Closing/sending song",
     }
 
-    for moment, count in MOMENTS_CONFIG.items():
+    for moment, count in moments.items():
         desc = descriptions.get(moment, "")
         print(f"{moment:<15} {count:<8} {desc}")
 

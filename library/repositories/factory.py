@@ -22,6 +22,7 @@ from .protocols import (
     HistoryRepository,
     ConfigRepository,
     OutputRepository,
+    EventTypeRepository,
 )
 
 
@@ -38,12 +39,14 @@ class RepositoryContainer:
         history: Repository for setlist history access
         config: Repository for configuration access
         output: Repository for output file generation
+        event_types: Repository for event type management (optional)
     """
 
     songs: SongRepository
     history: HistoryRepository
     config: ConfigRepository
     output: OutputRepository
+    event_types: EventTypeRepository | None = None
 
 
 class RepositoryFactory:

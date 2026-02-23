@@ -62,16 +62,27 @@ uv sync --group postgres
    psql postgresql://user:pass@localhost/songbook -f scripts/schema.sql
    ```
 
-   The schema creates four tables:
+   The schema creates five tables:
 
    | Table | Purpose |
    |-------|---------|
-   | `songs` | Song metadata (title, energy, content, YouTube URL) |
+   | `songs` | Song metadata (title, energy, content, YouTube URL, event_types) |
    | `song_tags` | Normalized moment-weight associations |
-   | `setlists` | Setlist history with JSONB moments |
+   | `setlists` | Setlist history with JSONB moments, event_type, label |
    | `config` | Key-value configuration (JSONB values) |
+   | `event_types` | Event type definitions with JSONB moments |
+
+   Key columns for event types:
+   - `songs.event_types` — `TEXT[] DEFAULT '{}'` (empty = available for all types)
+   - `setlists.event_type` — `TEXT DEFAULT ''` (empty = default type)
+   - `setlists` unique constraint: `(date, event_type, label)`
 
    The schema is idempotent — safe to re-run (`IF NOT EXISTS` / `ON CONFLICT DO NOTHING`).
+
+   **For existing databases**, apply the event types migration:
+   ```bash
+   psql $DATABASE_URL -f scripts/migrate_event_types.sql
+   ```
 
 ### Migrating Existing Data
 

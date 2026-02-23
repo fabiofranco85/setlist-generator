@@ -208,11 +208,8 @@ def build_toc_entries(
     """
     entries = []
 
-    # Iterate through moments in order
-    for moment in MOMENTS_CONFIG.keys():
-        if moment not in setlist.moments:
-            continue
-
+    # Iterate through moments in setlist order
+    for moment in setlist.moments.keys():
         song_list = setlist.moments[moment]
         if not song_list:
             continue
@@ -416,10 +413,7 @@ def build_pdf_content(
     story.append(toc_table)
 
     # Content pages: Each moment starts on a new page
-    for moment in MOMENTS_CONFIG.keys():
-        if moment not in setlist.moments:
-            continue
-
+    for moment in setlist.moments.keys():
         song_list = setlist.moments[moment]
         if not song_list:
             continue
@@ -513,7 +507,8 @@ def calculate_page_numbers(
 
 
 def generate_setlist_pdf(
-    setlist: Setlist, songs: Dict[str, Song], output_path: Path
+    setlist: Setlist, songs: Dict[str, Song], output_path: Path,
+    event_type_name: str = "",
 ) -> None:
     """Generate PDF setlist matching the reference format.
 
@@ -521,20 +516,27 @@ def generate_setlist_pdf(
         setlist: Setlist object with date and moments
         songs: Dictionary mapping song names to Song objects
         output_path: Path where PDF should be saved
+        event_type_name: Optional event type display name for subtitle
     """
     # Format date
     formatted_date = format_date_portuguese(setlist.date)
+    # Build subtitle parts
+    subtitle_parts = []
+    if event_type_name:
+        subtitle_parts.append(event_type_name)
+    subtitle_parts.append(formatted_date)
     if setlist.label:
+        subtitle_parts.append(f"({setlist.label})")
+    formatted_date = " - ".join(subtitle_parts) if event_type_name else formatted_date
+    if not event_type_name and setlist.label:
         formatted_date += f" ({setlist.label})"
 
     # Calculate page numbers (simplified - just use moment starts)
-    # For a more accurate TOC, we could do a two-pass render
+    # Use setlist.moments.keys() for ordering instead of MOMENTS_CONFIG.keys()
     page_map = {}
     current_page = 2  # Page 1 is TOC
 
-    for moment in MOMENTS_CONFIG.keys():
-        if moment not in setlist.moments:
-            continue
+    for moment in setlist.moments.keys():
         song_list = setlist.moments[moment]
         if song_list:
             page_map[moment] = current_page

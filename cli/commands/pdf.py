@@ -9,7 +9,7 @@ from library import (
 )
 
 
-def run(date, output_dir, history_dir, label=""):
+def run(date, output_dir, history_dir, label="", event_type=""):
     """
     Generate PDF from existing setlist history.
 
@@ -18,8 +18,9 @@ def run(date, output_dir, history_dir, label=""):
         output_dir: Custom output directory
         history_dir: Custom history directory
         label: Optional label for multiple setlists per date
+        event_type: Optional event type slug
     """
-    from cli.cli_utils import resolve_paths, handle_error, validate_label, find_setlist_or_fail
+    from cli.cli_utils import resolve_paths, handle_error, validate_label, find_setlist_or_fail, resolve_event_type
 
     label = validate_label(label)
 
@@ -31,22 +32,30 @@ def run(date, output_dir, history_dir, label=""):
     # Load data via repositories
     repos = get_repositories(history_dir=history_dir_path, output_dir=output_dir_path)
 
+    # Resolve event type
+    et = resolve_event_type(repos, event_type)
+    et_slug = event_type
+    et_name = et.name if et and not (et_slug == "" or et_slug == "main") else ""
+
     print("Loading songs...")
     songs = repos.songs.get_all()
     print(f"Loaded {len(songs)} songs")
 
     # Find target setlist
-    target_setlist = find_setlist_or_fail(repos, date, label)
+    target_setlist = find_setlist_or_fail(repos, date, label, event_type=et_slug)
 
     # Convert to Setlist object
     setlist = Setlist(
         date=target_setlist["date"],
         moments=target_setlist["moments"],
         label=target_setlist.get("label", ""),
+        event_type=target_setlist.get("event_type", ""),
     )
 
     # Display what we're generating
     header = f"\nGenerating PDF for {setlist.date}"
+    if et_name:
+        header += f" | {et_name}"
     if setlist.label:
         header += f" ({setlist.label})"
     print(header + "...")
@@ -56,11 +65,11 @@ def run(date, output_dir, history_dir, label=""):
         print(f"  {display_moment}: {', '.join(song_list)}")
 
     # Generate PDF
-    output_dir_path.mkdir(parents=True, exist_ok=True)
-    pdf_path = output_dir_path / f"{setlist.setlist_id}.pdf"
+    pdf_path = repos.output.get_pdf_path(setlist.date, label=setlist.label, event_type=et_slug)
+    pdf_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        generate_setlist_pdf(setlist, songs, pdf_path)
+        generate_setlist_pdf(setlist, songs, pdf_path, event_type_name=et_name)
         print(f"\n✓ PDF saved to: {pdf_path}")
     except ImportError:
         print("\nError: ReportLab library not installed.")

@@ -5,6 +5,7 @@ This module provides file-based implementations of all repository protocols:
 - HistoryRepository: JSON files
 - ConfigRepository: Python constants
 - OutputRepository: Markdown + PDF files
+- EventTypeRepository: JSON file
 
 This is the default backend and maintains backward compatibility with
 the original file-based storage format.
@@ -20,6 +21,7 @@ from .songs import FilesystemSongRepository
 from .history import FilesystemHistoryRepository
 from .config import FilesystemConfigRepository
 from .output import FilesystemOutputRepository
+from .event_types import FilesystemEventTypeRepository
 
 
 class FilesystemRepositoryContainer:
@@ -64,6 +66,7 @@ class FilesystemRepositoryContainer:
             history=FilesystemHistoryRepository(paths.history_dir),
             config=FilesystemConfigRepository(),
             output=FilesystemOutputRepository(paths.output_dir),
+            event_types=FilesystemEventTypeRepository(base_path),
         )
 
 
@@ -73,4 +76,5 @@ __all__ = [
     "FilesystemHistoryRepository",
     "FilesystemConfigRepository",
     "FilesystemOutputRepository",
+    "FilesystemEventTypeRepository",
 ]

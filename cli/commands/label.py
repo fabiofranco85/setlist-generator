@@ -9,7 +9,7 @@ from library import (
 )
 
 
-def run(date, label, to_label, remove, output_dir, history_dir):
+def run(date, label, to_label, remove, output_dir, history_dir, event_type=""):
     """
     Manage setlist labels (add, rename, or remove).
 
@@ -20,8 +20,9 @@ def run(date, label, to_label, remove, output_dir, history_dir):
         remove: Whether to remove the label
         output_dir: Custom output directory
         history_dir: Custom history directory
+        event_type: Optional event type slug
     """
-    from cli.cli_utils import resolve_paths, handle_error, validate_label, find_setlist_or_fail
+    from cli.cli_utils import resolve_paths, handle_error, validate_label, find_setlist_or_fail, resolve_event_type
 
     # --- Validate inputs ---
     if not remove and not to_label:
@@ -46,8 +47,13 @@ def run(date, label, to_label, remove, output_dir, history_dir):
     paths = resolve_paths(output_dir, history_dir)
     repos = get_repositories(history_dir=paths.history_dir, output_dir=paths.output_dir)
 
+    # Resolve event type
+    et = resolve_event_type(repos, event_type)
+    et_slug = event_type
+    et_name = et.name if et and not (et_slug == "" or et_slug == "main") else ""
+
     # --- Load source setlist ---
-    source_dict = find_setlist_or_fail(repos, date, label=label)
+    source_dict = find_setlist_or_fail(repos, date, label=label, event_type=et_slug)
 
     source_desc = f"{date}"
     if label:
@@ -58,7 +64,7 @@ def run(date, label, to_label, remove, output_dir, history_dir):
         target_desc += f" ({new_label})"
 
     # --- Check target doesn't conflict ---
-    if repos.history.exists(date, label=new_label):
+    if repos.history.exists(date, label=new_label, event_type=et_slug):
         target_name = new_label or "(unlabeled)"
         handle_error(
             f"A setlist already exists for {date} with label '{target_name}'.\n"
@@ -74,14 +80,14 @@ def run(date, label, to_label, remove, output_dir, history_dir):
 
     # 2. Regenerate and save markdown
     songs = repos.songs.get_all()
-    markdown = format_setlist_markdown(new_setlist, songs)
-    md_path = repos.output.save_markdown(date, markdown, label=new_label)
+    markdown = format_setlist_markdown(new_setlist, songs, event_type_name=et_name)
+    md_path = repos.output.save_markdown(date, markdown, label=new_label, event_type=et_slug)
 
     # 3. Delete old history
-    repos.history.delete(date, label=label)
+    repos.history.delete(date, label=label, event_type=et_slug)
 
     # 4. Delete old outputs
-    deleted_outputs = repos.output.delete_outputs(date, label=label)
+    deleted_outputs = repos.output.delete_outputs(date, label=label, event_type=et_slug)
 
     # --- Report ---
     if remove:

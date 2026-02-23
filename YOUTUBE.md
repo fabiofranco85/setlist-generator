@@ -106,6 +106,9 @@ songbook youtube --date 2026-02-15
 
 # Create playlist for a labeled setlist
 songbook youtube --date 2026-03-01 --label evening
+
+# Create playlist for an event-type-specific setlist
+songbook youtube --date 2026-03-20 -e youth
 ```
 
 ### First Run Authentication
@@ -193,6 +196,19 @@ YOUTUBE_PLAYLIST_NAME_PATTERN = "Culto {DD.MM.YY}"       # "Culto 15.02.26"
 YOUTUBE_PLAYLIST_NAME_PATTERN = "Worship {YYYY-MM-DD}"    # "Worship 2026-02-15"
 YOUTUBE_PLAYLIST_NAME_PATTERN = "Service {DD.MM.YYYY}"    # "Service 15.02.2026"
 ```
+
+### Event Type and Label in Playlist Name
+
+When using `--event-type` or `--label`, the playlist name includes them:
+
+| Flags | Playlist Name |
+|-------|---------------|
+| (none) | `Culto 15.02.26` |
+| `-e youth` | `Culto 15.02.26 - Youth Service` |
+| `--label evening` | `Culto 15.02.26 (evening)` |
+| `-e youth --label evening` | `Culto 15.02.26 - Youth Service (evening)` |
+
+The event type's display name (not slug) is used in the playlist title.
 
 ## Troubleshooting
 

@@ -39,7 +39,7 @@ class PostgresSongRepository:
             with conn.cursor() as cur:
                 # Load songs
                 cur.execute(
-                    "SELECT title, energy, content, youtube_url FROM songs ORDER BY title"
+                    "SELECT title, energy, content, youtube_url, event_types FROM songs ORDER BY title"
                 )
                 songs_rows = cur.fetchall()
 
@@ -56,13 +56,14 @@ class PostgresSongRepository:
 
         # Build Song objects
         songs: dict[str, Song] = {}
-        for title, energy, content, youtube_url in songs_rows:
+        for title, energy, content, youtube_url, event_types_arr in songs_rows:
             songs[title] = Song(
                 title=title,
                 tags=tags_by_title.get(title, {}),
                 energy=energy if energy is not None else DEFAULT_ENERGY,
                 content=content or "",
                 youtube_url=youtube_url or "",
+                event_types=list(event_types_arr) if event_types_arr else [],
             )
 
         return songs

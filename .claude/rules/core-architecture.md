@@ -6,6 +6,7 @@ This document describes the fundamental architecture and concepts of the setlist
 
 This is a **setlist generator** for church worship services. It intelligently selects songs based on:
 - **Moments/Tags**: Songs are categorized into service moments (prelúdio, louvor, ofertório, saudação, crianças, poslúdio)
+- **Event Types**: Different service types (main, youth, Christmas) with independent moment configurations and song filtering
 - **Weighted preferences**: Each song-moment association can have a weight (1-10, default 3)
 - **Energy-based sequencing**: Songs are ordered by energy level to create emotional arcs (e.g., upbeat → worship)
 - **Recency tracking**: Avoids recently used songs by tracking performance history
@@ -27,47 +28,58 @@ Where:
 ## Data Flow
 
 1. **Load songs** from the configured storage backend (default: `database.csv` + `chords/*.md`)
-2. **Load history** from the storage backend (sorted by date, most recent first; within same date, unlabeled before labeled)
-3. **Calculate recency scores** for all songs using time-based exponential decay (considers full history)
-4. **Generate setlist** by selecting songs for each moment using score-based algorithm
+2. **Filter songs** by event type if specified (unbound songs available for all types; bound songs only for their types)
+3. **Load history** from the storage backend (sorted by date, most recent first; within same date, unlabeled before labeled)
+4. **Calculate recency scores** for all songs using time-based exponential decay (considers full history — global, not per event type)
+5. **Load moments config** from event type (or global `MOMENTS_CONFIG` for default type)
+6. **Generate setlist** by selecting songs for each moment using score-based algorithm
    - If `--label` specified and a base setlist exists for the date, **derive** from the base by replacing a subset of songs
-5. **Apply energy ordering** to multi-song moments (e.g., louvor: 1→4 progression)
-6. **Save results** (filenames use `setlist_id` = `date_label` or just `date` when unlabeled):
+7. **Apply energy ordering** to multi-song moments (e.g., louvor: 1→4 progression)
+8. **Save results** (filenames use `setlist_id` = `date_label` or just `date` when unlabeled):
    - Terminal summary (song titles only)
-   - `output/YYYY-MM-DD[_label].md` (full markdown with chords — always filesystem)
-   - `output/YYYY-MM-DD[_label].pdf` (optional, with `--pdf` flag — always filesystem)
-   - History record (filesystem: `history/YYYY-MM-DD[_label].json`; postgres: `setlists` table)
+   - Output markdown/PDF — routed to subdirectory for non-default event types
+   - History record — routed to subdirectory for non-default event types
+
+**Subdirectory routing**: Default event type files stay at root (backward compat). Non-default types use `history/<event-type>/` and `output/<event-type>/`.
 
 ## File Structure
 
 ```
 .
 ├── database.csv                 # Song database: "song;energy;tags;youtube"
+├── event_types.json             # Event type definitions (auto-created)
 ├── chords/                  # Individual song files with chords
 │   └── <Song Name>.md       # Format: "# Song (Key)\n```\nchords...\n```"
 ├── output/                  # Generated markdown setlists
-│   ├── YYYY-MM-DD.md        # Unlabeled setlist
-│   └── YYYY-MM-DD_label.md  # Labeled setlist (e.g. 2026-03-01_evening.md)
+│   ├── YYYY-MM-DD.md        # Default event type (root)
+│   ├── YYYY-MM-DD_label.md  # Labeled setlist
+│   └── <event-type>/        # Non-default event types (subdirectory)
+│       └── YYYY-MM-DD.md
 ├── history/                 # JSON history tracking
-│   ├── YYYY-MM-DD.json      # Unlabeled setlist
-│   └── YYYY-MM-DD_label.json  # Labeled setlist
+│   ├── YYYY-MM-DD.json      # Default event type (root)
+│   ├── YYYY-MM-DD_label.json  # Labeled setlist
+│   └── <event-type>/        # Non-default event types (subdirectory)
+│       └── YYYY-MM-DD.json
 └── library/                 # Core package (modular architecture)
     ├── __init__.py          # Public API exports
     ├── config.py            # Configuration constants
-    ├── models.py            # Song and Setlist data structures (label + setlist_id)
+    ├── models.py            # Song and Setlist data structures (label + event_type + setlist_id)
+    ├── event_type.py        # Event type model, validation, filtering, load/save
     ├── loader.py            # Tag parsing utilities
     ├── labeler.py           # Setlist label management (add/rename/remove)
     ├── selector.py          # Song selection algorithms
     ├── paths.py             # Path resolution utilities
     ├── ordering.py          # Energy-based ordering
     ├── transposer.py        # Chord transposition (chromatic)
-    ├── generator.py         # Core setlist generation (label-aware)
+    ├── generator.py         # Core setlist generation (label + event-type aware)
     ├── replacer.py          # Song replacement + derive_setlist()
     ├── repositories/        # Data access abstraction layer
-    │   ├── protocols.py     # Repository interfaces (label-aware)
+    │   ├── protocols.py     # Repository interfaces (label + event-type aware)
     │   ├── factory.py       # Backend factory + RepositoryContainer
     │   ├── filesystem/      # Filesystem backend implementation
+    │   │   └── event_types.py  # FilesystemEventTypeRepository
     │   └── postgres/        # PostgreSQL backend (optional, requires psycopg)
+    │       └── event_types.py  # PostgresEventTypeRepository
     ├── formatter.py         # Output formatting (markdown, JSON)
     ├── pdf_formatter.py     # PDF generation (ReportLab)
     └── youtube.py           # YouTube playlist integration
@@ -85,17 +97,18 @@ The codebase is organized into focused modules for better maintainability and re
 
 **Module Responsibilities:**
 - `config.py` - Configuration constants (moments, weights, energy rules)
-- `models.py` - Data structures (Song, Setlist with `label` + `setlist_id` property)
+- `models.py` - Data structures (Song with `event_types`, Setlist with `label` + `event_type` + `setlist_id`)
+- `event_type.py` - EventType dataclass, slug validation, song filtering, load/save event_types.json
 - `loader.py` - Tag parsing utilities (`parse_tags()`)
 - `labeler.py` - Setlist label management (`relabel_setlist()` — add, rename, or remove labels)
 - `selector.py` - Song selection algorithms (scoring, recency calculation, usage queries)
 - `ordering.py` - Energy-based ordering for emotional arcs
 - `transposer.py` - Deterministic chromatic chord transposition (pure functions, `re` only)
-- `generator.py` - Orchestrates the complete setlist generation (includes SetlistGenerator class, label-aware)
+- `generator.py` - Orchestrates the complete setlist generation (includes SetlistGenerator class, label + event-type aware)
 - `replacer.py` - Song replacement, batch replacement, and `derive_setlist()` for creating labeled variants
-- `formatter.py` - Output formatting (markdown, JSON; label in header)
-- `pdf_formatter.py` - PDF generation using ReportLab (label in subtitle)
-- `youtube.py` - YouTube playlist integration (URL parsing, OAuth, API; label in playlist name)
+- `formatter.py` - Output formatting (markdown, JSON; label + event type name in header)
+- `pdf_formatter.py` - PDF generation using ReportLab (label + event type name in subtitle)
+- `youtube.py` - YouTube playlist integration (URL parsing, OAuth, API; label + event type name in playlist name)
 
 ## Hybrid Architecture (Functional + Object-Oriented)
 
@@ -115,6 +128,35 @@ The codebase uses a **hybrid approach** that combines functional and object-orie
 - Stateless transformations (energy ordering, chord transposition)
 - Pure algorithms (score calculation)
 - Simple utilities (formatting)
+
+## Event Types
+
+Event types allow different service formats (e.g., main Sunday service, youth service, Christmas) to have independent moment configurations and song pools.
+
+**Key concepts:**
+- **Default event type** (`main`): Uses global `MOMENTS_CONFIG`. Files at root (backward compat).
+- **Non-default types** (e.g., `youth`): Custom moments config. Files in subdirectories (`history/youth/`, `output/youth/`).
+- **Song binding**: Songs with `event_types=[]` (unbound) are available for ALL types. Songs with `event_types=["youth"]` are only available for youth.
+- **Global recency**: Recency scores are computed across ALL event types (not per-type).
+- **Identity**: A setlist is uniquely identified by `(date, event_type, label)`.
+- **`setlist_id`**: Intentionally excludes `event_type` — subdirectories handle routing.
+
+**EventType dataclass** (`library/event_type.py`):
+```python
+@dataclass
+class EventType:
+    slug: str                  # e.g., "main", "youth"
+    name: str                  # e.g., "Main Event", "Youth Service"
+    description: str = ""      # Human-readable description
+    moments: dict[str, int]    # e.g., {"louvor": 5, "prelúdio": 1}
+    # __post_init__ defaults moments to dict(MOMENTS_CONFIG) if not provided
+```
+
+**Song filtering** (`filter_songs_for_event_type(songs, slug)`):
+- Returns unbound songs + songs explicitly bound to the given slug
+- Empty slug returns only unbound songs
+
+**Storage**: `event_types.json` at the project root (filesystem), or `event_types` table (PostgreSQL).
 
 ## Moments Configuration
 
@@ -360,18 +402,23 @@ songs = repos.songs.get_all()
 - `repos.songs.get_all()` - Get all songs
 - `repos.songs.get_by_title(title)` - Get single song
 - `repos.songs.search(query)` - Search by title
-- `repos.history.get_all()` - Get all history (most recent first)
-- `repos.history.get_by_date(date, label="")` - Get specific setlist by date+label
-- `repos.history.get_by_date_all(date)` - Get all setlists for a date (all labels)
-- `repos.history.save(setlist)` - Save new setlist (uses `setlist.setlist_id` for filename)
-- `repos.history.exists(date, label="")` - Check if setlist exists
-- `repos.history.update(date, data, label="")` - Update setlist data
-- `repos.history.delete(date, label="")` - Delete a setlist (raises KeyError if missing)
+- `repos.history.get_all()` - Get all history (most recent first, across all event types)
+- `repos.history.get_by_date(date, label="", event_type="")` - Get specific setlist
+- `repos.history.get_by_date_all(date)` - Get all setlists for a date (all labels/types)
+- `repos.history.save(setlist)` - Save new setlist (routes to subdirectory by event_type)
+- `repos.history.exists(date, label="", event_type="")` - Check if setlist exists
+- `repos.history.update(date, data, label="", event_type="")` - Update setlist data
+- `repos.history.delete(date, label="", event_type="")` - Delete a setlist
 - `repos.config.get_moments_config()` - Get service moments
-- `repos.output.save_markdown(date, content, label="")` - Save markdown file
-- `repos.output.get_markdown_path(date, label="")` - Get markdown file path
-- `repos.output.get_pdf_path(date, label="")` - Get PDF file path
-- `repos.output.delete_outputs(date, label="")` - Delete md + pdf files (returns deleted paths)
+- `repos.output.save_markdown(date, content, label="", event_type="")` - Save markdown file
+- `repos.output.get_markdown_path(date, label="", event_type="")` - Get markdown file path
+- `repos.output.get_pdf_path(date, label="", event_type="")` - Get PDF file path
+- `repos.output.delete_outputs(date, label="", event_type="")` - Delete md + pdf files
+- `repos.event_types.get_all()` - Get all event types
+- `repos.event_types.get(slug)` - Get event type by slug
+- `repos.event_types.add(event_type)` - Add new event type
+- `repos.event_types.update(slug, **kwargs)` - Update event type fields
+- `repos.event_types.remove(slug)` - Remove event type (cannot remove default)
 
 ### SetlistGenerator Class
 

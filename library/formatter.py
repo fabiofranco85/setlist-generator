@@ -14,18 +14,22 @@ from .models import Song, Setlist
 
 def format_setlist_markdown(
     setlist: Setlist,
-    songs: dict[str, Song]
+    songs: dict[str, Song],
+    event_type_name: str = "",
 ) -> str:
     """Format setlist as markdown with chords.
 
     Args:
         setlist: Setlist object with date and moments
         songs: Dictionary mapping song titles to Song objects
+        event_type_name: Optional event type display name (omitted if empty or default)
 
     Returns:
         Markdown string with full chord content for each song
     """
     header = f"# Setlist - {setlist.date}"
+    if event_type_name:
+        header += f" | {event_type_name}"
     if setlist.label:
         header += f" ({setlist.label})"
     lines = [header, ""]

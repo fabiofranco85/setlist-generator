@@ -30,6 +30,24 @@ class TestSong:
         song = make_song(youtube_url="https://youtu.be/abc123")
         assert song.youtube_url == "https://youtu.be/abc123"
 
+    def test_event_types_default_empty(self):
+        song = Song(title="Test", tags={}, energy=2, content="")
+        assert song.event_types == []
+
+    def test_event_types_custom(self):
+        song = make_song(event_types=["youth", "main"])
+        assert song.event_types == ["youth", "main"]
+
+    def test_is_available_for_event_type_unbound(self):
+        song = make_song(event_types=[])
+        assert song.is_available_for_event_type("youth") is True
+        assert song.is_available_for_event_type("main") is True
+
+    def test_is_available_for_event_type_bound(self):
+        song = make_song(event_types=["youth"])
+        assert song.is_available_for_event_type("youth") is True
+        assert song.is_available_for_event_type("main") is False
+
 
 class TestSetlist:
     def test_to_dict_structure(self, sample_setlist):
@@ -52,3 +70,18 @@ class TestSetlist:
         rebuilt = Setlist(date=d["date"], moments=d["moments"])
         assert rebuilt.date == sample_setlist.date
         assert rebuilt.moments == sample_setlist.moments
+
+    def test_to_dict_omits_event_type_when_empty(self):
+        setlist = Setlist(date="2026-02-15", moments={"louvor": ["A"]})
+        d = setlist.to_dict()
+        assert "event_type" not in d
+
+    def test_to_dict_includes_event_type_when_set(self):
+        setlist = Setlist(date="2026-02-15", moments={"louvor": ["A"]}, event_type="youth")
+        d = setlist.to_dict()
+        assert d["event_type"] == "youth"
+
+    def test_setlist_id_excludes_event_type(self):
+        """setlist_id intentionally excludes event_type — subdirectories handle routing."""
+        setlist = Setlist(date="2026-02-15", moments={}, event_type="youth", label="evening")
+        assert setlist.setlist_id == "2026-02-15_evening"

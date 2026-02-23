@@ -18,7 +18,8 @@ from library.replacer import (
 )
 
 
-def run(moment, position, positions, replacement, date, output_dir, history_dir, verbose=False, label=""):
+def run(moment, position, positions, replacement, date, output_dir, history_dir, verbose=False, label="",
+        event_type=""):
     """
     Replace song in existing setlist.
 
@@ -32,8 +33,9 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir,
         history_dir: Custom history directory
         verbose: Whether to enable debug-level observability output
         label: Optional label for multiple setlists per date
+        event_type: Optional event type slug
     """
-    from cli.cli_utils import resolve_paths, handle_error, print_metrics_summary, validate_label, find_setlist_or_fail
+    from cli.cli_utils import resolve_paths, handle_error, print_metrics_summary, validate_label, find_setlist_or_fail, resolve_event_type
     from library.observability import Observability
 
     obs = Observability.for_cli(level="DEBUG" if verbose else "WARNING")
@@ -44,6 +46,11 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir,
 
     # Load data via repositories
     repos = get_repositories(history_dir=paths.history_dir, output_dir=paths.output_dir)
+
+    # Resolve event type
+    et = resolve_event_type(repos, event_type)
+    et_slug = event_type
+    et_name = et.name if et and not (et_slug == "" or et_slug == "main") else ""
 
     print("Loading songs...")
     songs = repos.songs.get_all()
@@ -59,7 +66,7 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir,
 
     # Find target setlist
     try:
-        setlist_dict = find_target_setlist(history, date, target_label=label)
+        setlist_dict = find_target_setlist(history, date, target_label=label, event_type=et_slug)
         setlist_label = setlist_dict.get("label", "")
         header = f"\nTarget setlist: {setlist_dict['date']}"
         if setlist_label:
@@ -172,10 +179,11 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir,
         date=new_setlist_dict["date"],
         moments=new_setlist_dict["moments"],
         label=new_setlist_dict.get("label", ""),
+        event_type=new_setlist_dict.get("event_type", ""),
     )
 
     # Save markdown
-    markdown = format_setlist_markdown(setlist_obj, songs)
+    markdown = format_setlist_markdown(setlist_obj, songs, event_type_name=et_name)
     output_path = paths.output_dir / f"{setlist_obj.setlist_id}.md"
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(markdown)

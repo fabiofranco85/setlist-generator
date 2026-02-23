@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from .config import MOMENTS_CONFIG
+from .event_type import filter_songs_for_event_type
 from .models import Song, Setlist
 from .ordering import apply_energy_ordering
 from .selector import calculate_recency_scores, select_songs_for_moment
@@ -88,6 +89,8 @@ class SetlistGenerator:
         date: str,
         overrides: dict[str, list[str]] | None = None,
         label: str = "",
+        event_type: str = "",
+        moments_config: dict[str, int] | None = None,
     ) -> Setlist:
         """
         Generate a complete setlist for all moments.
@@ -96,17 +99,25 @@ class SetlistGenerator:
             date: Date for this setlist
             overrides: Optional manual song overrides per moment
             label: Optional label for multiple setlists per date
+            event_type: Optional event type slug for song filtering
+            moments_config: Optional moments configuration override
+                (defaults to MOMENTS_CONFIG)
 
         Returns:
             Setlist object with selected songs
         """
+        config = moments_config or MOMENTS_CONFIG
+
+        # Filter songs by event type if specified
+        available = filter_songs_for_event_type(self.songs, event_type) if event_type else self.songs
+
         with self.obs.tracer.span("generate_setlist", date=date):
-            self.obs.logger.info("Generating setlist", date=date, songs=len(self.songs))
+            self.obs.logger.info("Generating setlist", date=date, songs=len(available))
 
             with self.obs.metrics.timer("generate_duration"):
-                # Calculate recency scores using the target date
+                # Calculate recency scores using ALL history (global recency)
                 self._recency_scores = calculate_recency_scores(
-                    self.songs,
+                    available,
                     self.history,
                     current_date=date
                 )
@@ -115,9 +126,9 @@ class SetlistGenerator:
                 self._already_selected = set()
                 self._moments = {}
 
-                # Generate songs for each moment
-                for moment, count in MOMENTS_CONFIG.items():
-                    self._generate_moment(moment, count, overrides)
+                # Generate songs for each moment using the event type's config
+                for moment, count in config.items():
+                    self._generate_moment(moment, count, overrides, available)
 
             self.obs.metrics.counter("setlists_generated")
             self.obs.logger.info(
@@ -126,13 +137,14 @@ class SetlistGenerator:
                 moments=len(self._moments),
             )
 
-        return Setlist(date=date, moments=self._moments, label=label)
+        return Setlist(date=date, moments=self._moments, label=label, event_type=event_type)
 
     def _generate_moment(
         self,
         moment: str,
         count: int,
-        overrides: dict[str, list[str]] | None
+        overrides: dict[str, list[str]] | None,
+        songs: dict[str, Song] | None = None,
     ) -> None:
         """
         Select and order songs for a specific moment.
@@ -141,7 +153,9 @@ class SetlistGenerator:
             moment: The moment name (e.g., "louvor", "prelúdio")
             count: Number of songs needed
             overrides: Optional manual song overrides per moment
+            songs: Available songs (defaults to self.songs)
         """
+        available = songs if songs is not None else self.songs
         moment_overrides = overrides.get(moment) if overrides else None
         override_count = len(moment_overrides) if moment_overrides else 0
 
@@ -149,7 +163,7 @@ class SetlistGenerator:
         selected_with_energy = select_songs_for_moment(
             moment,
             count,
-            self.songs,
+            available,
             self._recency_scores,
             self._already_selected,  # Mutated internally
             moment_overrides
@@ -170,6 +184,8 @@ def generate_setlist(
     overrides: dict[str, list[str]] | None = None,
     obs: Any = None,
     label: str = "",
+    event_type: str = "",
+    moments_config: dict[str, int] | None = None,
 ) -> Setlist:
     """
     Generate a complete setlist for all moments.
@@ -184,9 +200,14 @@ def generate_setlist(
         overrides: Optional manual song overrides per moment
         obs: Observability container (defaults to noop)
         label: Optional label for multiple setlists per date
+        event_type: Optional event type slug for song filtering
+        moments_config: Optional moments configuration override
 
     Returns:
         Setlist object with selected songs
     """
     generator = SetlistGenerator(songs, history, obs=obs)
-    return generator.generate(date, overrides, label=label)
+    return generator.generate(
+        date, overrides, label=label,
+        event_type=event_type, moments_config=moments_config,
+    )

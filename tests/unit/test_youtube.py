@@ -115,14 +115,13 @@ class TestResolveSetlistVideos:
         title, vid = next((t, v) for t, v in result if t == "Missing")
         assert vid is None
 
-    def test_moment_order_follows_config(self):
-        """Songs should appear in MOMENTS_CONFIG iteration order."""
-        from library.config import MOMENTS_CONFIG
-
+    def test_moment_order_follows_setlist(self):
+        """Songs should appear in the setlist's moment iteration order."""
         songs = {
             "A": make_song(title="A", youtube_url="https://youtu.be/a", tags={"prelúdio": 3}),
             "B": make_song(title="B", youtube_url="https://youtu.be/b", tags={"louvor": 3}),
         }
+        # Setlist has louvor first, prelúdio second
         setlist = {
             "moments": {
                 "louvor": ["B"],
@@ -131,9 +130,16 @@ class TestResolveSetlistVideos:
         }
         result = resolve_setlist_videos(setlist, songs)
         titles = [t for t, _ in result]
-        # prelúdio comes before louvor in MOMENTS_CONFIG
-        moments_order = list(MOMENTS_CONFIG.keys())
-        pre_idx = moments_order.index("prelúdio")
-        lou_idx = moments_order.index("louvor")
-        if pre_idx < lou_idx:
-            assert titles.index("A") < titles.index("B")
+        # Should follow setlist moment order (louvor before prelúdio)
+        assert titles == ["B", "A"]
+
+        # Reverse order in setlist
+        setlist_reversed = {
+            "moments": {
+                "prelúdio": ["A"],
+                "louvor": ["B"],
+            },
+        }
+        result_reversed = resolve_setlist_videos(setlist_reversed, songs)
+        titles_reversed = [t for t, _ in result_reversed]
+        assert titles_reversed == ["A", "B"]

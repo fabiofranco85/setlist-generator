@@ -14,6 +14,7 @@ Backends:
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
+from ..event_type import EventType
 from ..models import Song, Setlist
 
 
@@ -95,12 +96,13 @@ class HistoryRepository(Protocol):
         """
         ...
 
-    def get_by_date(self, date: str, label: str = "") -> dict | None:
-        """Get a setlist by date and optional label.
+    def get_by_date(self, date: str, label: str = "", event_type: str = "") -> dict | None:
+        """Get a setlist by date, optional label, and optional event type.
 
         Args:
             date: Date string in YYYY-MM-DD format
             label: Optional label for multiple setlists per date
+            event_type: Optional event type slug (empty = default type)
 
         Returns:
             Setlist dictionary if found, None otherwise
@@ -126,48 +128,52 @@ class HistoryRepository(Protocol):
         """
         ...
 
-    def update(self, date: str, setlist_dict: dict, label: str = "") -> None:
+    def update(self, date: str, setlist_dict: dict, label: str = "", event_type: str = "") -> None:
         """Update an existing setlist in history.
 
         Args:
             date: Date string identifying the setlist
             setlist_dict: Updated setlist dictionary
             label: Optional label for multiple setlists per date
+            event_type: Optional event type slug (empty = default type)
 
         Raises:
-            KeyError: If no setlist exists for the given date/label
+            KeyError: If no setlist exists for the given date/label/event_type
         """
         ...
 
-    def exists(self, date: str, label: str = "") -> bool:
-        """Check if a setlist exists for a date and optional label.
+    def exists(self, date: str, label: str = "", event_type: str = "") -> bool:
+        """Check if a setlist exists for a date, optional label, and event type.
 
         Args:
             date: Date string in YYYY-MM-DD format
             label: Optional label for multiple setlists per date
+            event_type: Optional event type slug (empty = default type)
 
         Returns:
             True if setlist exists, False otherwise
         """
         ...
 
-    def delete(self, date: str, label: str = "") -> None:
-        """Delete a setlist by date and optional label.
+    def delete(self, date: str, label: str = "", event_type: str = "") -> None:
+        """Delete a setlist by date, optional label, and event type.
 
         Args:
             date: Date string in YYYY-MM-DD format
             label: Optional label for multiple setlists per date
+            event_type: Optional event type slug (empty = default type)
 
         Raises:
-            KeyError: If no setlist exists for the given date/label
+            KeyError: If no setlist exists for the given date/label/event_type
         """
         ...
 
-    def get_by_date_all(self, date: str) -> list[dict]:
-        """Get all setlists for a date (all labels).
+    def get_by_date_all(self, date: str, event_type: str = "") -> list[dict]:
+        """Get all setlists for a date (all labels) within an event type.
 
         Args:
             date: Date string in YYYY-MM-DD format
+            event_type: Optional event type slug (empty = default type)
 
         Returns:
             List of setlist dictionaries for the given date,
@@ -244,13 +250,14 @@ class OutputRepository(Protocol):
     Outputs include markdown files and PDF files.
     """
 
-    def save_markdown(self, date: str, content: str, label: str = "") -> Path:
+    def save_markdown(self, date: str, content: str, label: str = "", event_type: str = "") -> Path:
         """Save setlist as markdown file.
 
         Args:
             date: Setlist date (used for filename)
             content: Markdown content to save
             label: Optional label for multiple setlists per date
+            event_type: Optional event type slug (empty = default type)
 
         Returns:
             Path to the saved file
@@ -269,38 +276,112 @@ class OutputRepository(Protocol):
         """
         ...
 
-    def get_markdown_path(self, date: str, label: str = "") -> Path:
+    def get_markdown_path(self, date: str, label: str = "", event_type: str = "") -> Path:
         """Get the path where markdown would be saved for a date.
 
         Args:
             date: Setlist date
             label: Optional label for multiple setlists per date
+            event_type: Optional event type slug (empty = default type)
 
         Returns:
             Path where markdown file would be saved
         """
         ...
 
-    def delete_outputs(self, date: str, label: str = "") -> list[Path]:
+    def delete_outputs(self, date: str, label: str = "", event_type: str = "") -> list[Path]:
         """Delete markdown and PDF output files for a setlist.
 
         Args:
             date: Setlist date
             label: Optional label for multiple setlists per date
+            event_type: Optional event type slug (empty = default type)
 
         Returns:
             List of paths that were actually deleted (may be empty)
         """
         ...
 
-    def get_pdf_path(self, date: str, label: str = "") -> Path:
+    def get_pdf_path(self, date: str, label: str = "", event_type: str = "") -> Path:
         """Get the path where PDF would be saved for a date.
 
         Args:
             date: Setlist date
             label: Optional label for multiple setlists per date
+            event_type: Optional event type slug (empty = default type)
 
         Returns:
             Path where PDF file would be saved
+        """
+        ...
+
+
+@runtime_checkable
+class EventTypeRepository(Protocol):
+    """Interface for event type data access.
+
+    Implementations must provide methods for CRUD operations on event types.
+    Event types define different service configurations with their own moments.
+    """
+
+    def get_all(self) -> dict[str, EventType]:
+        """Get all event types indexed by slug.
+
+        Returns:
+            Dictionary mapping slugs to EventType objects
+        """
+        ...
+
+    def get(self, slug: str) -> EventType | None:
+        """Get a single event type by slug.
+
+        Args:
+            slug: Event type slug
+
+        Returns:
+            EventType if found, None otherwise
+        """
+        ...
+
+    def get_default_slug(self) -> str:
+        """Get the default event type slug.
+
+        Returns:
+            The default event type slug (typically "main")
+        """
+        ...
+
+    def add(self, event_type: EventType) -> None:
+        """Add a new event type.
+
+        Args:
+            event_type: EventType object to add
+
+        Raises:
+            ValueError: If slug already exists
+        """
+        ...
+
+    def update(self, slug: str, **kwargs) -> None:
+        """Update an existing event type.
+
+        Args:
+            slug: Event type slug to update
+            **kwargs: Fields to update (name, description, moments)
+
+        Raises:
+            KeyError: If event type doesn't exist
+        """
+        ...
+
+    def remove(self, slug: str) -> None:
+        """Remove an event type.
+
+        Args:
+            slug: Event type slug to remove
+
+        Raises:
+            KeyError: If event type doesn't exist
+            ValueError: If trying to remove the default type
         """
         ...
