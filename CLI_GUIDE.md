@@ -20,10 +20,12 @@ Complete guide to all `songbook` CLI commands.
   - [pdf](#pdf---generate-pdf-from-setlist)
   - [markdown](#markdown---regenerate-markdown-from-setlist)
   - [youtube](#youtube---create-youtube-playlist)
+- [Examples and Workflows](#examples-and-workflows)
 - [Data Maintenance Commands](#data-maintenance-commands)
   - [cleanup](#cleanup---check-data-quality)
   - [fix-punctuation](#fix-punctuation---normalize-punctuation)
   - [import-history](#import-history---import-external-data)
+- [Troubleshooting](#troubleshooting)
 - [Shell Completion](#shell-completion)
 
 ## Installation
@@ -1069,6 +1071,140 @@ URL: https://www.youtube.com/playlist?list=PLxxxxxxxxxxxxxxxxxxx
 
 ---
 
+## Examples and Workflows
+
+### Regular Sunday Service
+
+```bash
+# Generate markdown only
+songbook generate --date 2026-02-15
+
+# Generate markdown + PDF
+songbook generate --date 2026-02-15 --pdf
+```
+
+### Themed Service (Prayer Focus)
+
+Force prayer-focused songs:
+
+```bash
+songbook generate \
+  --date 2026-02-22 \
+  --override "louvor:Lugar Secreto,Mais Que Uma Voz,Jesus Em Tua Presença"
+```
+
+The system will:
+- Use your 3 specified louvor songs **in the exact order you provided**
+- Pick 1 more louvor song automatically (sorted by energy with other auto-selected songs)
+- Fill all other moments with smart selection
+
+### Special Music Request
+
+Someone requested "Oceanos" for their birthday:
+
+```bash
+songbook generate \
+  --date 2026-03-01 \
+  --override "louvor:Oceanos"
+```
+
+The system ensures Oceanos is included while selecting 3 other louvor songs automatically.
+
+### Preview Next Month
+
+Plan ahead without affecting history:
+
+```bash
+songbook generate --date 2026-03-15 --no-save
+```
+
+Review the output, and if you don't like it, run again for a different selection. When satisfied, run without `--no-save`.
+
+### Back-to-Back Services
+
+Generate multiple services:
+
+```bash
+songbook generate --date 2026-02-15
+songbook generate --date 2026-02-22
+songbook generate --date 2026-03-01
+```
+
+Each service will automatically avoid songs used in previous services.
+
+### Planning Multiple Services (Batch)
+
+```bash
+# Plan next 4 Sundays
+for date in 2026-02-01 2026-02-08 2026-02-15 2026-02-22; do
+  songbook generate --date $date
+done
+
+# Review all setlists
+songbook view-setlist --date 2026-02-01
+songbook view-setlist --date 2026-02-08
+```
+
+### Event-Type-Specific Service
+
+Generate setlists for a youth service with a custom moments config:
+
+```bash
+# Set up the event type (one-time)
+songbook event-type add youth --name "Youth Service"
+songbook event-type moments youth --set "louvor=5,prelúdio=1,poslúdio=1"
+
+# Generate setlist
+songbook generate -e youth --date 2026-03-20
+
+# View, replace, generate PDF
+songbook view-setlist -e youth --date 2026-03-20 --keys
+songbook replace -e youth --moment louvor --position 3
+songbook pdf -e youth --date 2026-03-20
+```
+
+Output files are saved to subdirectories:
+- `history/youth/2026-03-20.json`
+- `output/youth/2026-03-20.md`
+- `output/youth/2026-03-20.pdf`
+
+### Multiple Services on the Same Day (Labels)
+
+When you have morning and evening services on the same date:
+
+```bash
+# Generate the primary (morning) setlist
+songbook generate --date 2026-03-01
+
+# Derive an evening variant (replaces some songs automatically)
+songbook generate --date 2026-03-01 --label evening
+
+# Derive replacing exactly 3 songs
+songbook generate --date 2026-03-01 --label evening --replace 3
+
+# Derive replacing all songs
+songbook generate --date 2026-03-01 --label evening --replace all
+```
+
+This creates two separate files:
+- `history/2026-03-01.json` (primary/morning)
+- `history/2026-03-01_evening.json` (evening variant)
+
+View or manage labeled setlists by adding `--label`:
+```bash
+songbook view-setlist --date 2026-03-01 --label evening
+songbook replace --moment louvor --position 2 --date 2026-03-01 --label evening
+songbook pdf --date 2026-03-01 --label evening
+```
+
+Rename or remove labels after creation:
+```bash
+songbook label --date 2026-03-01 --label evening --to night  # Rename
+songbook label --date 2026-03-01 --label night --remove      # Remove
+```
+
+---
+
 ## Data Maintenance Commands
 
 ### `cleanup` - Check Data Quality
@@ -1200,6 +1336,125 @@ songbook cleanup
 # Step 6: Test generation with real data
 songbook generate --date 2026-03-01 --no-save
 ```
+
+---
+
+## Troubleshooting
+
+### Problem: Song not appearing in setlists
+
+**Possible causes:**
+
+1. **Song was recently used**
+   - Check recent usage with `songbook info "Song Name"`
+   - Songs used within the last 30-45 days are heavily penalized
+   - Use `--override` to force it if needed
+
+2. **Tag/weight issue**
+   - Verify song is in `database.csv`
+   - Check if weight is too low (try increasing to 4-5)
+
+3. **Wrong moment tag**
+   - Ensure the moment tag matches: `prelúdio`, `ofertório`, `saudação`, `crianças`, `louvor`, `poslúdio`
+
+4. **Not enough songs in that moment**
+   - Check if you have enough songs tagged for that moment in `database.csv`
+
+### Problem: Error "File not found: chords/Song.md"
+
+The song is in `database.csv` but the chord file is missing or misnamed.
+
+**Solution:**
+- Create `chords/Song Name.md` with exact spelling
+- Check for typos in file name vs. `database.csv` entry
+- Ensure file extension is `.md` not `.txt`
+
+### Problem: Same songs appearing repeatedly
+
+**Solutions:**
+
+1. **Increase recency decay period** in `library/config.py`:
+   ```python
+   RECENCY_DECAY_DAYS = 60  # Instead of 45 (slower cycling)
+   # Or even 90 for maximum variety
+   ```
+
+2. **Add more songs** to `database.csv` for variety
+
+3. **Adjust weights** - lower weights on overused songs:
+   ```csv
+   # Before
+   Oceanos;3;louvor(5)
+
+   # After
+   Oceanos;3;louvor(3)
+   ```
+
+### Problem: Too many/few songs for a moment
+
+Edit `MOMENTS_CONFIG` in `library/config.py`:
+
+```python
+MOMENTS_CONFIG = {
+    "prelúdio": 1,
+    "ofertório": 1,
+    "saudação": 1,
+    "crianças": 1,
+    "louvor": 5,      # Changed from 4 to 5
+    "poslúdio": 1,
+}
+```
+
+### Problem: Songs in the wrong energy order
+
+If you want to disable energy ordering and use score-based order only:
+
+Edit `library/config.py`:
+```python
+ENERGY_ORDERING_ENABLED = False
+```
+
+Or if energy classifications seem wrong, update individual songs in `database.csv`:
+```csv
+# Before
+Hosana;1;louvor  # Classified as upbeat (wrong!)
+
+# After
+Hosana;3;louvor  # Corrected to reflective (right!)
+```
+
+### Problem: Override songs are being re-ordered
+
+This is expected behavior! Override songs maintain **your exact order**, but you might be seeing auto-selected songs sorted by energy.
+
+**Example:**
+```bash
+--override "louvor:Lugar Secreto,Hosana"
+# Output: Lugar Secreto, Hosana, [auto-song-1], [auto-song-2]
+# ✓ Your overrides stay in order
+# ✓ Auto-selected songs are energy-sorted
+```
+
+If you want complete control over order, override all songs for that moment:
+```bash
+--override "louvor:Song1,Song2,Song3,Song4"  # All 4 louvor songs
+```
+
+### Problem: Wrong date in output
+
+The script uses today's date by default. Always specify the date:
+
+```bash
+songbook generate --date 2026-02-15
+```
+
+### Problem: Encoding errors (special characters)
+
+This project uses UTF-8 encoding for Portuguese characters (ã, ç, é, etc.).
+
+Ensure your editor/terminal supports UTF-8:
+- VSCode: Check bottom-right corner shows "UTF-8"
+- Terminal: Should support UTF-8 by default on macOS/Linux
 
 ---
 

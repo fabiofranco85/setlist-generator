@@ -26,9 +26,7 @@ An intelligent setlist generator for church worship services that automatically 
 - [Storage Backends](#storage-backends)
 - [Programmatic Usage](#programmatic-usage)
 - [Output Files](#output-files)
-- [Examples](#examples)
-- [Data Maintenance](#data-maintenance)
-- [Troubleshooting](#troubleshooting)
+- [Notes](#-notes)
 
 ## Installation
 
@@ -117,24 +115,7 @@ This will:
 4. Save the output to `output/YYYY-MM-DD.md` (markdown with chords)
 5. Save history for recency tracking
 
-**Common commands:**
-
-```bash
-songbook generate --pdf              # Generate setlist with PDF
-songbook generate --label evening    # Derive labeled variant from primary
-songbook view-setlist --keys         # View latest setlist with keys
-songbook view-setlist --label evening  # View labeled setlist
-songbook view-song "Oceanos"         # View song details
-songbook info "Oceanos"              # Show song statistics
-songbook replace --moment louvor --position 2  # Replace a song
-songbook label --date 2026-03-01 --to evening  # Add/rename/remove label
-songbook transpose "Oceanos" --to G  # Transpose chords (preview)
-songbook pdf                         # Generate PDF from existing setlist
-songbook youtube                     # Create YouTube playlist
-songbook event-type list             # List event types
-songbook event-type add youth --name "Youth Service"  # Add event type
-songbook generate -e youth           # Generate for event type
-```
+For a full list of commands and usage examples, see the **[CLI Command Reference](./CLI_GUIDE.md)**.
 
 ## CLI Commands
 
@@ -218,23 +199,7 @@ The generator will likely pick: Oceanos, A Casa é Sua, and two other high-scori
 
 Event types let you run different service formats (e.g., main Sunday service, youth service, Christmas celebration) with independent moment configurations and song pools.
 
-### Quick Start
-
-```bash
-# Create a new event type
-songbook event-type add youth --name "Youth Service" --description "Friday evening"
-
-# Set custom moments (fewer moments, more louvor songs)
-songbook event-type moments youth --set "louvor=5,prelúdio=1,poslúdio=1"
-
-# Generate a setlist for the youth service
-songbook generate -e youth --date 2026-03-20
-
-# All other commands accept -e / --event-type
-songbook view-setlist -e youth --date 2026-03-20 --keys
-songbook replace -e youth --moment louvor --position 2
-songbook pdf -e youth --date 2026-03-20
-```
+For CLI commands to create and manage event types, see the **[CLI Command Reference](./CLI_GUIDE.md#event-type---manage-event-types)**.
 
 ### How It Works
 
@@ -242,18 +207,7 @@ songbook pdf -e youth --date 2026-03-20
 - **Non-default types** (e.g., `youth`): Have their own moments config. Files save to subdirectories (`history/youth/`, `output/youth/`).
 - **Song binding**: By default, all songs are available for all event types. You can restrict songs to specific types by adding an `event_types` column to `database.csv`.
 - **Global recency**: Song recency is computed across ALL event types, so a song used in the youth service affects its freshness for the main service too.
-- **Labels still work**: Event type and label are orthogonal — you can combine them: `songbook generate -e youth --label evening`.
-
-### Managing Event Types
-
-```bash
-songbook event-type list                                       # List all types
-songbook event-type add christmas --name "Christmas Eve"       # Add new type
-songbook event-type edit christmas --description "Dec 24"      # Edit description
-songbook event-type moments christmas --set "louvor=6"         # Set moments
-songbook event-type remove christmas                           # Remove type
-songbook event-type default --name "Sunday Worship"            # Edit default type
-```
+- **Labels still work**: Event type and label are orthogonal — you can combine them.
 
 ### Binding Songs to Event Types
 
@@ -870,298 +824,7 @@ Machine-readable format for tracking which songs were used.
 
 **Purpose**: The generator reads this history to avoid repeating songs too soon. Both labeled and unlabeled setlists contribute to recency scoring. With the filesystem backend, history is stored as JSON files; with PostgreSQL, it's stored in the `setlists` table.
 
-## Examples
-
-### Example 1: Regular Sunday Service
-
-```bash
-# Generate markdown only
-songbook generate --date 2026-02-15
-
-# Generate markdown + PDF
-songbook generate --date 2026-02-15 --pdf
-```
-
-**Output**:
-```
-Loading songs...
-Loaded 54 songs
-Loading history...
-Found 12 historical setlists
-
-Generating setlist...
-
-==================================================
-SETLIST FOR 2026-02-15
-==================================================
-
-PRELÚDIO:
-  - Abra os olhos do meu coração
-
-OFERTÓRIO:
-  - Agradeço
-
-SAUDAÇÃO:
-  - Corpo e Família
-
-CRIANÇAS:
-  - Deus Grandão
-
-LOUVOR:
-  - Santo Pra Sempre
-  - Oceanos
-  - Consagração
-  - Aos Pés da Cruz
-
-POSLÚDIO:
-  - Vou Seguir Com Fé
-
-Markdown saved to: output/2026-02-15.md
-History saved to: history/2026-02-15.json
-```
-
-**Note**: The louvor songs are automatically ordered by energy level:
-- Santo de Deus (energy 1) - upbeat celebration
-- Hosana (energy 3) - reflective
-- Consagração (energy 4) - contemplative
-- Aos Pés da Cruz (energy 4) - deep worship
-
-This creates a natural emotional arc from high energy to intimate worship.
-
-### Example 2: Themed Service (Prayer Focus)
-
-Force prayer-focused songs:
-
-```bash
-songbook generate \
-  --date 2026-02-22 \
-  --override "louvor:Lugar Secreto,Mais Que Uma Voz,Jesus Em Tua Presença"
-```
-
-The system will:
-- Use your 3 specified louvor songs **in the exact order you provided**
-- Pick 1 more louvor song automatically (sorted by energy with other auto-selected songs)
-- Fill all other moments with smart selection
-
-**Example output:**
-```
-LOUVOR:
-  - Lugar Secreto      (your override - energy 4)
-  - Mais Que Uma Voz   (your override - energy 3)
-  - Jesus Em Tua Presença (your override - energy 3)
-  - Oceanos            (auto-selected - energy 3)
-```
-
-**Note**: Your override songs (first 3) maintain the exact order you specified, even though they're not energy-sorted. Only the auto-selected song (Oceanos) follows energy ordering rules.
-
-### Example 3: Special Music Request
-
-Someone requested "Oceanos" for their birthday:
-
-```bash
-songbook generate \
-  --date 2026-03-01 \
-  --override "louvor:Oceanos"
-```
-
-The system ensures Oceanos is included while selecting 3 other louvor songs automatically.
-
-### Example 4: Preview Next Month
-
-Plan ahead without affecting history:
-
-```bash
-songbook generate --date 2026-03-15 --no-save
-```
-
-Review the output, and if you don't like it, run again for a different selection. When satisfied, run without `--no-save`.
-
-### Example 5: Back-to-Back Services
-
-Generate multiple services:
-
-```bash
-songbook generate --date 2026-02-15
-songbook generate --date 2026-02-22
-songbook generate --date 2026-03-01
-```
-
-Each service will automatically avoid songs used in previous services.
-
-### Example 6: Event-Type-Specific Service
-
-Generate setlists for a youth service with a custom moments config:
-
-```bash
-# Set up the event type (one-time)
-songbook event-type add youth --name "Youth Service"
-songbook event-type moments youth --set "louvor=5,prelúdio=1,poslúdio=1"
-
-# Generate setlist
-songbook generate -e youth --date 2026-03-20
-
-# View, replace, generate PDF
-songbook view-setlist -e youth --date 2026-03-20 --keys
-songbook replace -e youth --moment louvor --position 3
-songbook pdf -e youth --date 2026-03-20
-```
-
-Output files are saved to subdirectories:
-- `history/youth/2026-03-20.json`
-- `output/youth/2026-03-20.md`
-- `output/youth/2026-03-20.pdf`
-
-### Example 7: Multiple Services on the Same Day (Labels)
-
-When you have morning and evening services on the same date:
-
-```bash
-# Generate the primary (morning) setlist
-songbook generate --date 2026-03-01
-
-# Derive an evening variant (replaces some songs automatically)
-songbook generate --date 2026-03-01 --label evening
-
-# Derive replacing exactly 3 songs
-songbook generate --date 2026-03-01 --label evening --replace 3
-
-# Derive replacing all songs
-songbook generate --date 2026-03-01 --label evening --replace all
-```
-
-This creates two separate files:
-- `history/2026-03-01.json` (primary/morning)
-- `history/2026-03-01_evening.json` (evening variant)
-
-View or manage labeled setlists by adding `--label`:
-```bash
-songbook view-setlist --date 2026-03-01 --label evening
-songbook replace --moment louvor --position 2 --date 2026-03-01 --label evening
-songbook pdf --date 2026-03-01 --label evening
-```
-
-Rename or remove labels after creation:
-```bash
-songbook label --date 2026-03-01 --label evening --to night  # Rename
-songbook label --date 2026-03-01 --label night --remove      # Remove
-```
-
-## Troubleshooting
-
-### Problem: Song not appearing in setlists
-
-**Possible causes:**
-
-1. **Song was recently used**
-   - Check recent usage with `songbook info "Song Name"`
-   - Songs used within the last 30-45 days are heavily penalized
-   - Use `--override` to force it if needed
-
-2. **Tag/weight issue**
-   - Verify song is in `database.csv`
-   - Check if weight is too low (try increasing to 4-5)
-
-3. **Wrong moment tag**
-   - Ensure the moment tag matches: `prelúdio`, `ofertório`, `saudação`, `crianças`, `louvor`, `poslúdio`
-
-4. **Not enough songs in that moment**
-   - Check if you have enough songs tagged for that moment in `database.csv`
-
-### Problem: Error "File not found: chords/Song.md"
-
-The song is in `database.csv` but the chord file is missing or misnamed.
-
-**Solution:**
-- Create `chords/Song Name.md` with exact spelling
-- Check for typos in file name vs. `database.csv` entry
-- Ensure file extension is `.md` not `.txt`
-
-### Problem: Same songs appearing repeatedly
-
-**Solutions:**
-
-1. **Increase recency decay period** in `library/config.py`:
-   ```python
-   RECENCY_DECAY_DAYS = 60  # Instead of 45 (slower cycling)
-   # Or even 90 for maximum variety
-   ```
-
-2. **Add more songs** to `database.csv` for variety
-
-3. **Adjust weights** - lower weights on overused songs:
-   ```csv
-   # Before
-   Oceanos;3;louvor(5)
-
-   # After
-   Oceanos;3;louvor(3)
-   ```
-
-### Problem: Too many/few songs for a moment
-
-Edit `MOMENTS_CONFIG` in `library/config.py`:
-
-```python
-MOMENTS_CONFIG = {
-    "prelúdio": 1,
-    "ofertório": 1,
-    "saudação": 1,
-    "crianças": 1,
-    "louvor": 5,      # Changed from 4 to 5
-    "poslúdio": 1,
-}
-```
-
-### Problem: Songs in the wrong energy order
-
-If you want to disable energy ordering and use score-based order only:
-
-Edit `library/config.py`:
-```python
-ENERGY_ORDERING_ENABLED = False
-```
-
-Or if energy classifications seem wrong, update individual songs in `database.csv`:
-```csv
-# Before
-Hosana;1;louvor  # Classified as upbeat (wrong!)
-
-# After
-Hosana;3;louvor  # Corrected to reflective (right!)
-```
-
-### Problem: Override songs are being re-ordered
-
-This is expected behavior! Override songs maintain **your exact order**, but you might be seeing auto-selected songs sorted by energy.
-
-**Example:**
-```bash
---override "louvor:Lugar Secreto,Hosana"
-# Output: Lugar Secreto, Hosana, [auto-song-1], [auto-song-2]
-# ✓ Your overrides stay in order
-# ✓ Auto-selected songs are energy-sorted
-```
-
-If you want complete control over order, override all songs for that moment:
-```bash
---override "louvor:Song1,Song2,Song3,Song4"  # All 4 louvor songs
-```
-
-### Problem: Wrong date in output
-
-The script uses today's date by default. Always specify the date:
-
-```bash
-songbook generate --date 2026-02-15
-```
-
-### Problem: Encoding errors (special characters)
-
-This project uses UTF-8 encoding for Portuguese characters (ã, ç, é, etc.).
-
-Ensure your editor/terminal supports UTF-8:
-- VSCode: Check bottom-right corner shows "UTF-8"
-- Terminal: Should support UTF-8 by default on macOS/Linux
+For usage examples, common workflows, and troubleshooting, see the **[CLI Command Reference](./CLI_GUIDE.md#examples-and-workflows)**.
 
 ## 📝 Notes
 
@@ -1218,21 +881,7 @@ rm history/*.json
 psql $DATABASE_URL -c "DELETE FROM setlists"
 ```
 
-## Advanced Workflows
-
-### Workflow 1: Planning Multiple Services
-
-```bash
-# Plan next 4 Sundays
-for date in 2026-02-01 2026-02-08 2026-02-15 2026-02-22; do
-  songbook generate --date $date
-done
-
-# Review all setlists
-cat output/2026-02-*.md
-```
-
-### Workflow 2: Seasonal Adjustments
+### Seasonal Weight Adjustments
 
 For the Christmas season, increase weights on Christmas songs:
 
@@ -1247,56 +896,30 @@ Noite de Paz;4;louvor(7),prelúdio(6)
 Noite de Paz;4;louvor(2),prelúdio(2)
 ```
 
-**Note**: Energy levels (column 2) typically stay the same as they reflect the song's intrinsic character, not seasonal preference. Adjust weights (in tags) to change selection frequency.
+Energy levels (column 2) typically stay the same as they reflect the song's intrinsic character, not seasonal preference. Adjust weights (in tags) to change selection frequency.
 
-### Workflow 3: Testing New Songs
+### Testing New Songs
 
-Add new songs with low weights initially:
+Add new songs with low weights initially, then increase as the congregation learns them:
 
 ```csv
-# New upbeat song - start with low weight
+# New song - start low
 New Song;1;louvor(1)  # Energy 1 (upbeat), weight 1 (rarely selected)
-```
 
-After the congregation learns it, increase weight:
-```csv
-# Congregation knows it now - increase weight
-New Song;1;louvor(3)  # Energy stays 1, weight now 3 (normal selection)
-```
+# Congregation knows it - normal weight
+New Song;1;louvor(3)  # Energy stays 1, weight now 3
 
-After it becomes a favorite:
-```csv
-# Everyone loves it - increase weight more
-New Song;1;louvor(5)  # Energy still 1, weight now 5 (frequent selection)
+# Becomes a favorite - high weight
+New Song;1;louvor(5)  # Energy still 1, weight now 5
 ```
 
 **Key principle**: Energy (column 2) defines the song's character and rarely changes. Weight (in tags) controls selection frequency and can be adjusted based on congregation familiarity.
 
-## Data Maintenance
-
-The project includes utility commands to help maintain data quality and import external data.
-
-**Common maintenance tasks:**
-
-```bash
-songbook cleanup            # Verify history files match database.csv
-songbook fix-punctuation    # Normalize punctuation variations
-songbook import-history     # Import external setlist data
-```
-
-**When to run cleanup:**
-- After importing external data
-- Monthly as a health check
-- When songs seem to be repeating unexpectedly
-- Before making major changes to database.csv
-
-For detailed documentation on data maintenance commands, workflows, and troubleshooting, see the [CLI Command Reference (CLI_GUIDE.md)](./CLI_GUIDE.md#data-maintenance-commands).
-
 ## Support
 
 For issues or questions:
-1. Check this README's Troubleshooting section
-2. Review `CLAUDE.md` for technical details
+1. Check the [CLI Troubleshooting guide](./CLI_GUIDE.md#troubleshooting)
+2. Review this README's configuration and song management sections
 3. Check the generated output files for clues
 
 ## License
