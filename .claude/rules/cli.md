@@ -31,8 +31,11 @@ songbook generate -e youth           # Generate for event type
 songbook view-setlist --keys         # View setlist with keys
 songbook view-setlist --label evening  # View labeled setlist
 songbook view-song "Oceanos"         # View song details
+songbook view-song                   # Interactive song picker
 songbook info "Oceanos"              # Song statistics and history
+songbook info                        # Interactive picker → statistics
 songbook replace --moment louvor --position 2  # Replace song
+songbook replace --moment louvor --position 2 --pick  # Interactive picker
 songbook replace --moment louvor --position 2 --label evening  # Replace in labeled
 songbook label --date 2026-03-01 --to evening  # Add label to setlist
 songbook label --date 2026-03-01 --label evening --to night  # Rename label
@@ -170,10 +173,13 @@ Displays:
 
 ### songbook view-song
 
-View a specific song's lyrics, chords, and metadata.
+View a specific song's lyrics, chords, and metadata. When called without a song name, opens an interactive picker.
 
 **Usage:**
 ```bash
+# Interactive picker (when no song name given)
+songbook view-song
+
 # View a specific song's lyrics and chords
 songbook view-song "Oceanos"
 
@@ -202,6 +208,8 @@ Displays:
 - When target key matches original: "Already in X — showing original."
 
 **Features:**
+- Interactive picker when called without a song name (searchable menu with `/`, arrow keys, `Esc` to cancel)
+- Falls back to numbered list when terminal is non-interactive
 - Smart search: If song not found, suggests similar songs based on partial name match
 - Fuzzy matching for typos and partial names
 - Transposition preserves chord-lyric column alignment
@@ -211,10 +219,13 @@ Displays:
 
 ### songbook info
 
-Show detailed statistics for a song: metadata, recency score, and full usage history.
+Show detailed statistics for a song: metadata, recency score, and full usage history. When called without a song name, opens an interactive picker.
 
 **Usage:**
 ```bash
+# Interactive picker (when no song name given)
+songbook info
+
 # View statistics for a song
 songbook info "Oceanos"
 
@@ -223,7 +234,7 @@ songbook info "ocean"
 ```
 
 **Arguments:**
-- `SONG_NAME` - Name of the song to look up (supports tab completion)
+- `SONG_NAME` - Optional. Name of the song to look up (supports tab completion). Opens interactive picker if omitted.
 
 **Output:**
 Displays:
@@ -311,6 +322,10 @@ Replace songs in a previously generated setlist.
 # Auto-select replacement for position 2 in louvor
 songbook replace --moment louvor --position 2
 
+# Interactive picker filtered to louvor songs
+songbook replace --moment louvor --position 2 --pick
+songbook replace --moment louvor --position 2 -p
+
 # Manual replacement with specific song
 songbook replace --moment louvor --position 2 --with "Oceanos"
 
@@ -332,6 +347,7 @@ songbook replace --moment louvor --position 2 -e youth
 - `--position N` - Position to replace (1-indexed, default: 1)
 - `--positions N,N` - Multiple positions (comma-separated). Cannot be used with `--position`
 - `--with SONG` - Manual replacement song (auto-select if omitted)
+- `--pick` or `-p` - Interactively pick replacement song (single position only, cannot combine with `--with` or `--positions`)
 - `--date YYYY-MM-DD` - Target date (default: latest)
 - `--event-type TEXT` or `-e` - Event type slug
 - `--label TEXT` or `-l` - Setlist label
@@ -339,7 +355,8 @@ songbook replace --moment louvor --position 2 -e youth
 - `--history-dir PATH` - Custom history directory
 
 **Behavior:**
-- **Auto mode** (no `--with`): System selects best available song based on recency and weights
+- **Auto mode** (no `--with`, no `--pick`): System selects best available song based on recency and weights
+- **Pick mode** (`--pick`): Opens searchable menu filtered to the target moment, excluding songs already in setlist
 - **Manual mode** (`--with "Song"`): Uses specified song (validates existence and moment tag)
 - **Energy reordering**: Always reapplied after replacement to maintain emotional arc
 - **Batch mode** (`--positions`): Replaces multiple songs at once, ensures no duplicates
@@ -780,6 +797,7 @@ songbook cleanup             # Verify (should show 0 issues)
 
 **Check song statistics:**
 ```bash
+songbook info                        # Interactive picker → statistics
 songbook info "Oceanos"              # Recency, history, metadata
 ```
 

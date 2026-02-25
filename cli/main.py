@@ -138,7 +138,11 @@ def view_song(song_name, list, no_metadata, transpose_to):
     """View song lyrics, chords, and metadata.
 
     \b
+    When called without a song name, opens an interactive picker.
+
+    \b
     Examples:
+      songbook view-song                   # interactive picker
       songbook view-song "Oceanos"
       songbook view-song --list
       songbook view-song "Hosana" --no-metadata
@@ -150,15 +154,17 @@ def view_song(song_name, list, no_metadata, transpose_to):
 
 
 @cli.command()
-@click.argument("song_name", shell_complete=complete_song_names)
+@click.argument("song_name", required=False, shell_complete=complete_song_names)
 def info(song_name):
     """Show detailed statistics for a song.
 
     \b
     Displays metadata, recency score, and full usage history.
+    When called without a song name, opens an interactive picker.
 
     \b
     Examples:
+      songbook info                # interactive picker
       songbook info "Oceanos"
       songbook info "Hosana"
     """
@@ -206,13 +212,14 @@ def list_moments(event_type):
 @click.option("--position", type=int, help="Position to replace (1-indexed)")
 @click.option("--positions", help="Multiple positions (comma-separated)")
 @click.option("--with", "replacement", shell_complete=complete_song_names, help="Manual song selection")
+@click.option("--pick", "-p", is_flag=True, help="Interactively pick replacement song")
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
 @click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
 @click.option("--event-type", "-e", default="", help="Event type slug")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
 @click.pass_context
-def replace(ctx, moment, position, positions, replacement, date, label, event_type, output_dir, history_dir):
+def replace(ctx, moment, position, positions, replacement, pick, date, label, event_type, output_dir, history_dir):
     """Replace song in existing setlist.
 
     \b
@@ -220,11 +227,13 @@ def replace(ctx, moment, position, positions, replacement, date, label, event_ty
       songbook replace --moment prelúdio
       songbook replace --moment louvor --position 2
       songbook replace --moment louvor --position 2 --with "Oceanos"
+      songbook replace --moment louvor --position 2 --pick
       songbook replace --moment louvor --position 2 -e youth
     """
     from cli.commands.replace import run
     run(moment, position, positions, replacement, date, output_dir, history_dir,
-        verbose=ctx.obj.get("verbose", False), label=label, event_type=event_type)
+        verbose=ctx.obj.get("verbose", False), label=label, event_type=event_type,
+        pick=pick)
 
 
 @cli.command()

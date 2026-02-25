@@ -19,17 +19,11 @@ def list_all_songs(songs: dict):
     # Group by tags if available
     song_list = sorted(songs.keys())
 
+    from cli.picker import extract_key
+
     for song_name in song_list:
         song = songs[song_name]
-        # Try to extract key from content
-        key = ""
-        if song.content:
-            first_line = song.content.split("\n")[0].strip()
-            if "(" in first_line and ")" in first_line:
-                start = first_line.rfind("(")
-                end = first_line.rfind(")")
-                if start != -1 and end != -1 and end > start:
-                    key = first_line[start + 1 : end].strip()
+        key = extract_key(song.content)
 
         # Show tags
         tags_str = ", ".join(song.tags.keys()) if song.tags else "no tags"
@@ -215,14 +209,12 @@ def run(song_name, list_songs, no_metadata, transpose_to=None):
         list_all_songs(songs)
         return
 
-    # Require song name if not listing
+    # Require song name if not listing — launch picker if interactive
     if not song_name:
-        print("Error: Please provide a song name or use --list to see all songs.")
-        print()
-        print("Usage:")
-        print("  songbook view-song \"Song Name\"")
-        print("  songbook view-song --list")
-        raise SystemExit(1)
+        from cli.picker import pick_song
+        song_name = pick_song(songs)
+        if not song_name:
+            raise SystemExit(0)
 
     # Display the song
     exit_code = display_song(song_name, songs, show_metadata=not no_metadata,

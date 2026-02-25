@@ -19,7 +19,7 @@ from library.replacer import (
 
 
 def run(moment, position, positions, replacement, date, output_dir, history_dir, verbose=False, label="",
-        event_type=""):
+        event_type="", pick=False):
     """
     Replace song in existing setlist.
 
@@ -34,9 +34,16 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir,
         verbose: Whether to enable debug-level observability output
         label: Optional label for multiple setlists per date
         event_type: Optional event type slug
+        pick: Whether to use interactive picker for replacement
     """
     from cli.cli_utils import resolve_paths, handle_error, print_metrics_summary, validate_label, find_setlist_or_fail, resolve_event_type
     from library.observability import Observability
+
+    if pick and replacement:
+        handle_error("Cannot use --pick and --with together. Use one or the other.")
+
+    if pick and positions:
+        handle_error("Cannot use --pick with --positions. Use --pick with a single --position.")
 
     obs = Observability.for_cli(level="DEBUG" if verbose else "WARNING")
     label = validate_label(label)
@@ -121,6 +128,29 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir,
 
             print(f"\nReplacing '{old_song}' at position {positions_list[0]}...")
 
+            # Interactive picker: let user choose replacement
+            if pick:
+                from cli.picker import pick_song
+
+                # Build exclusion set: all songs currently in setlist except the one being replaced
+                exclude = set()
+                for m, slist in setlist_dict["moments"].items():
+                    for i, s in enumerate(slist):
+                        if m == moment and i == pos:
+                            continue
+                        exclude.add(s)
+
+                picked = pick_song(
+                    songs,
+                    title=f"Pick replacement for '{old_song}' ({moment} #{positions_list[0]}):",
+                    moment_filter=moment,
+                    exclude=exclude,
+                )
+                if not picked:
+                    print("Cancelled.")
+                    raise SystemExit(0)
+                replacement = picked
+
             # Select replacement
             replacement_song = select_replacement_song(
                 moment=moment,
@@ -131,7 +161,7 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir,
                 manual_replacement=replacement
             )
 
-            mode = "manual" if replacement else "auto"
+            mode = "pick" if pick else ("manual" if replacement else "auto")
             print(f"Selected replacement ({mode}): '{replacement_song}'")
 
             # Apply replacement

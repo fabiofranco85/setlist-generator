@@ -315,6 +315,9 @@ View a specific song's lyrics and chords without opening files.
 **Usage:**
 
 ```bash
+# Interactive picker (when no song name given)
+songbook view-song
+
 # View a specific song
 songbook view-song "Oceanos"
 
@@ -358,14 +361,17 @@ G         D       A
 ```
 
 **Features:**
+- **Interactive picker**: When called without a song name, opens a searchable menu (type `/` to search, arrow keys to navigate, `Esc`/`q` to cancel)
 - Displays full chord notation and lyrics
 - Shows song metadata (tags, energy level)
 - Smart search: suggests similar songs if name not found
 - List all songs with `--list` flag
 - Transpose to any key with `--transpose` (display-only, never modifies files)
+- Falls back to a numbered list when the terminal is non-interactive (e.g., piped input)
 
 **Use cases:**
 - Quickly reference chords during practice
+- Browse and select songs without knowing exact names
 - Check song key before rehearsal
 - Review lyrics without opening files
 - Find songs by partial name match
@@ -416,6 +422,22 @@ The system will:
 - Exclude songs already in the setlist
 - Choose the next best candidate
 - Reorder by energy to maintain emotional arc
+
+**Interactive Picker (`--pick`):**
+
+Browse and select a replacement from a searchable menu, filtered to the target moment:
+
+```bash
+# Open picker filtered to louvor songs
+songbook replace --moment louvor --position 2 --pick
+songbook replace --moment louvor --position 2 -p
+```
+
+The picker:
+- Only shows songs tagged for the target moment
+- Excludes songs already in the setlist
+- Supports `/` to search, arrow keys to navigate, `Esc`/`q` to cancel
+- Cannot be combined with `--with` or `--positions`
 
 **Manual Replacement:**
 
@@ -504,6 +526,7 @@ Both are completely regenerated to reflect the updated setlist.
 | `--position N` | Position to replace (1-indexed, default: 1) |
 | `--positions N,M,..` | Replace multiple positions (auto mode only) |
 | `--with "SONG"` | Manual replacement with specific song |
+| `--pick`, `-p` | Interactively pick replacement song (single position only) |
 | `--output-dir DIR` | Custom output directory |
 | `--history-dir DIR` | Custom history directory |
 
@@ -628,6 +651,10 @@ View detailed statistics for any song, including metadata, recency score, and fu
 **Usage:**
 
 ```bash
+# Interactive picker (when no song name given)
+songbook info
+
+# View statistics for a specific song
 songbook info "Oceanos"
 ```
 
@@ -655,12 +682,15 @@ USAGE HISTORY (2 time(s))
 ```
 
 **Features:**
+- **Interactive picker**: When called without a song name, opens a searchable menu (type `/` to search, arrow keys to navigate, `Esc`/`q` to cancel)
 - Shows song key, energy level, and moment tags with weights
 - Displays recency score (0.00 = just used, 1.00 = never used / very long ago)
 - Lists every date the song was used and in which moment
 - Smart search: suggests similar songs if name not found
+- Falls back to a numbered list when the terminal is non-interactive
 
 **Use cases:**
+- Browse songs and check their statistics without knowing exact names
 - Check when a song was last used before adding it to an override
 - Understand why a song keeps or doesn't keep appearing in setlists
 - Review a song's full performance history

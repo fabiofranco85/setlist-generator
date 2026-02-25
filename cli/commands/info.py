@@ -10,20 +10,7 @@ from library import (
 )
 
 
-def _extract_key(content: str) -> str:
-    """Extract key from chord file first line (### Title (Key) pattern)."""
-    if not content:
-        return ""
-    first_line = content.split("\n")[0].strip()
-    if "(" in first_line and ")" in first_line:
-        start = first_line.rfind("(")
-        end = first_line.rfind(")")
-        if start != -1 and end != -1 and end > start:
-            return first_line[start + 1 : end].strip()
-    return ""
-
-
-def run(song_name: str):
+def run(song_name: str | None = None):
     """Show detailed statistics for a song."""
     from cli.cli_utils import handle_error
 
@@ -36,6 +23,13 @@ def run(song_name: str):
 
     if not songs:
         handle_error("No songs found.")
+
+    # Launch picker if no song name provided
+    if not song_name:
+        from cli.picker import pick_song
+        song_name = pick_song(songs)
+        if not song_name:
+            raise SystemExit(0)
 
     # Look up the song
     song = songs.get(song_name)
@@ -64,7 +58,8 @@ def run(song_name: str):
     history = repos.history.get_all()
 
     # Extract key from chord content
-    key = _extract_key(song.content)
+    from cli.picker import extract_key
+    key = extract_key(song.content)
 
     # Calculate recency
     recency_scores = calculate_recency_scores(songs, history)

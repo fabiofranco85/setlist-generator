@@ -49,8 +49,11 @@ songbook generate --label evening --replace 3  # Derive replacing 3 songs
 songbook view-setlist --keys         # View setlist with keys
 songbook view-setlist --label evening  # View labeled setlist
 songbook view-song "Oceanos"         # View song details
+songbook view-song                   # Interactive song picker
 songbook info "Oceanos"              # Song statistics and history
+songbook info                        # Interactive picker → statistics
 songbook replace --moment louvor --position 2  # Replace song
+songbook replace --moment louvor --position 2 --pick  # Interactive picker
 songbook replace --moment louvor --position 2 --label evening  # Replace in labeled
 songbook label --date 2026-03-01 --to evening  # Add label to setlist
 songbook label --date 2026-03-01 --label evening --to night  # Rename label
@@ -122,6 +125,7 @@ This is a **setlist generator** for church worship services. It intelligently se
 │   └── migrate_to_postgres.py  # Filesystem → PostgreSQL migration
 └── cli/                         # CLI interface
     ├── main.py                 # Entry point
+    ├── picker.py               # Interactive song picker (searchable menu)
     └── commands/               # Command implementations
 ```
 
@@ -180,6 +184,7 @@ songbook generate --date 2026-03-01 --label evening --replace all  # Replace all
 **Replace a song:**
 ```bash
 songbook replace --moment louvor --position 2
+songbook replace --moment louvor --position 2 --pick            # Interactive picker
 songbook replace --moment louvor --position 2 --with "Oceanos"  # Manual
 songbook replace --moment louvor --position 2 --label evening   # In labeled setlist
 ```
@@ -203,6 +208,7 @@ songbook event-type default --name "Sunday Worship"            # Edit default ty
 
 **Song statistics:**
 ```bash
+songbook info            # Interactive picker → statistics
 songbook info "Oceanos"  # Metadata, recency, and usage history
 ```
 
@@ -322,6 +328,7 @@ STORAGE_BACKEND=postgres DATABASE_URL=postgresql://user:pass@host/db songbook ge
 
 - Python 3.12+
 - Standard library (no external dependencies for core functionality)
+- `simple-term-menu` for interactive song picker (CLI)
 - Optional: `reportlab` for PDF generation
 - Optional: `psycopg[binary,pool]>=3.1` for PostgreSQL backend
 - Optional: `uv` for package management
