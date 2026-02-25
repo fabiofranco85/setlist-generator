@@ -229,7 +229,10 @@ Add YouTube URLs to the `youtube` column in `database.csv` for at least some son
 
 ### Token expired or invalid
 
-Delete `.youtube_token.json` and run the command again. A new browser authentication will be triggered.
+The system automatically re-authenticates when a cached token has expired or been revoked.
+A browser window will open for you to authorize the application again.
+
+If automatic re-authentication fails, delete the token file manually and retry:
 
 ```bash
 rm .youtube_token.json

@@ -166,8 +166,13 @@ def get_credentials(
     # Refresh or re-authenticate
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
+            try:
+                creds.refresh(Request())
+            except Exception:
+                # Refresh token expired/revoked — fall through to re-auth
+                creds = None
+
+        if creds is None:
             flow = InstalledAppFlow.from_client_secrets_file(
                 str(secrets_file), SCOPES
             )

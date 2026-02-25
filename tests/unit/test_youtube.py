@@ -1,4 +1,6 @@
-"""Tests for library.youtube — pure functions (no API calls)."""
+"""Tests for library.youtube — pure functions and credential handling."""
+
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -143,3 +145,89 @@ class TestResolveSetlistVideos:
         result_reversed = resolve_setlist_videos(setlist_reversed, songs)
         titles_reversed = [t for t, _ in result_reversed]
         assert titles_reversed == ["A", "B"]
+
+
+# ---------------------------------------------------------------------------
+# get_credentials — refresh failure fallthrough
+# ---------------------------------------------------------------------------
+
+
+class TestGetCredentialsRefreshFallthrough:
+    """When cached token refresh fails, get_credentials should re-authenticate."""
+
+    @patch("google_auth_oauthlib.flow.InstalledAppFlow")
+    @patch("google.oauth2.credentials.Credentials")
+    def test_refresh_failure_triggers_reauth(
+        self, mock_creds_cls, mock_flow_cls, tmp_path
+    ):
+        """If creds.refresh() raises, fall through to InstalledAppFlow."""
+        from library.youtube import get_credentials
+
+        # Set up fake client_secrets and token files
+        secrets_file = tmp_path / "client_secrets.json"
+        secrets_file.write_text("{}")
+        token_file = tmp_path / ".youtube_token.json"
+        token_file.write_text("{}")
+
+        # Mock expired credentials whose refresh() raises
+        expired_creds = MagicMock()
+        expired_creds.valid = False
+        expired_creds.expired = True
+        expired_creds.refresh_token = "old-refresh-token"
+        expired_creds.refresh.side_effect = Exception("Token has been revoked")
+        mock_creds_cls.from_authorized_user_file.return_value = expired_creds
+
+        # Mock the re-auth flow
+        fresh_creds = MagicMock()
+        fresh_creds.to_json.return_value = '{"token": "new"}'
+        mock_flow = MagicMock()
+        mock_flow.run_local_server.return_value = fresh_creds
+        mock_flow_cls.from_client_secrets_file.return_value = mock_flow
+
+        result = get_credentials(
+            client_secrets_path=str(secrets_file),
+            token_path=str(token_file),
+        )
+
+        # Should have attempted refresh
+        expired_creds.refresh.assert_called_once()
+        # Should have fallen through to browser flow
+        mock_flow.run_local_server.assert_called_once_with(port=0)
+        # Should return the fresh credentials
+        assert result is fresh_creds
+        # Token file should be updated
+        assert token_file.read_text() == '{"token": "new"}'
+
+    @patch("google_auth_oauthlib.flow.InstalledAppFlow")
+    @patch("google.oauth2.credentials.Credentials")
+    def test_successful_refresh_skips_reauth(
+        self, mock_creds_cls, mock_flow_cls, tmp_path
+    ):
+        """If creds.refresh() succeeds, do not launch browser flow."""
+        from library.youtube import get_credentials
+
+        secrets_file = tmp_path / "client_secrets.json"
+        secrets_file.write_text("{}")
+        token_file = tmp_path / ".youtube_token.json"
+        token_file.write_text("{}")
+
+        # Mock expired credentials whose refresh() succeeds
+        refreshed_creds = MagicMock()
+        refreshed_creds.valid = False
+        refreshed_creds.expired = True
+        refreshed_creds.refresh_token = "valid-refresh-token"
+        refreshed_creds.refresh.return_value = None  # success
+        refreshed_creds.to_json.return_value = '{"token": "refreshed"}'
+        mock_creds_cls.from_authorized_user_file.return_value = refreshed_creds
+
+        result = get_credentials(
+            client_secrets_path=str(secrets_file),
+            token_path=str(token_file),
+        )
+
+        # Should have refreshed successfully
+        refreshed_creds.refresh.assert_called_once()
+        # Should NOT have launched browser flow
+        mock_flow_cls.from_client_secrets_file.assert_not_called()
+        # Should return the refreshed credentials
+        assert result is refreshed_creds
