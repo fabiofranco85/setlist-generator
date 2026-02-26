@@ -134,12 +134,12 @@ The codebase uses a **hybrid approach** that combines functional and object-orie
 Event types allow different service formats (e.g., main Sunday service, youth service, Christmas) to have independent moment configurations and song pools.
 
 **Key concepts:**
-- **Default event type** (`main`): Uses global `MOMENTS_CONFIG`. Files at root (backward compat).
-- **Non-default types** (e.g., `youth`): Custom moments config. Files in subdirectories (`history/youth/`, `output/youth/`).
+- **Default event type** (`main`): Uses global `MOMENTS_CONFIG`. Data stored at root level (backward compat).
+- **Non-default types** (e.g., `youth`): Custom moments config. Data stored under event type name (e.g., `history/youth/`, `output/youth/` on filesystem).
 - **Song binding**: Songs with `event_types=[]` (unbound) are available for ALL types. Songs with `event_types=["youth"]` are only available for youth.
 - **Global recency**: Recency scores are computed across ALL event types (not per-type).
 - **Identity**: A setlist is uniquely identified by `(date, event_type, label)`.
-- **`setlist_id`**: Intentionally excludes `event_type` — subdirectories handle routing.
+- **`setlist_id`**: Intentionally excludes `event_type` — the repository layer handles routing by event type.
 
 **EventType dataclass** (`library/event_type.py`):
 ```python

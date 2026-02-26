@@ -203,8 +203,8 @@ For CLI commands to create and manage event types, see the **[CLI Command Refere
 
 ### How It Works
 
-- **Default event type** (`main`): Uses the global `MOMENTS_CONFIG`. Files are saved at root (`history/`, `output/`) for backward compatibility.
-- **Non-default types** (e.g., `youth`): Have their own moments config. Files save to subdirectories (`history/youth/`, `output/youth/`).
+- **Default event type** (`main`): Uses the global `MOMENTS_CONFIG`. Data is stored at the root level for backward compatibility (e.g., `history/` and `output/` with the filesystem backend).
+- **Non-default types** (e.g., `youth`): Have their own moments config. Data is stored under the event type name (e.g., `history/youth/` and `output/youth/` with the filesystem backend).
 - **Song binding**: By default, all songs are available for all event types. You can restrict songs to specific types by adding an `event_types` column to `database.csv`.
 - **Global recency**: Song recency is computed across ALL event types, so a song used in the youth service affects its freshness for the main service too.
 - **Labels still work**: Event type and label are orthogonal — you can combine them.
