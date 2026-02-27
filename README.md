@@ -205,13 +205,13 @@ For CLI commands to create and manage event types, see the **[CLI Command Refere
 
 - **Default event type** (`main`): Uses the global `MOMENTS_CONFIG`. With the filesystem backend, data is stored at the root level (e.g., `history/` and `output/`).
 - **Non-default types** (e.g., `youth`): Have their own moments config. Data is stored under the event type name (e.g., `history/youth/` and `output/youth/` with the filesystem backend).
-- **Song binding**: By default, all songs are available for all event types. You can restrict songs to specific types by adding an `event_types` column to `database.csv`.
+- **Song binding**: By default, all songs are available for all event types. You can restrict songs to specific types by adding an `event_types` column to `database.csv` (filesystem backend) or through the `event_types` field in your database (PostgreSQL backend).
 - **Global recency**: Song recency is computed across ALL event types, so a song used in the youth service affects its freshness for the main service too.
 - **Labels still work**: Event type and label are orthogonal — you can combine them.
 
 ### Binding Songs to Event Types
 
-To restrict a song to specific event types, add an `event_types` column to `database.csv`:
+To restrict a song to specific event types, add an `event_types` column to `database.csv` (filesystem backend) or set the `event_types` field when inserting songs into your database (PostgreSQL backend):
 
 ```csv
 song;energy;tags;youtube;event_types
@@ -225,6 +225,8 @@ General Song;2;louvor(3);;
 - `event_types=youth,christmas` = available for both
 
 ## Managing Songs
+
+> **Note**: The instructions in this section apply to the default **filesystem backend** (`database.csv` and `chords/` files). For the PostgreSQL backend, songs are managed directly through database tables. See [Storage Backends](./STORAGE_BACKENDS.md) for details.
 
 ### Song Database: `database.csv`
 
@@ -565,7 +567,7 @@ DEFAULT_WEIGHT = 3  # Default weight when not specified in tags
    }
    ```
 
-2. Add songs with the new tag in `database.csv`:
+2. Add songs with the new tag to your song database. With the filesystem backend, edit `database.csv`:
    ```csv
    Lugar Secreto;4;meditação
    ```
