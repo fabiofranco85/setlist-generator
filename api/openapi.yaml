@@ -1,0 +1,1314 @@
+openapi: 3.1.0
+info:
+  title: Songbook API
+  description: Multi-tenant church worship setlist generator API
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: songs
+    description: Song CRUD, fork, search, share, and transpose
+  - name: setlists
+    description: Setlist generation, viewing, replacement, and derivation
+  - name: event-types
+    description: Event type CRUD
+  - name: labels
+    description: Setlist label management
+  - name: sharing
+    description: Song sharing workflow (user → org → global)
+  - name: config
+    description: Organization config overrides
+  - name: admin
+    description: System admin endpoints
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: health
+      security: []
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                required: [status]
+
+  # ── Songs ─────────────────────────────────────────────────────────
+
+  /songs:
+    get:
+      tags: [songs]
+      summary: List all songs in the effective library
+      operationId: listSongs
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+      responses:
+        "200":
+          description: Array of songs (without chord content)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SongResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      tags: [songs]
+      summary: Create a new song
+      operationId: createSong
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SongCreate"
+      responses:
+        "200":
+          description: Created song
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SongResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /songs/search:
+    get:
+      tags: [songs]
+      summary: Search songs by title
+      operationId: searchSongs
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: Search query
+      responses:
+        "200":
+          description: Matching songs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SongResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /songs/{title}:
+    get:
+      tags: [songs]
+      summary: Get song details including chords
+      operationId: getSong
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - $ref: "#/components/parameters/SongTitle"
+      responses:
+        "200":
+          description: Song with chord content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SongResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      tags: [songs]
+      summary: Update song fields
+      operationId: updateSong
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - $ref: "#/components/parameters/SongTitle"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SongUpdate"
+      responses:
+        "200":
+          description: Updated song
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SongResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [songs]
+      summary: Delete a song
+      operationId: deleteSong
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - $ref: "#/components/parameters/SongTitle"
+      responses:
+        "200":
+          description: Deletion confirmation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetailMessage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /songs/{title}/fork:
+    post:
+      tags: [songs]
+      summary: Fork a song with modifications
+      operationId: forkSong
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - $ref: "#/components/parameters/SongTitle"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SongFork"
+      responses:
+        "200":
+          description: Forked song
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SongResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /songs/{title}/share:
+    post:
+      tags: [songs]
+      summary: Share a user-level song to org visibility
+      operationId: shareSong
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - $ref: "#/components/parameters/SongTitle"
+      responses:
+        "200":
+          description: Share confirmation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetailMessage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /songs/{title}/transpose:
+    post:
+      tags: [songs]
+      summary: Preview a song transposed to a different key
+      operationId: transposeSong
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - $ref: "#/components/parameters/SongTitle"
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Target key (e.g. G, Am, Bb)
+      responses:
+        "200":
+          description: Transposed content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransposeResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /songs/{title}/info:
+    get:
+      tags: [songs]
+      summary: Get song statistics and usage history
+      operationId: songInfo
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - $ref: "#/components/parameters/SongTitle"
+      responses:
+        "200":
+          description: Song metadata and usage stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SongInfoResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Setlists ──────────────────────────────────────────────────────
+
+  /setlists:
+    get:
+      tags: [setlists]
+      summary: List setlists
+      operationId: listSetlists
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - name: label
+          in: query
+          schema:
+            type: string
+          description: Filter by label
+        - name: event_type
+          in: query
+          schema:
+            type: string
+          description: Filter by event type slug
+      responses:
+        "200":
+          description: Array of setlists
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SetlistResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /setlists/generate:
+    post:
+      tags: [setlists]
+      summary: Generate a new setlist
+      operationId: generateSetlist
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateRequest"
+      responses:
+        "200":
+          description: Generated setlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetlistResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /setlists/{date}:
+    get:
+      tags: [setlists]
+      summary: Get a specific setlist by date
+      operationId: getSetlist
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - $ref: "#/components/parameters/SetlistDate"
+        - $ref: "#/components/parameters/LabelQuery"
+        - $ref: "#/components/parameters/EventTypeQuery"
+      responses:
+        "200":
+          description: Setlist details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetlistResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /setlists/{date}/replace:
+    post:
+      tags: [setlists]
+      summary: Replace a song in a setlist
+      operationId: replaceSong
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - $ref: "#/components/parameters/SetlistDate"
+        - $ref: "#/components/parameters/LabelQuery"
+        - $ref: "#/components/parameters/EventTypeQuery"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplaceRequest"
+      responses:
+        "200":
+          description: Updated setlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetlistResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /setlists/{date}/derive:
+    post:
+      tags: [setlists]
+      summary: Derive a labeled variant from an existing setlist
+      operationId: deriveSetlist
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - $ref: "#/components/parameters/SetlistDate"
+        - $ref: "#/components/parameters/EventTypeQuery"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeriveRequest"
+      responses:
+        "200":
+          description: Derived setlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetlistResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /setlists/{date}/pdf:
+    get:
+      tags: [setlists]
+      summary: Download a setlist as PDF
+      operationId: downloadPdf
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - $ref: "#/components/parameters/SetlistDate"
+        - $ref: "#/components/parameters/LabelQuery"
+        - $ref: "#/components/parameters/EventTypeQuery"
+      responses:
+        "200":
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: 'attachment; filename="setlist-YYYY-MM-DD.pdf"'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Event Types ───────────────────────────────────────────────────
+
+  /event-types:
+    get:
+      tags: [event-types]
+      summary: List all event types
+      operationId: listEventTypes
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+      responses:
+        "200":
+          description: Array of event types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EventTypeResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      tags: [event-types]
+      summary: Create a new event type
+      operationId: createEventType
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventTypeCreate"
+      responses:
+        "200":
+          description: Created event type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventTypeResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /event-types/{slug}:
+    get:
+      tags: [event-types]
+      summary: Get a specific event type
+      operationId: getEventType
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - $ref: "#/components/parameters/EventTypeSlug"
+      responses:
+        "200":
+          description: Event type details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventTypeResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      tags: [event-types]
+      summary: Update an event type
+      operationId: updateEventType
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - $ref: "#/components/parameters/EventTypeSlug"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventTypeUpdate"
+      responses:
+        "200":
+          description: Updated event type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventTypeResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: [event-types]
+      summary: Delete an event type
+      operationId: deleteEventType
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - $ref: "#/components/parameters/EventTypeSlug"
+      responses:
+        "200":
+          description: Deletion confirmation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetailMessage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # ── Labels ────────────────────────────────────────────────────────
+
+  /labels:
+    post:
+      tags: [labels]
+      summary: Add a label to an existing setlist
+      operationId: addLabel
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Setlist date (YYYY-MM-DD)
+        - name: label
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Label to add
+        - $ref: "#/components/parameters/EventTypeQuery"
+      responses:
+        "200":
+          description: Labeled setlist copy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetlistResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /labels/{label}:
+    patch:
+      tags: [labels]
+      summary: Rename a label on a setlist
+      operationId: renameLabel
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - name: label
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Current label
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Setlist date (YYYY-MM-DD)
+        - name: new_label
+          in: query
+          required: true
+          schema:
+            type: string
+          description: New label name
+        - $ref: "#/components/parameters/EventTypeQuery"
+      responses:
+        "200":
+          description: Relabeled setlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetlistResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+    delete:
+      tags: [labels]
+      summary: Remove a labeled setlist
+      operationId: removeLabel
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - name: label
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Label to remove
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Setlist date (YYYY-MM-DD)
+        - $ref: "#/components/parameters/EventTypeQuery"
+      responses:
+        "200":
+          description: Removal confirmation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetailMessage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Sharing ───────────────────────────────────────────────────────
+
+  /sharing/request/{title}:
+    post:
+      tags: [sharing]
+      summary: Submit a request to promote a song to global visibility
+      operationId: requestGlobalShare
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - $ref: "#/components/parameters/SongTitle"
+      responses:
+        "200":
+          description: Share request submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  request_id:
+                    type: string
+                    description: Unique ID for the share request
+                  detail:
+                    type: string
+                required: [request_id, detail]
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /sharing/pending:
+    get:
+      tags: [sharing]
+      summary: List pending share requests (system admin only)
+      operationId: listPendingShares
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+      responses:
+        "200":
+          description: Pending share requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShareRequestResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /sharing/{request_id}/review:
+    post:
+      tags: [sharing]
+      summary: Approve or reject a share request (system admin only)
+      operationId: reviewShareRequest
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+        - name: request_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Share request ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShareReview"
+      responses:
+        "200":
+          description: Review result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetailMessage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # ── Config ────────────────────────────────────────────────────────
+
+  /config:
+    get:
+      tags: [config]
+      summary: Get effective config (system defaults + org overrides)
+      operationId: getConfig
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+      responses:
+        "200":
+          description: Effective generation config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    patch:
+      tags: [config]
+      summary: Update org-specific config overrides (org_admin only)
+      operationId: updateConfig
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgConfigUpdate"
+      responses:
+        "200":
+          description: Updated effective config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # ── Admin ─────────────────────────────────────────────────────────
+
+  /admin/songs/global:
+    get:
+      tags: [admin]
+      summary: List all global songs (system admin only)
+      operationId: listGlobalSongs
+      parameters:
+        - $ref: "#/components/parameters/XOrgId"
+      responses:
+        "200":
+          description: Global songs (title, energy, tags only)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    energy:
+                      type: number
+                    tags:
+                      type: object
+                      additionalProperties:
+                        type: integer
+                  required: [title, energy, tags]
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+# ── Components ────────────────────────────────────────────────────
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase JWT token
+
+  parameters:
+    XOrgId:
+      name: X-Org-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Organization UUID
+
+    SongTitle:
+      name: title
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Song title
+
+    SetlistDate:
+      name: date
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^\d{4}-\d{2}-\d{2}$'
+      description: Setlist date (YYYY-MM-DD)
+
+    EventTypeSlug:
+      name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[a-z0-9][a-z0-9-]*$'
+      description: Event type slug
+
+    LabelQuery:
+      name: label
+      in: query
+      schema:
+        type: string
+        default: ""
+      description: Setlist label (empty for primary)
+
+    EventTypeQuery:
+      name: event_type
+      in: query
+      schema:
+        type: string
+        default: ""
+      description: Event type slug (empty for default type)
+
+  schemas:
+    # ── Song schemas ──
+
+    SongCreate:
+      type: object
+      required: [title, energy]
+      properties:
+        title:
+          type: string
+        energy:
+          type: number
+          minimum: 1
+          maximum: 4
+          description: "Energy level: 1=upbeat, 2=moderate-high, 3=moderate-low, 4=contemplative"
+        tags:
+          type: object
+          additionalProperties:
+            type: integer
+          description: "Moment→weight mapping (e.g. {\"louvor\": 5, \"prelúdio\": 3})"
+          default: {}
+        youtube_url:
+          type: string
+          default: ""
+        content:
+          type: string
+          description: Chord/lyrics markdown content
+          default: ""
+        visibility:
+          type: string
+          enum: [global, org, user]
+          default: user
+        event_types:
+          type: array
+          items:
+            type: string
+          description: "Bound event type slugs (empty = available for all types)"
+          default: []
+
+    SongUpdate:
+      type: object
+      properties:
+        energy:
+          type: number
+          minimum: 1
+          maximum: 4
+        tags:
+          type: object
+          additionalProperties:
+            type: integer
+        youtube_url:
+          type: string
+        content:
+          type: string
+        event_types:
+          type: array
+          items:
+            type: string
+
+    SongResponse:
+      type: object
+      required: [title, energy, tags]
+      properties:
+        title:
+          type: string
+        energy:
+          type: number
+        tags:
+          type: object
+          additionalProperties:
+            type: integer
+        youtube_url:
+          type: string
+          default: ""
+        content:
+          type: string
+          default: ""
+        event_types:
+          type: array
+          items:
+            type: string
+          default: []
+
+    SongFork:
+      type: object
+      properties:
+        title:
+          type: string
+          description: New title for the forked song
+        energy:
+          type: number
+          minimum: 1
+          maximum: 4
+        tags:
+          type: object
+          additionalProperties:
+            type: integer
+
+    TransposeResponse:
+      type: object
+      required: [title, original_key, target_key, content]
+      properties:
+        title:
+          type: string
+        original_key:
+          type: string
+        target_key:
+          type: string
+        content:
+          type: string
+          description: Transposed chord/lyrics content
+
+    SongInfoResponse:
+      type: object
+      required: [title, energy, tags, youtube_url, event_types, usage_count, days_since_last_use, usage_history]
+      properties:
+        title:
+          type: string
+        energy:
+          type: number
+        tags:
+          type: object
+          additionalProperties:
+            type: integer
+        youtube_url:
+          type: string
+        event_types:
+          type: array
+          items:
+            type: string
+        usage_count:
+          type: integer
+        days_since_last_use:
+          type: integer
+          description: "-1 if never used"
+        usage_history:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              moment:
+                type: string
+
+    # ── Setlist schemas ──
+
+    GenerateRequest:
+      type: object
+      required: [date]
+      properties:
+        date:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Target date (YYYY-MM-DD)
+        overrides:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: "Moment→[song titles] to force specific songs"
+        label:
+          type: string
+          default: ""
+          description: Setlist label for multiple services on same date
+        event_type:
+          type: string
+          default: ""
+          description: Event type slug (uses its moments config)
+        include_pdf:
+          type: boolean
+          default: false
+          description: Also generate PDF output
+
+    SetlistResponse:
+      type: object
+      required: [date, moments]
+      properties:
+        date:
+          type: string
+        moments:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: "Moment→[song titles] mapping"
+        label:
+          type: string
+          default: ""
+        event_type:
+          type: string
+          default: ""
+
+    ReplaceRequest:
+      type: object
+      required: [moment, position]
+      properties:
+        moment:
+          type: string
+          description: Moment name (e.g. louvor, prelúdio)
+        position:
+          type: integer
+          minimum: 0
+          description: Zero-based position within the moment
+        song:
+          type: string
+          description: Specific song title (null for auto-select)
+
+    DeriveRequest:
+      type: object
+      required: [label]
+      properties:
+        label:
+          type: string
+          description: Label for the derived variant
+        replace_count:
+          type: integer
+          description: Number of songs to replace (null for random)
+
+    # ── Event Type schemas ──
+
+    EventTypeCreate:
+      type: object
+      required: [slug, name]
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 30
+          pattern: '^[a-z0-9][a-z0-9-]*$'
+          description: URL-safe identifier
+        name:
+          type: string
+          minLength: 1
+          description: Human-readable name
+        description:
+          type: string
+          default: ""
+        moments:
+          type: object
+          additionalProperties:
+            type: integer
+          description: "Moment→count config (defaults to system MOMENTS_CONFIG)"
+          default: {}
+
+    EventTypeUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        moments:
+          type: object
+          additionalProperties:
+            type: integer
+
+    EventTypeResponse:
+      type: object
+      required: [slug, name, moments]
+      properties:
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          default: ""
+        moments:
+          type: object
+          additionalProperties:
+            type: integer
+
+    # ── Sharing schemas ──
+
+    ShareReview:
+      type: object
+      required: [approve]
+      properties:
+        approve:
+          type: boolean
+        reason:
+          type: string
+          default: ""
+
+    ShareRequestResponse:
+      type: object
+      required: [id, song_title, org_name, requested_by, created_at]
+      properties:
+        id:
+          type: string
+        song_title:
+          type: string
+        org_name:
+          type: string
+        requested_by:
+          type: string
+        created_at:
+          type: string
+
+    # ── Config schemas ──
+
+    OrgConfigUpdate:
+      type: object
+      properties:
+        moments_config:
+          type: object
+          additionalProperties:
+            type: integer
+          description: "Moment→count overrides"
+        recency_decay_days:
+          type: integer
+          description: Recency decay constant (default 45)
+        default_weight:
+          type: integer
+          description: Default tag weight (default 3)
+        energy_ordering_enabled:
+          type: boolean
+          description: Enable energy-based song ordering
+        energy_ordering_rules:
+          type: object
+          additionalProperties:
+            type: string
+          description: "Moment→ordering direction (e.g. {\"louvor\": \"asc\"})"
+        default_energy:
+          type: number
+          description: Default energy for songs without an explicit value
+
+    ConfigResponse:
+      type: object
+      required:
+        - moments_config
+        - recency_decay_days
+        - default_weight
+        - energy_ordering_enabled
+        - energy_ordering_rules
+        - default_energy
+      properties:
+        moments_config:
+          type: object
+          additionalProperties:
+            type: integer
+        recency_decay_days:
+          type: integer
+        default_weight:
+          type: integer
+        energy_ordering_enabled:
+          type: boolean
+        energy_ordering_rules:
+          type: object
+          additionalProperties:
+            type: string
+        default_energy:
+          type: number
+
+    # ── Common schemas ──
+
+    DetailMessage:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Invalid or expired token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
