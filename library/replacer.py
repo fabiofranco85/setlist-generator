@@ -16,6 +16,7 @@ from .ordering import apply_energy_ordering
 from .selector import calculate_recency_scores, select_songs_for_moment
 
 if TYPE_CHECKING:
+    from .config import GenerationConfig
     from .observability import Observability
 
 
@@ -70,6 +71,7 @@ def validate_replacement_request(
     replacement_song: str | None,
     songs: dict[str, Song],
     moments_config: dict[str, int] | None = None,
+    config: GenerationConfig | None = None,
 ) -> None:
     """
     Validate the replacement request.
@@ -85,10 +87,14 @@ def validate_replacement_request(
     Raises:
         ValueError: If validation fails with descriptive message
     """
-    config = moments_config or MOMENTS_CONFIG
+    effective_moments = (
+        config.moments_config if config is not None
+        else moments_config if moments_config is not None
+        else MOMENTS_CONFIG
+    )
     # Validate moment exists
-    if moment not in config:
-        valid = ", ".join(config.keys())
+    if moment not in effective_moments:
+        valid = ", ".join(effective_moments.keys())
         raise ValueError(f"Invalid moment '{moment}'. Valid: {valid}")
 
     # Validate position
@@ -193,6 +199,7 @@ def replace_song_in_setlist(
     songs: dict[str, Song],
     reorder_energy: bool = True,
     obs: Observability | None = None,
+    config: GenerationConfig | None = None,
 ) -> dict[str, Any]:
     """
     Replace a song and optionally reorder by energy.
@@ -241,7 +248,9 @@ def replace_song_in_setlist(
 
     # Optionally reorder by energy
     if reorder_energy:
-        if ENERGY_ORDERING_ENABLED and moment in ENERGY_ORDERING_RULES:
+        eo_enabled = config.energy_ordering_enabled if config else ENERGY_ORDERING_ENABLED
+        eo_rules = config.energy_ordering_rules if config else ENERGY_ORDERING_RULES
+        if eo_enabled and moment in eo_rules:
             # Reconstruct (title, energy) tuples
             selected_with_energy = [
                 (title, songs[title].energy)
@@ -252,7 +261,9 @@ def replace_song_in_setlist(
             ordered_songs = apply_energy_ordering(
                 moment=moment,
                 selected_songs=selected_with_energy,
-                override_count=0
+                override_count=0,
+                energy_ordering_enabled=eo_enabled,
+                energy_ordering_rules=eo_rules,
             )
 
             new_setlist["moments"][moment] = ordered_songs
@@ -267,6 +278,7 @@ def replace_songs_batch(
     songs: dict[str, Song],
     history: list[dict[str, Any]],
     obs: Observability | None = None,
+    config: GenerationConfig | None = None,
 ) -> dict[str, Any]:
     """
     Replace multiple songs at once.
@@ -360,8 +372,10 @@ def replace_songs_batch(
     # Reorder each affected moment by energy
     affected_moments = {moment for moment, _, _ in replacements}
 
+    eo_enabled = config.energy_ordering_enabled if config else ENERGY_ORDERING_ENABLED
+    eo_rules = config.energy_ordering_rules if config else ENERGY_ORDERING_RULES
     for moment in affected_moments:
-        if ENERGY_ORDERING_ENABLED and moment in ENERGY_ORDERING_RULES:
+        if eo_enabled and moment in eo_rules:
             moment_songs = new_setlist["moments"][moment]
             selected_with_energy = [
                 (title, songs[title].energy)
@@ -370,7 +384,9 @@ def replace_songs_batch(
             ordered = apply_energy_ordering(
                 moment=moment,
                 selected_songs=selected_with_energy,
-                override_count=0
+                override_count=0,
+                energy_ordering_enabled=eo_enabled,
+                energy_ordering_rules=eo_rules,
             )
             new_setlist["moments"][moment] = ordered
 
@@ -384,6 +400,7 @@ def derive_setlist(
     history: list[dict[str, Any]],
     replace_count: int | None = None,
     event_type: str = "",
+    config: GenerationConfig | None = None,
 ) -> dict[str, Any]:
     """
     Derive a new setlist by replacing songs from a base setlist.
@@ -448,4 +465,5 @@ def derive_setlist(
         replacements=replacements,
         songs=available,
         history=history,
+        config=config,
     )

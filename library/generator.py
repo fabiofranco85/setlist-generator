@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from .config import MOMENTS_CONFIG
+from .config import MOMENTS_CONFIG, GenerationConfig
 from .event_type import filter_songs_for_event_type
 from .models import Song, Setlist
 from .ordering import apply_energy_ordering
@@ -12,7 +12,7 @@ from .selector import calculate_recency_scores, select_songs_for_moment
 
 if TYPE_CHECKING:
     from .observability import Observability
-    from .repositories.protocols import SongRepository, HistoryRepository
+    from .repositories.protocols import SongRepository, HistoryRepository, ConfigRepository
 
 
 class SetlistGenerator:
@@ -35,6 +35,7 @@ class SetlistGenerator:
         songs: dict[str, Song],
         history: list[dict],
         obs: Observability | None = None,
+        config: GenerationConfig | None = None,
     ):
         """
         Initialize generator with songs and history.
@@ -43,12 +44,14 @@ class SetlistGenerator:
             songs: Dictionary of available songs
             history: List of historical setlists
             obs: Observability container (defaults to noop)
+            config: Generation config (defaults to GenerationConfig.from_defaults())
         """
         from .observability import Observability as _Obs
 
         self.songs = songs
         self.history = history
         self.obs = obs or _Obs.noop()
+        self.config = config or GenerationConfig.from_defaults()
         self._recency_scores: dict[str, float] = {}
         self._already_selected: set[str] = set()
         self._moments: dict[str, list[str]] = {}
@@ -59,6 +62,7 @@ class SetlistGenerator:
         songs_repo: SongRepository,
         history_repo: HistoryRepository,
         obs: Observability | None = None,
+        config_repo: ConfigRepository | None = None,
     ) -> SetlistGenerator:
         """
         Create a generator from repository instances.
@@ -71,6 +75,7 @@ class SetlistGenerator:
             songs_repo: Repository providing song data
             history_repo: Repository providing history data
             obs: Observability container (defaults to noop)
+            config_repo: Optional config repository for per-org config overrides
 
         Returns:
             SetlistGenerator instance initialized with repository data
@@ -82,7 +87,8 @@ class SetlistGenerator:
         """
         songs = songs_repo.get_all()
         history = history_repo.get_all()
-        return cls(songs, history, obs=obs)
+        config = GenerationConfig.from_config_repo(config_repo) if config_repo else None
+        return cls(songs, history, obs=obs, config=config)
 
     def generate(
         self,
@@ -106,7 +112,7 @@ class SetlistGenerator:
         Returns:
             Setlist object with selected songs
         """
-        config = moments_config or MOMENTS_CONFIG
+        effective_moments = moments_config or self.config.moments_config
 
         # Filter songs by event type if specified
         available = filter_songs_for_event_type(self.songs, event_type) if event_type else self.songs
@@ -119,7 +125,8 @@ class SetlistGenerator:
                 self._recency_scores = calculate_recency_scores(
                     available,
                     self.history,
-                    current_date=date
+                    current_date=date,
+                    recency_decay_days=self.config.recency_decay_days,
                 )
 
                 # Reset state for new generation
@@ -127,7 +134,7 @@ class SetlistGenerator:
                 self._moments = {}
 
                 # Generate songs for each moment using the event type's config
-                for moment, count in config.items():
+                for moment, count in effective_moments.items():
                     self._generate_moment(moment, count, overrides, available)
 
             self.obs.metrics.counter("setlists_generated")
@@ -170,7 +177,13 @@ class SetlistGenerator:
         )
 
         # Apply energy-based ordering (preserves override order)
-        ordered_songs = apply_energy_ordering(moment, selected_with_energy, override_count)
+        ordered_songs = apply_energy_ordering(
+            moment,
+            selected_with_energy,
+            override_count,
+            energy_ordering_enabled=self.config.energy_ordering_enabled,
+            energy_ordering_rules=self.config.energy_ordering_rules,
+        )
         self._moments[moment] = ordered_songs
         self.obs.logger.debug(
             "Moment generated", moment=moment, songs=len(ordered_songs),
@@ -186,6 +199,7 @@ def generate_setlist(
     label: str = "",
     event_type: str = "",
     moments_config: dict[str, int] | None = None,
+    config: GenerationConfig | None = None,
 ) -> Setlist:
     """
     Generate a complete setlist for all moments.
@@ -202,11 +216,12 @@ def generate_setlist(
         label: Optional label for multiple setlists per date
         event_type: Optional event type slug for song filtering
         moments_config: Optional moments configuration override
+        config: Generation config (defaults to GenerationConfig.from_defaults())
 
     Returns:
         Setlist object with selected songs
     """
-    generator = SetlistGenerator(songs, history, obs=obs)
+    generator = SetlistGenerator(songs, history, obs=obs, config=config)
     return generator.generate(
         date, overrides, label=label,
         event_type=event_type, moments_config=moments_config,

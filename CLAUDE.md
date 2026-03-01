@@ -8,6 +8,7 @@ This project uses **path-scoped documentation** to keep context focused. Differe
 
 - **Core Architecture** (`.claude/rules/core-architecture.md`) - Always loaded. Contains project overview, algorithms, data structures, and configuration.
 - **CLI Commands** (`.claude/rules/cli.md`) - Loads when working on `cli/**/*.py`. Contains all command documentation and usage examples.
+- **SaaS API** (`.claude/rules/api.md`) - Loads when working on `api/**/*.py`, Supabase/S3 backends. Contains endpoints, auth, RBAC, schemas, and backend details.
 - **Data Maintenance** (`.claude/rules/data-maintenance.md`) - Loads when working on maintenance scripts. Contains cleanup and import utilities.
 - **Development Guide** (`.claude/rules/development.md`) - Loads when working on `library/**/*.py`. Contains module details and implementation patterns.
 
@@ -26,6 +27,9 @@ uv sync
 
 # With PostgreSQL backend support
 uv sync --group postgres
+
+# With SaaS API layer (Supabase + S3 + FastAPI)
+uv sync --group saas
 
 # Alternative: Using pip
 pip install -e .
@@ -114,13 +118,19 @@ This is a **setlist generator** for church worship services. It intelligently se
 │   ├── generator.py            # Core setlist generation
 │   ├── replacer.py             # Song replacement + derivation
 │   ├── formatter.py            # Output formatting
-│   ├── pdf_formatter.py        # PDF generation
+│   ├── pdf_formatter.py        # PDF generation (file + in-memory bytes)
+│   ├── sharing.py              # Song library merging + share validation
 │   ├── youtube.py              # YouTube playlist integration
 │   └── repositories/           # Data access abstraction
 │       ├── filesystem/         # Default CSV+JSON backend
-│       └── postgres/           # PostgreSQL backend (optional)
+│       ├── postgres/           # PostgreSQL backend (optional)
+│       ├── supabase/           # Supabase multi-tenant backend (optional)
+│       └── s3/                 # S3/R2 cloud output backend (optional)
+├── api/                         # FastAPI SaaS API layer (see .claude/rules/api.md)
 ├── scripts/                     # Utilities
 │   ├── schema.sql              # PostgreSQL DDL + seed data
+│   ├── supabase_schema.sql     # Supabase multi-tenant schema + RLS
+│   ├── supabase_seed.sql       # System config seed data
 │   ├── migrate_event_types.sql # Event types migration (existing DBs)
 │   └── migrate_to_postgres.py  # Filesystem → PostgreSQL migration
 └── cli/                         # CLI interface
@@ -307,6 +317,7 @@ Set `STORAGE_BACKEND` environment variable to choose the data backend:
 ```bash
 STORAGE_BACKEND=filesystem   # Default (CSV + JSON files)
 STORAGE_BACKEND=postgres     # PostgreSQL database
+STORAGE_BACKEND=supabase     # Supabase multi-tenant (SaaS)
 ```
 
 **PostgreSQL setup:**
@@ -324,6 +335,10 @@ python scripts/migrate_to_postgres.py --database-url $DATABASE_URL
 STORAGE_BACKEND=postgres DATABASE_URL=postgresql://user:pass@host/db songbook generate --date 2026-03-15
 ```
 
+### SaaS API (Multi-Tenant)
+
+The `api/` package provides a FastAPI multi-tenant API backed by Supabase (auth + RLS) and S3 (output storage). Install with `uv sync --group saas` and run with `uvicorn api:create_app --factory --reload`. See `.claude/rules/api.md` for full documentation.
+
 ## Dependencies
 
 - Python 3.12+
@@ -331,6 +346,7 @@ STORAGE_BACKEND=postgres DATABASE_URL=postgresql://user:pass@host/db songbook ge
 - `simple-term-menu` for interactive song picker (CLI)
 - Optional: `reportlab` for PDF generation
 - Optional: `psycopg[binary,pool]>=3.1` for PostgreSQL backend
+- Optional: `supabase>=2.0`, `boto3>=1.28`, `fastapi>=0.115`, `uvicorn>=0.30` for SaaS API
 - Optional: `uv` for package management
 
 ## Further Reading
@@ -342,5 +358,6 @@ For detailed documentation on specific areas, see the path-scoped documentation 
 - **Data maintenance** → `.claude/rules/data-maintenance.md`
 - **Development patterns** → `.claude/rules/development.md`
 - **Recency system** → `RECENCY_SYSTEM.md`
+- **SaaS API** → `.claude/rules/api.md`
 - **Storage backends** → `STORAGE_BACKENDS.md`
 - **YouTube integration** → `YOUTUBE.md`

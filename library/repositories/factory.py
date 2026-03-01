@@ -23,6 +23,9 @@ from .protocols import (
     ConfigRepository,
     OutputRepository,
     EventTypeRepository,
+    UserRepository,
+    ShareRequestRepository,
+    CloudOutputRepository,
 )
 
 
@@ -47,6 +50,19 @@ class RepositoryContainer:
     config: ConfigRepository
     output: OutputRepository
     event_types: EventTypeRepository | None = None
+
+
+@dataclass
+class SaaSRepositoryContainer(RepositoryContainer):
+    """Extended container for SaaS deployments with multi-tenant support.
+
+    Adds user management, song sharing workflows, and cloud output storage
+    on top of the base RepositoryContainer.
+    """
+
+    users: UserRepository | None = None
+    share_requests: ShareRequestRepository | None = None
+    cloud_output: CloudOutputRepository | None = None
 
 
 class RepositoryFactory:

@@ -7,6 +7,7 @@ from .config import (
     DEFAULT_WEIGHT,
     ENERGY_ORDERING_ENABLED,
     ENERGY_ORDERING_RULES,
+    GenerationConfig,
     MOMENTS_CONFIG,
     RECENCY_DECAY_DAYS,
     canonical_moment_order,
@@ -30,7 +31,8 @@ from .selector import (
 )
 from .models import Setlist, Song
 from .paths import PathConfig, get_output_paths
-from .pdf_formatter import generate_setlist_pdf
+from .pdf_formatter import generate_setlist_pdf, generate_setlist_pdf_bytes
+from .sharing import merge_effective_library, validate_share_request
 from .replacer import (
     derive_setlist,
     find_target_setlist,
@@ -94,6 +96,7 @@ from .observability import (
 
 __all__ = [
     # Configuration
+    "GenerationConfig",
     "MOMENTS_CONFIG",
     "DEFAULT_WEIGHT",
     "RECENCY_DECAY_DAYS",
@@ -123,6 +126,10 @@ __all__ = [
     "generate_setlist",
     "format_setlist_markdown",
     "generate_setlist_pdf",
+    "generate_setlist_pdf_bytes",
+    # Sharing
+    "merge_effective_library",
+    "validate_share_request",
     # Classes
     "SetlistGenerator",
     # Path utilities

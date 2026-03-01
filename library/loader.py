@@ -16,7 +16,7 @@ import re
 from .config import DEFAULT_WEIGHT
 
 
-def parse_tags(tags_str: str) -> dict[str, int]:
+def parse_tags(tags_str: str, default_weight: int = DEFAULT_WEIGHT) -> dict[str, int]:
     """
     Parse tags string into dict of {moment: weight}.
 
@@ -27,6 +27,7 @@ def parse_tags(tags_str: str) -> dict[str, int]:
 
     Args:
         tags_str: Comma-separated tags string from database.csv
+        default_weight: Weight for tags without explicit weight (defaults to DEFAULT_WEIGHT)
 
     Returns:
         Dictionary mapping moment names to weights
@@ -53,7 +54,7 @@ def parse_tags(tags_str: str) -> dict[str, int]:
             weight = int(match.group(2))
         else:
             moment = tag
-            weight = DEFAULT_WEIGHT
+            weight = default_weight
 
         tags[moment] = weight
 

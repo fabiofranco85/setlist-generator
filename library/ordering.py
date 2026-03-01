@@ -6,7 +6,9 @@ from .config import ENERGY_ORDERING_ENABLED, ENERGY_ORDERING_RULES
 def apply_energy_ordering(
     moment: str,
     selected_songs: list[tuple[str, float]],
-    override_count: int = 0
+    override_count: int = 0,
+    energy_ordering_enabled: bool | None = None,
+    energy_ordering_rules: dict[str, str] | None = None,
 ) -> list[str]:
     """
     Sort songs by energy level according to moment-specific rules.
@@ -16,14 +18,19 @@ def apply_energy_ordering(
         moment: The moment name (e.g., "louvor")
         selected_songs: List of (title, energy) tuples
         override_count: Number of songs at the start that were manually overridden
+        energy_ordering_enabled: Whether ordering is enabled (defaults to module constant)
+        energy_ordering_rules: Per-moment ordering rules (defaults to module constant)
 
     Returns:
         List of song titles sorted by energy (except overrides)
     """
-    if not ENERGY_ORDERING_ENABLED:
+    enabled = energy_ordering_enabled if energy_ordering_enabled is not None else ENERGY_ORDERING_ENABLED
+    rules = energy_ordering_rules if energy_ordering_rules is not None else ENERGY_ORDERING_RULES
+
+    if not enabled:
         return [title for title, _ in selected_songs]
 
-    rule = ENERGY_ORDERING_RULES.get(moment)
+    rule = rules.get(moment)
     if not rule:
         return [title for title, _ in selected_songs]
 

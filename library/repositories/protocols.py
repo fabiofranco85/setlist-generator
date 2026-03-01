@@ -6,10 +6,11 @@ the required methods satisfies the protocol without explicit inheritance.
 
 Backends:
 - Filesystem (default): CSV + JSON files (current behavior)
-- PostgreSQL/Supabase: SQL database (future)
-- MongoDB: Document database (future)
-- S3: Object storage for chord files (future, hybrid)
+- PostgreSQL/Supabase: SQL database
+- S3: Object storage for chord files and outputs (cloud)
 """
+
+from __future__ import annotations
 
 from pathlib import Path
 from typing import Protocol, runtime_checkable
@@ -383,5 +384,300 @@ class EventTypeRepository(Protocol):
         Raises:
             KeyError: If event type doesn't exist
             ValueError: If trying to remove the default type
+        """
+        ...
+
+
+# ---------------------------------------------------------------------------
+# SaaS-layer protocols (multi-tenant extensions)
+# ---------------------------------------------------------------------------
+
+
+@runtime_checkable
+class MultiTenantSongRepository(SongRepository, Protocol):
+    """Extended song repository with multi-tenant visibility and sharing.
+
+    Builds on SongRepository with layered visibility (global/org/user),
+    song forking, and sharing workflows. UUID identity is internal —
+    the public API uses song titles at the boundary.
+    """
+
+    def get_effective_library(self) -> dict[str, Song]:
+        """Get the merged song library visible to the current user.
+
+        Merges global, org-level, and user-level songs with priority:
+        user > org > global (higher visibility overrides lower).
+
+        Returns:
+            Dictionary mapping song titles to Song objects
+        """
+        ...
+
+    def create(self, song: Song, visibility: str = "user") -> str:
+        """Create a new song.
+
+        Args:
+            song: Song object to create
+            visibility: Visibility level ('global', 'org', 'user')
+
+        Returns:
+            Title of the created song
+
+        Raises:
+            ValueError: If a song with the same title already exists
+                at the same visibility scope
+        """
+        ...
+
+    def delete(self, title: str) -> None:
+        """Delete a song.
+
+        Args:
+            title: Song title to delete
+
+        Raises:
+            KeyError: If song doesn't exist
+            PermissionError: If user doesn't own the song
+        """
+        ...
+
+    def fork(self, title: str, overrides: dict) -> str:
+        """Fork an existing song with modifications.
+
+        Creates a user-level copy of a song with optional overrides
+        (e.g., different key, modified chords). Sets parent_id to
+        the source song.
+
+        Args:
+            title: Title of the song to fork
+            overrides: Fields to override in the fork
+
+        Returns:
+            Title of the forked song
+
+        Raises:
+            KeyError: If source song doesn't exist
+        """
+        ...
+
+    def share_to_org(self, title: str) -> None:
+        """Promote a user-level song to org visibility.
+
+        Args:
+            title: Song title to share
+
+        Raises:
+            KeyError: If song doesn't exist
+            PermissionError: If user doesn't own the song
+            ValueError: If song is not user-level
+        """
+        ...
+
+    def request_global_share(self, title: str) -> str:
+        """Submit a request to promote a song to global visibility.
+
+        Creates a share request that must be approved by a system admin.
+
+        Args:
+            title: Song title to request global sharing for
+
+        Returns:
+            Share request ID
+
+        Raises:
+            KeyError: If song doesn't exist
+            ValueError: If song is already global
+        """
+        ...
+
+
+@runtime_checkable
+class ShareRequestRepository(Protocol):
+    """Repository for managing song share requests.
+
+    Share requests flow: user submits -> system admin reviews -> approve/reject.
+    """
+
+    def submit(self, song_title: str) -> str:
+        """Submit a share request for global visibility.
+
+        Args:
+            song_title: Title of the song to share globally
+
+        Returns:
+            Request ID
+        """
+        ...
+
+    def list_pending(self) -> list[dict]:
+        """List all pending share requests.
+
+        Returns:
+            List of request dicts with keys: id, song_title, org_name,
+            requested_by, created_at
+        """
+        ...
+
+    def approve(self, request_id: str) -> None:
+        """Approve a share request, promoting the song to global.
+
+        Args:
+            request_id: ID of the request to approve
+
+        Raises:
+            KeyError: If request doesn't exist
+            ValueError: If request is not pending
+        """
+        ...
+
+    def reject(self, request_id: str, reason: str) -> None:
+        """Reject a share request.
+
+        Args:
+            request_id: ID of the request to reject
+            reason: Explanation for the rejection
+
+        Raises:
+            KeyError: If request doesn't exist
+            ValueError: If request is not pending
+        """
+        ...
+
+
+@runtime_checkable
+class UserRepository(Protocol):
+    """Repository for user and organization membership management."""
+
+    def get_user_orgs(self, user_id: str) -> list[dict]:
+        """Get all organizations a user belongs to.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            List of dicts with keys: org_id, org_name, org_slug, role
+        """
+        ...
+
+    def get_org_members(self, org_id: str) -> list[dict]:
+        """Get all members of an organization.
+
+        Args:
+            org_id: Organization UUID
+
+        Returns:
+            List of dicts with keys: user_id, email, role
+        """
+        ...
+
+    def get_user_role(self, user_id: str, org_id: str) -> str | None:
+        """Get a user's role in an organization.
+
+        Args:
+            user_id: User UUID
+            org_id: Organization UUID
+
+        Returns:
+            Role string ('org_admin', 'editor', 'viewer') or None if not a member
+        """
+        ...
+
+    def is_system_admin(self, user_id: str) -> bool:
+        """Check if a user is a system administrator.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            True if user is a system admin
+        """
+        ...
+
+
+@runtime_checkable
+class CloudOutputRepository(Protocol):
+    """S3-compatible output repository returning URLs instead of Paths.
+
+    Used in SaaS deployments where output files (markdown, PDF, chord content)
+    are stored in object storage rather than the local filesystem.
+    """
+
+    def save_markdown(self, date: str, content: str, label: str = "", event_type: str = "") -> str:
+        """Save setlist markdown to cloud storage.
+
+        Args:
+            date: Setlist date
+            content: Markdown content
+            label: Optional label
+            event_type: Optional event type slug
+
+        Returns:
+            URL or key of the saved object
+        """
+        ...
+
+    def save_pdf_bytes(self, date: str, pdf_bytes: bytes, label: str = "", event_type: str = "") -> str:
+        """Save PDF bytes to cloud storage.
+
+        Args:
+            date: Setlist date
+            pdf_bytes: PDF file content as bytes
+            label: Optional label
+            event_type: Optional event type slug
+
+        Returns:
+            URL or key of the saved object
+        """
+        ...
+
+    def get_markdown_url(self, date: str, label: str = "", event_type: str = "") -> str | None:
+        """Get URL for a stored markdown file.
+
+        Returns:
+            Presigned URL or None if not found
+        """
+        ...
+
+    def get_pdf_url(self, date: str, label: str = "", event_type: str = "") -> str | None:
+        """Get URL for a stored PDF file.
+
+        Returns:
+            Presigned URL or None if not found
+        """
+        ...
+
+    def save_chord_content(self, song_id: str, content: str) -> str:
+        """Save chord content to cloud storage.
+
+        Args:
+            song_id: Song identifier (UUID in Supabase)
+            content: Chord markdown content
+
+        Returns:
+            S3 key of the saved object
+        """
+        ...
+
+    def get_chord_content(self, song_id: str) -> str | None:
+        """Get chord content from cloud storage.
+
+        Args:
+            song_id: Song identifier
+
+        Returns:
+            Chord content string or None if not found
+        """
+        ...
+
+    def delete_outputs(self, date: str, label: str = "", event_type: str = "") -> int:
+        """Delete output files from cloud storage.
+
+        Args:
+            date: Setlist date
+            label: Optional label
+            event_type: Optional event type slug
+
+        Returns:
+            Number of objects deleted
         """
         ...

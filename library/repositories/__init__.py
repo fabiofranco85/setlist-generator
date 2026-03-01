@@ -33,9 +33,14 @@ from .protocols import (
     ConfigRepository,
     OutputRepository,
     EventTypeRepository,
+    MultiTenantSongRepository,
+    ShareRequestRepository,
+    UserRepository,
+    CloudOutputRepository,
 )
 from .factory import (
     RepositoryContainer,
+    SaaSRepositoryContainer,
     RepositoryFactory,
     get_repositories,
 )
@@ -74,8 +79,14 @@ __all__ = [
     "ConfigRepository",
     "OutputRepository",
     "EventTypeRepository",
+    # SaaS protocols
+    "MultiTenantSongRepository",
+    "ShareRequestRepository",
+    "UserRepository",
+    "CloudOutputRepository",
     # Factory
     "RepositoryContainer",
+    "SaaSRepositoryContainer",
     "RepositoryFactory",
     "get_repositories",
     # Filesystem implementations
@@ -94,4 +105,32 @@ if _has_postgres:
         "PostgresHistoryRepository",
         "PostgresConfigRepository",
         "PostgresEventTypeRepository",
+    ]
+
+# Conditionally register Supabase backend (requires supabase)
+try:
+    from .supabase import (
+        SupabaseRepositoryContainer,
+        SupabaseSongRepository,
+        SupabaseHistoryRepository,
+        SupabaseConfigRepository,
+        SupabaseEventTypeRepository,
+        SupabaseUserRepository,
+        SupabaseShareRequestRepository,
+    )
+
+    RepositoryFactory.register("supabase", SupabaseRepositoryContainer)
+    _has_supabase = True
+except ImportError:
+    _has_supabase = False
+
+if _has_supabase:
+    __all__ += [
+        "SupabaseRepositoryContainer",
+        "SupabaseSongRepository",
+        "SupabaseHistoryRepository",
+        "SupabaseConfigRepository",
+        "SupabaseEventTypeRepository",
+        "SupabaseUserRepository",
+        "SupabaseShareRequestRepository",
     ]

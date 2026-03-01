@@ -1,5 +1,7 @@
 """PDF formatting for setlists using ReportLab."""
 
+from io import BytesIO
+
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
@@ -564,3 +566,60 @@ def generate_setlist_pdf(
 
     # Build PDF
     doc.build(story)
+
+
+def generate_setlist_pdf_bytes(
+    setlist: Setlist, songs: Dict[str, Song],
+    event_type_name: str = "",
+) -> bytes:
+    """Generate PDF setlist as in-memory bytes.
+
+    Same output as generate_setlist_pdf() but writes to a BytesIO buffer
+    instead of a file path. Useful for cloud storage or HTTP responses.
+
+    Args:
+        setlist: Setlist object with date and moments
+        songs: Dictionary mapping song names to Song objects
+        event_type_name: Optional event type display name for subtitle
+
+    Returns:
+        PDF content as bytes
+    """
+    # Format date
+    formatted_date = format_date_portuguese(setlist.date)
+    subtitle_parts = []
+    if event_type_name:
+        subtitle_parts.append(event_type_name)
+    subtitle_parts.append(formatted_date)
+    if setlist.label:
+        subtitle_parts.append(f"({setlist.label})")
+    formatted_date = " - ".join(subtitle_parts) if event_type_name else formatted_date
+    if not event_type_name and setlist.label:
+        formatted_date += f" ({setlist.label})"
+
+    # Calculate page numbers
+    page_map = {}
+    current_page = 2
+    for moment in canonical_moment_order(setlist.moments):
+        song_list = setlist.moments[moment]
+        if song_list:
+            page_map[moment] = current_page
+            current_page += 1
+
+    # Create styles and build content
+    styles = create_styles()
+    toc_entries = build_toc_entries(setlist, songs, page_map)
+    story = build_pdf_content(setlist, songs, formatted_date, toc_entries, styles)
+
+    # Build to BytesIO buffer
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=2 * cm,
+        leftMargin=2 * cm,
+        topMargin=2 * cm,
+        bottomMargin=2 * cm,
+    )
+    doc.build(story)
+    return buffer.getvalue()

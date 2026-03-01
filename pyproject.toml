@@ -15,6 +15,7 @@ dependencies = [
 
 [project.scripts]
 songbook = "cli:main"
+songbook-api = "api:create_app"
 
 [build-system]
 requires = ["hatchling"]
@@ -33,6 +34,12 @@ dev = [
 postgres = [
     "psycopg[binary,pool]>=3.1",
 ]
+saas = [
+    "supabase>=2.0",
+    "boto3>=1.28",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -43,6 +50,7 @@ markers = [
     "integration: tests that interact with real or simulated external systems",
     "slow: tests that take more than a few seconds to run",
     "postgres: tests that require a PostgreSQL database (DATABASE_URL env var)",
+    "supabase: tests that require a local Supabase instance",
 ]
 filterwarnings = [
     "error",
@@ -52,7 +60,7 @@ filterwarnings = [
 [tool.coverage.run]
 source = ["library"]
 branch = true
-omit = ["library/pdf_formatter.py", "library/repositories/postgres/*"]
+omit = ["library/pdf_formatter.py", "library/repositories/postgres/*", "library/repositories/supabase/*", "library/repositories/s3/*", "api/*"]
 
 [tool.coverage.report]
 fail_under = 80

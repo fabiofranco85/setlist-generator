@@ -12,7 +12,8 @@ from .models import Song
 def calculate_recency_scores(
     songs: dict[str, Song],
     history: list[dict],
-    current_date: str | None = None
+    current_date: str | None = None,
+    recency_decay_days: int = RECENCY_DECAY_DAYS,
 ) -> dict[str, float]:
     """
     Calculate recency scores using time-based exponential decay.
@@ -69,7 +70,7 @@ def calculate_recency_scores(
             # Same day or future date (shouldn't happen, but handle gracefully)
             scores[song] = 0.0
         else:
-            decay_factor = exp(-days_since / RECENCY_DECAY_DAYS)
+            decay_factor = exp(-days_since / recency_decay_days)
             scores[song] = 1.0 - decay_factor
 
     return scores
