@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 
 from library.config import GenerationConfig
@@ -45,10 +45,12 @@ async def generate_setlist(
 
     # Use event type moments if specified
     moments_config = None
+    moments_order = None
     if data.event_type and repos.event_types:
         et = await asyncio.to_thread(repos.event_types.get, data.event_type)
         if et:
-            moments_config = et.moments
+            moments_config = et.ordered_moments
+            moments_order = et.moments_order
 
     setlist = await asyncio.to_thread(
         generator.generate,
@@ -63,7 +65,7 @@ async def generate_setlist(
     await asyncio.to_thread(repos.history.save, setlist)
 
     # Generate markdown output
-    md = format_setlist_markdown(setlist, songs)
+    md = format_setlist_markdown(setlist, songs, moments_order=moments_order)
     await asyncio.to_thread(
         repos.output.save_markdown, setlist.date, md,
         setlist.label, setlist.event_type,
@@ -219,7 +221,16 @@ async def download_pdf(
         event_type=entry.get("event_type", ""),
     )
 
-    pdf_bytes = await asyncio.to_thread(generate_setlist_pdf_bytes, setlist, songs)
+    moments_order = None
+    if event_type and repos.event_types:
+        et = await asyncio.to_thread(repos.event_types.get, event_type)
+        if et:
+            moments_order = et.moments_order
+
+    pdf_bytes = await asyncio.to_thread(
+        generate_setlist_pdf_bytes, setlist, songs,
+        moments_order=moments_order,
+    )
 
     filename = f"setlist-{date}"
     if label:

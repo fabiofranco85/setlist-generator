@@ -27,7 +27,7 @@ class SupabaseEventTypeRepository:
 
         response = (
             self._client.table("event_types")
-            .select("slug, name, description, moments")
+            .select("slug, name, description, moments, moments_order")
             .eq("org_id", self._org_id)
             .execute()
         )
@@ -39,6 +39,7 @@ class SupabaseEventTypeRepository:
                 name=row["name"],
                 description=row.get("description") or "",
                 moments=row["moments"],
+                moments_order=row.get("moments_order") or [],
             )
             result[row["slug"]] = et
 
@@ -63,6 +64,7 @@ class SupabaseEventTypeRepository:
             "name": event_type.name,
             "description": event_type.description,
             "moments": event_type.moments,
+            "moments_order": event_type.moments_order,
         }).execute()
 
         self._invalidate_cache()
@@ -79,6 +81,7 @@ class SupabaseEventTypeRepository:
             update_data["description"] = kwargs["description"]
         if "moments" in kwargs:
             update_data["moments"] = kwargs["moments"]
+            update_data["moments_order"] = list(kwargs["moments"].keys())
 
         if update_data:
             (

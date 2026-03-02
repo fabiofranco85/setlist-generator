@@ -119,6 +119,9 @@ def add_type(slug, name, description, moments):
     moments_str = ", ".join(f"{m}={c}" for m, c in moments_dict.items())
     click.echo(f"  Moments: {moments_str}")
 
+    # Warn about moments with no tagged songs
+    _warn_empty_moments(repos, moments_dict)
+
 
 @event_type_group.command("edit")
 @click.argument("slug")
@@ -247,6 +250,9 @@ def manage_moments(slug, moments_str):
         for moment, count in moments_dict.items():
             click.echo(f"  {moment}: {count}")
 
+        # Warn about moments with no tagged songs
+        _warn_empty_moments(repos, moments_dict)
+
 
 @event_type_group.command("default")
 @click.option("--name", "-n", default=None, help="New display name for the default type")
@@ -300,6 +306,26 @@ def edit_default(name, description):
             click.echo(f"  Name: {name}")
         if description is not None:
             click.echo(f"  Description: {description}")
+
+
+def _warn_empty_moments(repos, moments_dict: dict[str, int]) -> None:
+    """Check if any moments have zero tagged songs and print warnings.
+
+    Args:
+        repos: Repository container with songs access
+        moments_dict: Moments configuration to check
+    """
+    songs = repos.songs.get_all()
+    for moment, count in moments_dict.items():
+        if count <= 0:
+            continue
+        tagged = sum(1 for s in songs.values() if s.has_moment(moment))
+        if tagged == 0:
+            click.secho(
+                f"  Warning: No songs tagged with '{moment}'. "
+                f"Generation will fail until songs are tagged.",
+                fg="yellow",
+            )
 
 
 def _parse_moments_string(moments_str: str) -> dict[str, int]:

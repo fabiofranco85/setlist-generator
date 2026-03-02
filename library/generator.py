@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from .config import MOMENTS_CONFIG, GenerationConfig
+from .config import GenerationConfig
 from .event_type import filter_songs_for_event_type
 from .models import Song, Setlist
 from .ordering import apply_energy_ordering
@@ -134,8 +134,9 @@ class SetlistGenerator:
                 self._moments = {}
 
                 # Generate songs for each moment using the event type's config
+                uses_custom_moments = moments_config is not None
                 for moment, count in effective_moments.items():
-                    self._generate_moment(moment, count, overrides, available)
+                    self._generate_moment(moment, count, overrides, available, strict=uses_custom_moments)
 
             self.obs.metrics.counter("setlists_generated")
             self.obs.logger.info(
@@ -152,6 +153,7 @@ class SetlistGenerator:
         count: int,
         overrides: dict[str, list[str]] | None,
         songs: dict[str, Song] | None = None,
+        strict: bool = False,
     ) -> None:
         """
         Select and order songs for a specific moment.
@@ -161,6 +163,7 @@ class SetlistGenerator:
             count: Number of songs needed
             overrides: Optional manual song overrides per moment
             songs: Available songs (defaults to self.songs)
+            strict: If True, raise ValueError when no songs are tagged for this moment
         """
         available = songs if songs is not None else self.songs
         moment_overrides = overrides.get(moment) if overrides else None
@@ -184,6 +187,16 @@ class SetlistGenerator:
             energy_ordering_enabled=self.config.energy_ordering_enabled,
             energy_ordering_rules=self.config.energy_ordering_rules,
         )
+
+        if not ordered_songs and count > 0 and strict:
+            # Check if any songs are tagged for this moment at all
+            has_tagged_songs = any(s.has_moment(moment) for s in available.values())
+            if not has_tagged_songs:
+                raise ValueError(
+                    f"No songs available for moment '{moment}'. "
+                    f"Tag songs with '{moment}' in database.csv."
+                )
+
         self._moments[moment] = ordered_songs
         self.obs.logger.debug(
             "Moment generated", moment=moment, songs=len(ordered_songs),

@@ -1,45 +1,45 @@
-### Vou Deixar Na Cruz (G)
+### Vou Deixar Na Cruz (A#)
 
-[Intro] Em  C9  G/B  D
-        Em7  C9  G
+[Intro]  Gm D#9 A#/D F
+        Gm7  D#9 A#
 
 [Primeira Parte]
 
- G9
+ A#9
 Sua morte ali na cruz
-      G7M
+      A#7M
 Carregando a minha dor
-           C7M    C7M(9)
+           D#7M   D#7M(9)
 Você se expôs por mim
-         G9
+         A#9
 Se entregou em meu lugar
-      G7M
+      A#7M
 E me deu uma nova chance
-         C7M
+         D#7M
 Eu vou recomeçar
 
 [Refrão]
 
-                Em7
+                Gm7
 Vou deixar na cruz
-               C9
+               D#9
 Tudo o que passou
-              G/B          D
+              A#/D         F
 Tudo o que ficou pra trás
-            Em7
+            Gm7
 Olho pra você
-             C9
+             D#9
 Corro pra Você
-                G/B  G
+                A#/D A#
 O Seu amor me chama
 
-      D9
+      F9
 Eu dependo desse amor
-         Am           G
+         Cm           A#
 Do Seu amor mais que tudo
-       D9
+       F9
 Eu confio
-                     Am
+                     Cm
 Que esse amor tem poder
-           G
+           A#
 Pra curar dores

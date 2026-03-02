@@ -34,10 +34,11 @@ CREATE INDEX IF NOT EXISTS idx_setlists_date ON setlists(date DESC);
 
 -- Event types: configurable service types with custom moments
 CREATE TABLE IF NOT EXISTS event_types (
-    slug        TEXT PRIMARY KEY,
-    name        TEXT NOT NULL,
-    description TEXT NOT NULL DEFAULT '',
-    moments     JSONB NOT NULL
+    slug           TEXT PRIMARY KEY,
+    name           TEXT NOT NULL,
+    description    TEXT NOT NULL DEFAULT '',
+    moments        JSONB NOT NULL,
+    moments_order  JSONB DEFAULT NULL  -- JSON array preserving user-defined key order
 );
 
 -- Seed default event type

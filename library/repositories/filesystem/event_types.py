@@ -90,6 +90,7 @@ class FilesystemEventTypeRepository:
             et.description = kwargs["description"]
         if "moments" in kwargs:
             et.moments = kwargs["moments"]
+            et.moments_order = list(kwargs["moments"].keys())
 
         save_event_types(data, self._file_path)
         self._invalidate_cache()

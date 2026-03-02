@@ -27,6 +27,11 @@ class PostgresHistoryRepository:
         """
         self._pool = pool
 
+    @property
+    def backend_name(self) -> str:
+        """Return the backend name."""
+        return "postgres"
+
     @staticmethod
     def _row_to_dict(date, label, moments, event_type="") -> dict:
         """Convert a database row to the standard setlist dict format.
