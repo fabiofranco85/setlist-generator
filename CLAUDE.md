@@ -131,8 +131,9 @@ This is a **setlist generator** for church worship services. It intelligently se
 │   ├── schema.sql              # PostgreSQL DDL + seed data
 │   ├── supabase_schema.sql     # Supabase multi-tenant schema + RLS
 │   ├── supabase_seed.sql       # System config seed data
-│   ├── migrate_event_types.sql # Event types migration (existing DBs)
-│   └── migrate_to_postgres.py  # Filesystem → PostgreSQL migration
+│   ├── migrate_event_types.sql    # Event types migration (existing DBs)
+│   ├── migrate_moments_order.sql  # Add moments_order column (existing DBs)
+│   └── migrate_to_postgres.py     # Filesystem → PostgreSQL migration
 └── cli/                         # CLI interface
     ├── main.py                 # Entry point
     ├── picker.py               # Interactive song picker (searchable menu)

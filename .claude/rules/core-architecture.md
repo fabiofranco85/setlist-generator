@@ -149,7 +149,13 @@ class EventType:
     name: str                  # e.g., "Main Event", "Youth Service"
     description: str = ""      # Human-readable description
     moments: dict[str, int]    # e.g., {"louvor": 5, "prelúdio": 1}
+    moments_order: list[str]   # Preserves user-defined key order
     # __post_init__ defaults moments to dict(MOMENTS_CONFIG) if not provided
+    # __post_init__ defaults moments_order to list(moments.keys()) if empty
+
+    @property
+    def ordered_moments(self) -> dict[str, int]:
+        # Returns moments reordered by moments_order
 ```
 
 **Song filtering** (`filter_songs_for_event_type(songs, slug)`):
