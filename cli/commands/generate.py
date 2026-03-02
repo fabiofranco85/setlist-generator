@@ -94,7 +94,7 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
     et = resolve_event_type(repos, event_type)
     et_slug = event_type
     et_name = et.name if et and not (et_slug == "" or et_slug == "main") else ""
-    moments_config = et.moments if et else None
+    moments_config = et.ordered_moments if et else None
 
     print("Loading songs...")
     songs = repos.songs.get_all()
@@ -147,17 +147,23 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
         else:
             # No base exists — generate fresh with label
             print(f"\nNo existing setlist for {date} — generating fresh with label '{label}'.")
-            setlist = generate_setlist(
-                songs, history, date, overrides, obs=obs, label=label,
-                event_type=et_slug, moments_config=moments_config,
-            )
+            try:
+                setlist = generate_setlist(
+                    songs, history, date, overrides, obs=obs, label=label,
+                    event_type=et_slug, moments_config=moments_config,
+                )
+            except ValueError as e:
+                handle_error(str(e))
     else:
         # Standard generation (no label)
         print("\nGenerating setlist...")
-        setlist = generate_setlist(
-            songs, history, date, overrides, obs=obs,
-            event_type=et_slug, moments_config=moments_config,
-        )
+        try:
+            setlist = generate_setlist(
+                songs, history, date, overrides, obs=obs,
+                event_type=et_slug, moments_config=moments_config,
+            )
+        except ValueError as e:
+            handle_error(str(e))
 
     # Display summary
     setlist_id = setlist.setlist_id
@@ -175,28 +181,40 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
             print(f"  - {song}")
 
     # Generate markdown
-    markdown = format_setlist_markdown(setlist, songs, event_type_name=et_name)
+    et_moments_order = et.moments_order if et else None
+    markdown = format_setlist_markdown(setlist, songs, event_type_name=et_name, moments_order=et_moments_order)
 
     # Save files
-    output_path = Path(output) if output else output_dir_path / f"{setlist_id}.md"
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(markdown)
+    if output:
+        # Custom output path — write directly
+        output_path = Path(output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(markdown)
+    else:
+        # Use repository (handles event type subdirectory routing)
+        output_path = repos.output.save_markdown(date, markdown, label=label, event_type=et_slug)
     print(f"\nMarkdown saved to: {output_path}")
 
     if not no_save:
         repos.history.save(setlist)
-        print(f"History saved to: {history_dir_path / f'{setlist_id}.json'}")
+        if repos.history.backend_name == "filesystem":
+            hist_dir = paths.history_dir
+            if et_slug and et_slug != "main":
+                hist_dir = hist_dir / et_slug
+            print(f"History saved to: {hist_dir / f'{setlist_id}.json'}")
+        else:
+            print(f"History saved to {repos.history.backend_name} database")
     else:
         print("(Dry run - history not saved)")
 
     # Generate PDF if requested
     if pdf:
-        pdf_path = output_dir_path / f"{setlist_id}.pdf"
+        pdf_path = repos.output.get_pdf_path(date, label=label, event_type=et_slug)
+        pdf_path.parent.mkdir(parents=True, exist_ok=True)
         print(f"\nGenerating PDF...")
         try:
-            generate_setlist_pdf(setlist, songs, pdf_path, event_type_name=et_name)
+            generate_setlist_pdf(setlist, songs, pdf_path, event_type_name=et_name, moments_order=et_moments_order)
             print(f"PDF saved to: {pdf_path}")
         except ImportError:
             print("Error: ReportLab library not installed.")
