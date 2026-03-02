@@ -1,0 +1,16 @@
+{
+  "event_types": {
+    "main": {
+      "name": "Main Event",
+      "description": "Default service configuration",
+      "moments": {
+        "prelúdio": 1,
+        "ofertório": 1,
+        "saudação": 1,
+        "crianças": 1,
+        "louvor": 4,
+        "poslúdio": 1
+      }
+    }
+  }
+}

@@ -196,7 +196,8 @@ class PageTracker:
 
 
 def build_toc_entries(
-    setlist: Setlist, songs: Dict[str, Song], page_map: Dict[str, int]
+    setlist: Setlist, songs: Dict[str, Song], page_map: Dict[str, int],
+    moments_ref: dict[str, int] | None = None,
 ) -> List[TOCEntry]:
     """Build table of contents entries with anchor IDs.
 
@@ -211,7 +212,7 @@ def build_toc_entries(
     entries = []
 
     # Iterate through moments in canonical order
-    for moment in canonical_moment_order(setlist.moments):
+    for moment in canonical_moment_order(setlist.moments, reference_config=moments_ref):
         song_list = setlist.moments[moment]
         if not song_list:
             continue
@@ -347,6 +348,7 @@ def build_pdf_content(
     formatted_date: str,
     toc_entries: List[TOCEntry],
     styles: dict,
+    moments_ref: dict[str, int] | None = None,
 ) -> List:
     """Build flowables for PDF content.
 
@@ -415,7 +417,7 @@ def build_pdf_content(
     story.append(toc_table)
 
     # Content pages: Each moment starts on a new page
-    for moment in canonical_moment_order(setlist.moments):
+    for moment in canonical_moment_order(setlist.moments, reference_config=moments_ref):
         song_list = setlist.moments[moment]
         if not song_list:
             continue
@@ -511,6 +513,7 @@ def calculate_page_numbers(
 def generate_setlist_pdf(
     setlist: Setlist, songs: Dict[str, Song], output_path: Path,
     event_type_name: str = "",
+    moments_order: list[str] | None = None,
 ) -> None:
     """Generate PDF setlist matching the reference format.
 
@@ -519,6 +522,7 @@ def generate_setlist_pdf(
         songs: Dictionary mapping song names to Song objects
         output_path: Path where PDF should be saved
         event_type_name: Optional event type display name for subtitle
+        moments_order: Optional explicit moment ordering from event type
     """
     # Format date
     formatted_date = format_date_portuguese(setlist.date)
@@ -533,12 +537,15 @@ def generate_setlist_pdf(
     if not event_type_name and setlist.label:
         formatted_date += f" ({setlist.label})"
 
+    # Build reference config for moment ordering
+    _ref = {m: 0 for m in moments_order} if moments_order else None
+
     # Calculate page numbers (simplified - just use moment starts)
     # Use setlist.moments.keys() for ordering instead of MOMENTS_CONFIG.keys()
     page_map = {}
     current_page = 2  # Page 1 is TOC
 
-    for moment in canonical_moment_order(setlist.moments):
+    for moment in canonical_moment_order(setlist.moments, reference_config=_ref):
         song_list = setlist.moments[moment]
         if song_list:
             page_map[moment] = current_page
@@ -549,10 +556,10 @@ def generate_setlist_pdf(
     styles = create_styles()
 
     # Build TOC entries
-    toc_entries = build_toc_entries(setlist, songs, page_map)
+    toc_entries = build_toc_entries(setlist, songs, page_map, moments_ref=_ref)
 
     # Build PDF content
-    story = build_pdf_content(setlist, songs, formatted_date, toc_entries, styles)
+    story = build_pdf_content(setlist, songs, formatted_date, toc_entries, styles, moments_ref=_ref)
 
     # Create PDF
     doc = SimpleDocTemplate(
@@ -571,6 +578,7 @@ def generate_setlist_pdf(
 def generate_setlist_pdf_bytes(
     setlist: Setlist, songs: Dict[str, Song],
     event_type_name: str = "",
+    moments_order: list[str] | None = None,
 ) -> bytes:
     """Generate PDF setlist as in-memory bytes.
 
@@ -581,6 +589,7 @@ def generate_setlist_pdf_bytes(
         setlist: Setlist object with date and moments
         songs: Dictionary mapping song names to Song objects
         event_type_name: Optional event type display name for subtitle
+        moments_order: Optional explicit moment ordering from event type
 
     Returns:
         PDF content as bytes
@@ -597,10 +606,13 @@ def generate_setlist_pdf_bytes(
     if not event_type_name and setlist.label:
         formatted_date += f" ({setlist.label})"
 
+    # Build reference config for moment ordering
+    _ref = {m: 0 for m in moments_order} if moments_order else None
+
     # Calculate page numbers
     page_map = {}
     current_page = 2
-    for moment in canonical_moment_order(setlist.moments):
+    for moment in canonical_moment_order(setlist.moments, reference_config=_ref):
         song_list = setlist.moments[moment]
         if song_list:
             page_map[moment] = current_page
@@ -608,8 +620,8 @@ def generate_setlist_pdf_bytes(
 
     # Create styles and build content
     styles = create_styles()
-    toc_entries = build_toc_entries(setlist, songs, page_map)
-    story = build_pdf_content(setlist, songs, formatted_date, toc_entries, styles)
+    toc_entries = build_toc_entries(setlist, songs, page_map, moments_ref=_ref)
+    story = build_pdf_content(setlist, songs, formatted_date, toc_entries, styles, moments_ref=_ref)
 
     # Build to BytesIO buffer
     buffer = BytesIO()

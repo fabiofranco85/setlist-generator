@@ -18,6 +18,11 @@ class SupabaseHistoryRepository:
         self._client = client
         self._org_id = org_id
 
+    @property
+    def backend_name(self) -> str:
+        """Return the backend name."""
+        return "supabase"
+
     def get_all(self) -> list[dict]:
         """Get all setlists for the current org, most recent first."""
         response = (

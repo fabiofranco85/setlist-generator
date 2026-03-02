@@ -39,6 +39,11 @@ class FilesystemHistoryRepository:
         self.history_dir = history_dir
         self._history_cache: list[dict] | None = None
 
+    @property
+    def backend_name(self) -> str:
+        """Return the backend name."""
+        return "filesystem"
+
     @staticmethod
     def _make_setlist_id(date: str, label: str = "") -> str:
         """Build setlist_id from date and optional label."""

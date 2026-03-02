@@ -31,17 +31,23 @@ class PostgresEventTypeRepository:
         with self._pool.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT slug, name, description, moments FROM event_types ORDER BY slug"
+                    "SELECT slug, name, description, moments, moments_order "
+                    "FROM event_types ORDER BY slug"
                 )
                 rows = cur.fetchall()
 
         result: dict[str, EventType] = {}
-        for slug, name, description, moments in rows:
+        for row in rows:
+            slug, name, description, moments, moments_order = row
+            raw_moments = moments if isinstance(moments, dict) else {}
+            # Reconstruct ordered dict from moments_order
+            order = moments_order if isinstance(moments_order, list) else []
             result[slug] = EventType(
                 slug=slug,
                 name=name,
                 description=description or "",
-                moments=moments if isinstance(moments, dict) else {},
+                moments=raw_moments,
+                moments_order=order,
             )
         return result
 
@@ -75,10 +81,11 @@ class PostgresEventTypeRepository:
         with self._pool.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "INSERT INTO event_types (slug, name, description, moments) "
-                    "VALUES (%s, %s, %s, %s::jsonb)",
+                    "INSERT INTO event_types (slug, name, description, moments, moments_order) "
+                    "VALUES (%s, %s, %s, %s::jsonb, %s::jsonb)",
                     (event_type.slug, event_type.name, event_type.description,
-                     json.dumps(event_type.moments)),
+                     json.dumps(event_type.moments),
+                     json.dumps(event_type.moments_order)),
                 )
                 conn.commit()
 
@@ -103,6 +110,9 @@ class PostgresEventTypeRepository:
             if key == "moments":
                 set_clauses.append("moments = %s::jsonb")
                 params.append(json.dumps(value))
+                # Also update moments_order to preserve key order
+                set_clauses.append("moments_order = %s::jsonb")
+                params.append(json.dumps(list(value.keys())))
             elif key in ("name", "description"):
                 set_clauses.append(f"{key} = %s")
                 params.append(value)

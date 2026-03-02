@@ -124,12 +124,13 @@ CREATE TABLE org_config (
 
 -- Org-scoped event types with custom moments config
 CREATE TABLE event_types (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  org_id      UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
-  slug        TEXT NOT NULL,
-  name        TEXT NOT NULL,
-  description TEXT DEFAULT '',
-  moments     JSONB NOT NULL,
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id         UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  slug           TEXT NOT NULL,
+  name           TEXT NOT NULL,
+  description    TEXT DEFAULT '',
+  moments        JSONB NOT NULL,
+  moments_order  JSONB DEFAULT NULL,
   UNIQUE (org_id, slug)
 );
 

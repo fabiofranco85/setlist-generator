@@ -89,6 +89,11 @@ class HistoryRepository(Protocol):
     History entries are stored by date (YYYY-MM-DD format).
     """
 
+    @property
+    def backend_name(self) -> str:
+        """Human-readable name for the storage backend (e.g., 'filesystem', 'postgres')."""
+        ...
+
     def get_all(self) -> list[dict]:
         """Get all historical setlists sorted by date (most recent first).
 

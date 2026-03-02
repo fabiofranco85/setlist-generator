@@ -17,6 +17,7 @@ def format_setlist_markdown(
     setlist: Setlist,
     songs: dict[str, Song],
     event_type_name: str = "",
+    moments_order: list[str] | None = None,
 ) -> str:
     """Format setlist as markdown with chords.
 
@@ -24,6 +25,8 @@ def format_setlist_markdown(
         setlist: Setlist object with date and moments
         songs: Dictionary mapping song titles to Song objects
         event_type_name: Optional event type display name (omitted if empty or default)
+        moments_order: Optional explicit moment ordering from event type.
+            When provided, uses this order instead of the default MOMENTS_CONFIG.
 
     Returns:
         Markdown string with full chord content for each song
@@ -35,7 +38,9 @@ def format_setlist_markdown(
         header += f" ({setlist.label})"
     lines = [header, ""]
 
-    for moment in canonical_moment_order(setlist.moments):
+    # Use explicit moments_order as reference config if provided
+    ref = {m: 0 for m in moments_order} if moments_order else None
+    for moment in canonical_moment_order(setlist.moments, reference_config=ref):
         song_list = setlist.moments[moment]
         lines.append(f"## {moment.capitalize()}")
         lines.append("")

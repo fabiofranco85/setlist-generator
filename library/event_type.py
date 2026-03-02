@@ -28,10 +28,30 @@ class EventType:
     name: str
     description: str = ""
     moments: dict[str, int] = field(default_factory=dict)
+    moments_order: list[str] = field(default_factory=list)
 
     def __post_init__(self):
         if not self.moments:
             self.moments = dict(MOMENTS_CONFIG)
+        if not self.moments_order:
+            self.moments_order = list(self.moments.keys())
+
+    @property
+    def ordered_moments(self) -> dict[str, int]:
+        """Return moments dict ordered according to moments_order.
+
+        Keys in moments_order come first (in that order),
+        followed by any extra keys in moments not in moments_order.
+        """
+        result = {}
+        for key in self.moments_order:
+            if key in self.moments:
+                result[key] = self.moments[key]
+        # Append any keys not in moments_order
+        for key in self.moments:
+            if key not in result:
+                result[key] = self.moments[key]
+        return result
 
 
 def validate_event_type_slug(slug: str) -> str:
@@ -114,6 +134,7 @@ def load_event_types(path: Path) -> dict[str, EventType]:
             name=info.get("name", slug),
             description=info.get("description", ""),
             moments=info.get("moments", dict(MOMENTS_CONFIG)),
+            moments_order=info.get("moments_order", []),
         )
 
     return result
@@ -132,6 +153,7 @@ def save_event_types(event_types: dict[str, EventType], path: Path) -> None:
             "name": et.name,
             "description": et.description,
             "moments": et.moments,
+            "moments_order": et.moments_order,
         }
 
     with open(path, "w", encoding="utf-8") as f:
