@@ -1,5 +1,7 @@
 ### Rei Davi (Em)
 
+Intro: Em  C B Em 2x
+
         Em
 Se o Espírito de Deus se move em mim
     B                  Em
