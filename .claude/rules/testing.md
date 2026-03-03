@@ -139,8 +139,8 @@ docker info
 # Start local Supabase (uses supabase/config.toml + migrations + seed.sql)
 npx supabase start
 
-# Install test + saas dependencies
-uv sync --group dev --group saas
+# Install test + saas + postgres dependencies
+uv sync --group dev --group saas --group postgres
 ```
 
 ### Running
