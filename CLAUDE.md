@@ -340,6 +340,24 @@ STORAGE_BACKEND=postgres DATABASE_URL=postgresql://user:pass@host/db songbook ge
 
 The `api/` package provides a FastAPI multi-tenant API backed by Supabase (auth + RLS) and S3 (output storage). Install with `uv sync --group saas` and run with `uvicorn api:create_app --factory --reload`. See `.claude/rules/api.md` for full documentation.
 
+### Running API Tests
+
+API integration tests run against a local Supabase instance:
+
+```bash
+# Prerequisites: Docker running
+npx supabase start          # Start local Supabase (one-time)
+uv sync --group dev --group saas  # Install test + saas dependencies
+
+# Run API tests
+uv run pytest tests/integration/api/ -v -m supabase
+
+# Run everything except API tests (when Docker unavailable)
+uv run pytest tests/ -m "not supabase"
+```
+
+Tests exercise the full endpoint pipeline (routes, schemas, PostgREST queries, JSONB handling) against real Postgres. See `.claude/rules/testing.md` for fixture details.
+
 ## Dependencies
 
 - Python 3.12+

@@ -355,11 +355,67 @@ async def do_something(
 
 ## Testing
 
-- Unit tests: `tests/unit/test_generation_config.py`, `tests/unit/test_sharing.py`, `tests/unit/test_s3_output.py`
-- API tests: `tests/api/` (with FastAPI `TestClient` and mocked repos)
-- Supabase integration tests: marked `@pytest.mark.supabase`, require local Supabase
+### Unit Tests
+
+- `tests/unit/test_generation_config.py`, `tests/unit/test_sharing.py`, `tests/unit/test_s3_output.py`
 - S3 tests use `MagicMock` for the boto3 client; `pytest.importorskip("boto3")` for skip
 - Coverage omits: `library/repositories/supabase/*`, `library/repositories/s3/*`, `api/*`
+
+### API Integration Tests (Supabase)
+
+**Location:** `tests/integration/api/`
+
+Tests run against a **local Supabase instance** (via `npx supabase start`). They exercise the full endpoint pipeline — FastAPI routes, Pydantic schemas, repository queries, JSONB handling, and Postgres constraints — against real infrastructure.
+
+**Prerequisites:**
+- Docker running
+- Supabase CLI (`npx supabase`)
+- Local Supabase started: `npx supabase start`
+
+**Architecture:**
+- `get_current_user` is overridden to inject fake user dicts (no real JWT flow)
+- `get_repos` is overridden to use `SupabaseRepositoryContainer` with `service_role` key (bypasses RLS)
+- Direct SQL via `psycopg` for test data setup/teardown
+- Each test gets a clean database state (mutable tables truncated after each test)
+
+**Fixtures** (in `tests/integration/api/conftest.py`):
+
+| Fixture | Scope | Purpose |
+|---------|-------|---------|
+| `supabase_instance` | session | Parse `supabase status` for connection info; skip if unavailable |
+| `db_conn` | session | Raw psycopg connection for direct SQL |
+| `test_org` | session | Two test orgs (`test-church`, `other-church`) |
+| `test_users` | session | Five GoTrue users: viewer, editor, org_admin, other_org_user, system_admin |
+| `seed_songs` | function | Insert 4 test songs with tags |
+| `make_client` | function | Factory: `make_client("editor")` → `TestClient` with dep overrides |
+| `clean_test_data` | function, autouse | Truncate mutable tables after each test |
+
+**Test files:**
+
+| File | Tests | Endpoints covered |
+|------|-------|-------------------|
+| `test_songs.py` | ~15 | Song CRUD, search, fork, share, transpose, info |
+| `test_setlists.py` | ~14 | Generate, list, get, replace, derive, PDF |
+| `test_rbac.py` | ~10 | Cross-cutting role checks for all roles |
+| `test_workflows.py` | ~4 | Multi-step end-to-end workflows |
+
+**Running:**
+
+```bash
+# Start local Supabase (one-time)
+npx supabase start
+
+# Run API tests
+uv run pytest tests/integration/api/ -v -m supabase
+
+# Run everything except API tests
+uv run pytest tests/ -m "not supabase"
+
+# Single file
+uv run pytest tests/integration/api/test_songs.py -v
+```
+
+**Markers:** All API tests have `pytestmark = [pytest.mark.supabase, pytest.mark.slow]`.
 
 ## Dependencies
 

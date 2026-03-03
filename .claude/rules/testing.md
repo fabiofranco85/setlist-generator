@@ -124,6 +124,87 @@ uv run pytest tests/unit/test_selector.py -v
 uv run pytest -k "recency" -v
 ```
 
+## API Integration Tests (Supabase)
+
+**Location:** `tests/integration/api/`
+
+These tests run against a **local Supabase instance** and exercise the full API endpoint pipeline.
+
+### Prerequisites
+
+```bash
+# Docker must be running
+docker info
+
+# Start local Supabase (uses supabase/config.toml + migrations + seed.sql)
+npx supabase start
+
+# Install test + saas dependencies
+uv sync --group dev --group saas
+```
+
+### Running
+
+```bash
+# All API tests
+uv run pytest tests/integration/api/ -v -m supabase
+
+# Exclude API tests (when Docker unavailable)
+uv run pytest tests/ -m "not supabase"
+
+# Single route group
+uv run pytest tests/integration/api/test_songs.py -v
+```
+
+### Markers
+
+All files in `tests/integration/api/` use:
+```python
+pytestmark = [pytest.mark.supabase, pytest.mark.slow]
+```
+
+The `supabase` marker is registered in `pyproject.toml`. Tests are auto-skipped when Supabase is not running.
+
+### Architecture
+
+- **Auth**: `get_current_user` overridden to inject fake user dicts (no real JWT)
+- **Repos**: `get_repos` overridden with `SupabaseRepositoryContainer` using `service_role` key (bypasses RLS but uses real PostgREST queries)
+- **Data setup**: Direct SQL via `psycopg` connection (`db_conn` fixture)
+- **Cleanup**: `clean_test_data` (autouse) truncates mutable tables after each test
+
+### Fixture Reference (`tests/integration/api/conftest.py`)
+
+| Fixture | Scope | Description |
+|---------|-------|-------------|
+| `supabase_instance` | session | Parse `npx supabase status`; skip if unavailable |
+| `db_conn` | session | Raw psycopg connection for direct SQL |
+| `test_org` | session | Two orgs: `test-church` and `other-church` |
+| `test_users` | session | Five GoTrue users with org memberships |
+| `seed_songs` | function | Insert 4 test songs with tags via SQL |
+| `make_client` | function | Factory: `make_client("editor")` → `TestClient` |
+| `clean_test_data` | function, autouse | Truncate mutable tables, re-seed system_config |
+
+### Writing New API Tests
+
+```python
+# tests/integration/api/test_my_feature.py
+import pytest
+
+pytestmark = [pytest.mark.supabase, pytest.mark.slow]
+
+
+class TestMyFeature:
+    def test_editor_can_do_thing(self, make_client, seed_songs):
+        client = make_client("editor")
+        resp = client.post("/my-endpoint", json={...})
+        assert resp.status_code == 200
+
+    def test_viewer_cannot_do_thing(self, make_client):
+        client = make_client("viewer")
+        resp = client.post("/my-endpoint", json={...})
+        assert resp.status_code == 403
+```
+
 ## Adding New Tests
 
 1. Create `tests/unit/test_<module>.py` or `tests/integration/test_<feature>.py`
