@@ -347,7 +347,7 @@ API integration tests run against a local Supabase instance:
 ```bash
 # Prerequisites: Docker running
 npx supabase start          # Start local Supabase (one-time)
-uv sync --group dev --group saas  # Install test + saas dependencies
+uv sync --group dev --group saas --group postgres  # Install test + saas + postgres deps
 
 # Run API tests
 uv run pytest tests/integration/api/ -v -m supabase
