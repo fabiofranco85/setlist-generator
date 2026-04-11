@@ -205,9 +205,18 @@ async def download_pdf(
     date: str,
     label: str = "",
     event_type: str = "",
+    no_chords: bool = False,
     repos: RepositoryContainer = Depends(get_repos),
 ):
-    """Download a setlist as PDF."""
+    """Download a setlist as PDF.
+
+    Query parameters:
+        label: Optional setlist label.
+        event_type: Optional event type slug.
+        no_chords: When True, return a lyrics-only PDF (chord lines stripped)
+            for non-musicians. The downloaded filename is suffixed with
+            ``-lyrics`` so it does not collide with the full chord PDF.
+    """
     entry = await asyncio.to_thread(repos.history.get_by_date, date, label, event_type)
     if not entry:
         raise KeyError(f"Setlist for {date} not found")
@@ -230,11 +239,14 @@ async def download_pdf(
     pdf_bytes = await asyncio.to_thread(
         generate_setlist_pdf_bytes, setlist, songs,
         moments_order=moments_order,
+        include_chords=not no_chords,
     )
 
     filename = f"setlist-{date}"
     if label:
         filename += f"-{label}"
+    if no_chords:
+        filename += "-lyrics"
     filename += ".pdf"
 
     return Response(

@@ -9,7 +9,7 @@ from library import (
 )
 
 
-def run(date, output_dir, history_dir, label="", event_type=""):
+def run(date, output_dir, history_dir, label="", event_type="", no_chords=False):
     """
     Generate PDF from existing setlist history.
 
@@ -19,6 +19,9 @@ def run(date, output_dir, history_dir, label="", event_type=""):
         history_dir: Custom history directory
         label: Optional label for multiple setlists per date
         event_type: Optional event type slug
+        no_chords: When True, generate a lyrics-only PDF (chord lines
+            stripped) saved as ``<setlist_id>_lyrics.pdf`` alongside the
+            regular chord PDF.
     """
     from cli.cli_utils import resolve_paths, handle_error, validate_label, find_setlist_or_fail, resolve_event_type
 
@@ -65,12 +68,20 @@ def run(date, output_dir, history_dir, label="", event_type=""):
         print(f"  {display_moment}: {', '.join(song_list)}")
 
     # Generate PDF
-    pdf_path = repos.output.get_pdf_path(setlist.date, label=setlist.label, event_type=et_slug)
+    variant = "lyrics" if no_chords else ""
+    pdf_path = repos.output.get_pdf_path(
+        setlist.date, label=setlist.label, event_type=et_slug, variant=variant
+    )
     pdf_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        generate_setlist_pdf(setlist, songs, pdf_path, event_type_name=et_name)
-        print(f"\n✓ PDF saved to: {pdf_path}")
+        generate_setlist_pdf(
+            setlist, songs, pdf_path,
+            event_type_name=et_name,
+            include_chords=not no_chords,
+        )
+        label_suffix = " (lyrics-only)" if no_chords else ""
+        print(f"\n✓ PDF saved to: {pdf_path}{label_suffix}")
     except ImportError:
         print("\nError: ReportLab library not installed.")
         print("Install with: uv sync            (installs all dependencies)")

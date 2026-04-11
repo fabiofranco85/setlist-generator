@@ -47,7 +47,7 @@ def parse_overrides(override_args: tuple[str, ...] | None) -> dict[str, list[str
 
 
 def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=False,
-        label="", replace_count=None, event_type=""):
+        label="", replace_count=None, event_type="", no_chords=False):
     """
     Generate a setlist for a service date.
 
@@ -63,6 +63,8 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
         label: Optional label for multiple setlists per date
         replace_count: Songs to replace when deriving (number string, "all", or None)
         event_type: Optional event type slug
+        no_chords: When True (and ``pdf`` is also True), generate a
+            lyrics-only PDF variant instead of the regular chord PDF.
     """
     from cli.cli_utils import resolve_paths, print_metrics_summary, validate_label, handle_error, resolve_event_type
     from library.observability import Observability
@@ -77,6 +79,10 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
     # Validate --replace requires --label
     if replace_count is not None and not label:
         handle_error("--replace requires --label")
+
+    # --no-chords only makes sense alongside --pdf
+    if no_chords and not pdf:
+        handle_error("--no-chords requires --pdf")
 
     # Use today if no date specified
     if not date:
@@ -210,11 +216,20 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
 
     # Generate PDF if requested
     if pdf:
-        pdf_path = repos.output.get_pdf_path(date, label=label, event_type=et_slug)
+        variant = "lyrics" if no_chords else ""
+        pdf_path = repos.output.get_pdf_path(
+            date, label=label, event_type=et_slug, variant=variant
+        )
         pdf_path.parent.mkdir(parents=True, exist_ok=True)
-        print(f"\nGenerating PDF...")
+        variant_label = " (lyrics-only)" if no_chords else ""
+        print(f"\nGenerating PDF{variant_label}...")
         try:
-            generate_setlist_pdf(setlist, songs, pdf_path, event_type_name=et_name, moments_order=et_moments_order)
+            generate_setlist_pdf(
+                setlist, songs, pdf_path,
+                event_type_name=et_name,
+                moments_order=et_moments_order,
+                include_chords=not no_chords,
+            )
             print(f"PDF saved to: {pdf_path}")
         except ImportError:
             print("Error: ReportLab library not installed.")

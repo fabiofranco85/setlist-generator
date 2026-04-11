@@ -217,6 +217,47 @@ class TestFilesystemOutputRepository:
         path = repo.get_pdf_path("2026-02-15")
         assert path == tmp_project / "output" / "2026-02-15.pdf"
 
+    def test_get_pdf_path_lyrics_variant(self, repo, tmp_project):
+        path = repo.get_pdf_path("2026-02-15", variant="lyrics")
+        assert path == tmp_project / "output" / "2026-02-15_lyrics.pdf"
+
+    def test_get_pdf_path_lyrics_variant_with_label(self, repo, tmp_project):
+        path = repo.get_pdf_path("2026-02-15", label="evening", variant="lyrics")
+        assert path == tmp_project / "output" / "2026-02-15_evening_lyrics.pdf"
+
+    def test_get_pdf_path_lyrics_variant_with_event_type(self, repo, tmp_project):
+        path = repo.get_pdf_path("2026-02-15", event_type="youth", variant="lyrics")
+        assert path == tmp_project / "output" / "youth" / "2026-02-15_lyrics.pdf"
+
+    def test_get_pdf_path_lyrics_variant_with_label_and_event_type(self, repo, tmp_project):
+        path = repo.get_pdf_path(
+            "2026-02-15", label="evening", event_type="youth", variant="lyrics"
+        )
+        assert path == tmp_project / "output" / "youth" / "2026-02-15_evening_lyrics.pdf"
+
+    def test_get_pdf_path_default_has_no_variant_suffix(self, repo, tmp_project):
+        # Sanity check: empty variant keeps the filename unchanged.
+        path = repo.get_pdf_path("2026-02-15", variant="")
+        assert path == tmp_project / "output" / "2026-02-15.pdf"
+
+    def test_save_pdf_lyrics_variant_does_not_clobber_full(self, repo, tmp_project):
+        pytest.importorskip("reportlab")
+        songs_repo = FilesystemSongRepository(tmp_project)
+        songs = songs_repo.get_all()
+        setlist = Setlist(
+            date="2026-02-15",
+            moments={"louvor": ["Upbeat Song", "Moderate Song"]},
+        )
+        full_path = repo.save_pdf(setlist, songs)
+        lyrics_path = repo.save_pdf(setlist, songs, variant="lyrics")
+        assert full_path.exists()
+        assert lyrics_path.exists()
+        assert full_path != lyrics_path
+        assert lyrics_path.name == "2026-02-15_lyrics.pdf"
+        # Both files should be non-trivial (lyrics version may be smaller).
+        assert full_path.stat().st_size > 0
+        assert lyrics_path.stat().st_size > 0
+
     def test_save_from_setlist_markdown_only(self, repo, tmp_project):
         songs_repo = FilesystemSongRepository(tmp_project)
         songs = songs_repo.get_all()

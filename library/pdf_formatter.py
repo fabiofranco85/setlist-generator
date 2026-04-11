@@ -182,6 +182,30 @@ def extract_chord_content(song: Song) -> str:
     return song.content.strip()
 
 
+def _filter_out_chord_lines(content: str) -> str:
+    """Return content with chord lines removed.
+
+    Drops both "pure" chord lines (where every token is a valid chord
+    symbol) and "mixed" chord lines (lines dominated by chord tokens but
+    containing stray non-chord tokens such as parenthesized groupings
+    ``(Dm G7)`` or annotations like ``Riff``). Standalone section
+    markers (``[Refrão]``, ``[Verso 1]``) are preserved because they
+    help non-musicians follow song structure.
+
+    Used to produce a lyrics-only PDF variant for non-musicians — the
+    requirement is that no chord notation leaks into the final PDF, so
+    the stricter ``_is_mixed_chord_line`` heuristic is layered on top of
+    ``is_chord_line``.
+    """
+    from .transposer import _is_mixed_chord_line, is_chord_line
+
+    def is_chord(line: str) -> bool:
+        return is_chord_line(line) or _is_mixed_chord_line(line)
+
+    kept = [line.rstrip() for line in content.split("\n") if not is_chord(line)]
+    return "\n".join(kept)
+
+
 class PageTracker:
     """Tracks page numbers during PDF generation."""
 
@@ -349,6 +373,7 @@ def build_pdf_content(
     toc_entries: List[TOCEntry],
     styles: dict,
     moments_ref: dict[str, int] | None = None,
+    include_chords: bool = True,
 ) -> List:
     """Build flowables for PDF content.
 
@@ -358,6 +383,9 @@ def build_pdf_content(
         formatted_date: Formatted date string
         toc_entries: TOC entries
         styles: Style dictionary
+        moments_ref: Optional reference config for moment ordering
+        include_chords: When False, strip chord lines from rendered songs
+            (lyrics-only variant for non-musicians)
 
     Returns:
         List of flowables for PDF
@@ -386,11 +414,12 @@ def build_pdf_content(
             ]
         else:
             # Song row - clickable link with page number
-            song_with_key = (
-                f"{entry.song_title} ({entry.song_key})"
-                if entry.song_key
-                else entry.song_title
-            )
+            if include_chords and entry.song_key:
+                song_with_key = f"{entry.song_title} ({entry.song_key})"
+            else:
+                # Lyrics-only variant hides song keys entirely (no musical
+                # notation in the TOC either).
+                song_with_key = entry.song_title
 
             row = [
                 Paragraph(
@@ -441,9 +470,13 @@ def build_pdf_content(
             if not song:
                 continue
 
-            # Song title with key AND ANCHOR
+            # Song title with key AND ANCHOR.
+            # Lyrics-only variant hides the key from the header too.
             title, key = parse_song_title_and_key(song_title, song)
-            title_with_key = f"{title} ({key})" if key else title
+            if include_chords and key:
+                title_with_key = f"{title} ({key})"
+            else:
+                title_with_key = title
             song_anchor_id = generate_anchor_id(moment, idx)
             story.append(
                 Paragraph(
@@ -454,6 +487,8 @@ def build_pdf_content(
 
             # Chord content (monospace)
             chord_content = extract_chord_content(song)
+            if not include_chords:
+                chord_content = _filter_out_chord_lines(chord_content)
             if chord_content:
                 # Use Preformatted for monospace rendering
                 preformatted = Preformatted(
@@ -514,6 +549,7 @@ def generate_setlist_pdf(
     setlist: Setlist, songs: Dict[str, Song], output_path: Path,
     event_type_name: str = "",
     moments_order: list[str] | None = None,
+    include_chords: bool = True,
 ) -> None:
     """Generate PDF setlist matching the reference format.
 
@@ -523,6 +559,8 @@ def generate_setlist_pdf(
         output_path: Path where PDF should be saved
         event_type_name: Optional event type display name for subtitle
         moments_order: Optional explicit moment ordering from event type
+        include_chords: When False, strip chord lines from rendered songs
+            (lyrics-only variant for non-musicians)
     """
     # Format date
     formatted_date = format_date_portuguese(setlist.date)
@@ -559,7 +597,10 @@ def generate_setlist_pdf(
     toc_entries = build_toc_entries(setlist, songs, page_map, moments_ref=_ref)
 
     # Build PDF content
-    story = build_pdf_content(setlist, songs, formatted_date, toc_entries, styles, moments_ref=_ref)
+    story = build_pdf_content(
+        setlist, songs, formatted_date, toc_entries, styles,
+        moments_ref=_ref, include_chords=include_chords,
+    )
 
     # Create PDF
     doc = SimpleDocTemplate(
@@ -579,6 +620,7 @@ def generate_setlist_pdf_bytes(
     setlist: Setlist, songs: Dict[str, Song],
     event_type_name: str = "",
     moments_order: list[str] | None = None,
+    include_chords: bool = True,
 ) -> bytes:
     """Generate PDF setlist as in-memory bytes.
 
@@ -590,6 +632,8 @@ def generate_setlist_pdf_bytes(
         songs: Dictionary mapping song names to Song objects
         event_type_name: Optional event type display name for subtitle
         moments_order: Optional explicit moment ordering from event type
+        include_chords: When False, strip chord lines from rendered songs
+            (lyrics-only variant for non-musicians)
 
     Returns:
         PDF content as bytes
@@ -621,7 +665,10 @@ def generate_setlist_pdf_bytes(
     # Create styles and build content
     styles = create_styles()
     toc_entries = build_toc_entries(setlist, songs, page_map, moments_ref=_ref)
-    story = build_pdf_content(setlist, songs, formatted_date, toc_entries, styles, moments_ref=_ref)
+    story = build_pdf_content(
+        setlist, songs, formatted_date, toc_entries, styles,
+        moments_ref=_ref, include_chords=include_chords,
+    )
 
     # Build to BytesIO buffer
     buffer = BytesIO()

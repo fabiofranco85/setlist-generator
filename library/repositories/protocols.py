@@ -270,12 +270,16 @@ class OutputRepository(Protocol):
         """
         ...
 
-    def save_pdf(self, setlist: Setlist, songs: dict[str, Song]) -> Path:
+    def save_pdf(self, setlist: Setlist, songs: dict[str, Song], variant: str = "") -> Path:
         """Generate and save setlist as PDF.
 
         Args:
             setlist: Setlist object with date and moments
             songs: Dictionary of songs for chord content
+            variant: Optional variant suffix (e.g. "lyrics" for a lyrics-only
+                PDF). When non-empty, the filename is suffixed with
+                ``_{variant}`` and the lyrics-only variant strips chord lines
+                from the rendered output.
 
         Returns:
             Path to the saved PDF file
@@ -308,13 +312,16 @@ class OutputRepository(Protocol):
         """
         ...
 
-    def get_pdf_path(self, date: str, label: str = "", event_type: str = "") -> Path:
+    def get_pdf_path(self, date: str, label: str = "", event_type: str = "", variant: str = "") -> Path:
         """Get the path where PDF would be saved for a date.
 
         Args:
             date: Setlist date
             label: Optional label for multiple setlists per date
             event_type: Optional event type slug (empty = default type)
+            variant: Optional variant suffix (e.g. "lyrics" for a lyrics-only
+                PDF). When non-empty, the filename is suffixed with
+                ``_{variant}`` to allow variants to coexist on disk.
 
         Returns:
             Path where PDF file would be saved

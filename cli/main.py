@@ -85,18 +85,20 @@ def cli(ctx, verbose):
 @click.option("--replace", "-r", "replace_count", default=None, help="Songs to replace when deriving (number or 'all', default: random)")
 @click.option("--override", multiple=True, help="Force songs: MOMENT:SONG1,SONG2")
 @click.option("--pdf", is_flag=True, help="Generate PDF output")
+@click.option("--no-chords", is_flag=True, default=False, help="When combined with --pdf, generate a lyrics-only PDF for non-musicians")
 @click.option("--no-save", is_flag=True, help="Dry run (don't save to history)")
 @click.option("--output-dir", help="Custom markdown output directory")
 @click.option("--history-dir", help="Custom history directory")
 @click.option("--output", help="Custom output filename")
 @click.pass_context
-def generate(ctx, date, label, event_type, replace_count, override, pdf, no_save, output_dir, history_dir, output):
+def generate(ctx, date, label, event_type, replace_count, override, pdf, no_chords, no_save, output_dir, history_dir, output):
     """Generate new setlist for a service date.
 
     \b
     Examples:
       songbook generate
       songbook generate --date 2026-02-15 --pdf
+      songbook generate --date 2026-02-15 --pdf --no-chords  # lyrics-only PDF
       songbook generate --override "louvor:Oceanos,Santo Pra Sempre"
       songbook generate --label evening                  # derive from primary
       songbook generate --label evening --replace 3      # derive replacing 3 songs
@@ -105,7 +107,7 @@ def generate(ctx, date, label, event_type, replace_count, override, pdf, no_save
     from cli.commands.generate import run
     run(date, override, pdf, no_save, output_dir, history_dir, output,
         verbose=ctx.obj.get("verbose", False), label=label, replace_count=replace_count,
-        event_type=event_type)
+        event_type=event_type, no_chords=no_chords)
 
 
 @cli.command("view-setlist")
@@ -261,9 +263,10 @@ def label(date, label, event_type, to_label, remove, output_dir, history_dir):
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
 @click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
 @click.option("--event-type", "-e", default="", help="Event type slug")
+@click.option("--no-chords", is_flag=True, default=False, help="Generate a lyrics-only PDF (no chord lines) for non-musicians")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
-def pdf(date, label, event_type, output_dir, history_dir):
+def pdf(date, label, event_type, no_chords, output_dir, history_dir):
     """Generate PDF from existing setlist.
 
     \b
@@ -271,9 +274,10 @@ def pdf(date, label, event_type, output_dir, history_dir):
       songbook pdf
       songbook pdf --date 2026-02-15
       songbook pdf -e youth --date 2026-03-20
+      songbook pdf --date 2026-02-15 --no-chords  # Lyrics-only variant
     """
     from cli.commands.pdf import run
-    run(date, output_dir, history_dir, label=label, event_type=event_type)
+    run(date, output_dir, history_dir, label=label, event_type=event_type, no_chords=no_chords)
 
 
 @cli.command()

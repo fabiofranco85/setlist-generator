@@ -72,12 +72,15 @@ class FilesystemOutputRepository:
         output_path.write_text(content, encoding="utf-8")
         return output_path
 
-    def save_pdf(self, setlist: Setlist, songs: dict[str, Song]) -> Path:
+    def save_pdf(self, setlist: Setlist, songs: dict[str, Song], variant: str = "") -> Path:
         """Generate and save setlist as PDF.
 
         Args:
             setlist: Setlist object with date and moments
             songs: Dictionary of songs for chord content
+            variant: Optional variant suffix (e.g. "lyrics" for a lyrics-only
+                PDF). When set to ``"lyrics"``, chord lines are stripped from
+                the rendered output.
 
         Returns:
             Path to the saved PDF file
@@ -95,9 +98,16 @@ class FilesystemOutputRepository:
 
         event_type = setlist.event_type
         self._ensure_dir(event_type)
-        target_dir = self._resolve_dir(event_type)
-        output_path = target_dir / f"{setlist.setlist_id}.pdf"
-        generate_setlist_pdf(setlist, songs, output_path)
+        output_path = self.get_pdf_path(
+            setlist.date,
+            label=setlist.label,
+            event_type=event_type,
+            variant=variant,
+        )
+        generate_setlist_pdf(
+            setlist, songs, output_path,
+            include_chords=(variant != "lyrics"),
+        )
         return output_path
 
     def delete_outputs(self, date: str, label: str = "", event_type: str = "") -> list[Path]:
@@ -135,19 +145,23 @@ class FilesystemOutputRepository:
         setlist_id = self._make_setlist_id(date, label)
         return self._resolve_dir(event_type) / f"{setlist_id}.md"
 
-    def get_pdf_path(self, date: str, label: str = "", event_type: str = "") -> Path:
+    def get_pdf_path(self, date: str, label: str = "", event_type: str = "", variant: str = "") -> Path:
         """Get the path where PDF would be saved for a date.
 
         Args:
             date: Setlist date
             label: Optional label for multiple setlists per date
             event_type: Optional event type slug (empty = default type)
+            variant: Optional variant suffix (e.g. "lyrics" for a lyrics-only
+                PDF). When non-empty, the filename is suffixed with
+                ``_{variant}`` so variants can coexist on disk.
 
         Returns:
             Path where PDF file would be saved
         """
         setlist_id = self._make_setlist_id(date, label)
-        return self._resolve_dir(event_type) / f"{setlist_id}.pdf"
+        filename = f"{setlist_id}_{variant}.pdf" if variant else f"{setlist_id}.pdf"
+        return self._resolve_dir(event_type) / filename
 
     def save_from_setlist(
         self, setlist: Setlist, songs: dict[str, Song], include_pdf: bool = False
