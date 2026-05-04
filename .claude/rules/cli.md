@@ -35,8 +35,9 @@ songbook view-song "Oceanos"         # View song details
 songbook view-song                   # Interactive song picker
 songbook info "Oceanos"              # Song statistics and history
 songbook info                        # Interactive picker → statistics
-songbook replace --moment louvor --position 2  # Replace song
+songbook replace --moment louvor --position 2  # Replace song (re-applies energy order)
 songbook replace --moment louvor --position 2 --pick  # Interactive picker
+songbook replace --moment louvor --position 2 --keep-position  # Pin to position, no reorder
 songbook replace --moment louvor --position 2 --label evening  # Replace in labeled
 songbook label --date 2026-03-01 --to evening  # Add label to setlist
 songbook label --date 2026-03-01 --label evening --to night  # Rename label
@@ -347,6 +348,9 @@ songbook replace --moment louvor --position 2 --date 2026-03-01 --label evening
 
 # Replace in an event-type-specific setlist
 songbook replace --moment louvor --position 2 -e youth
+
+# Pin replacement to the requested position (skip energy reorder)
+songbook replace --moment louvor --position 3 --keep-position
 ```
 
 **Options:**
@@ -355,6 +359,7 @@ songbook replace --moment louvor --position 2 -e youth
 - `--positions N,N` - Multiple positions (comma-separated). Cannot be used with `--position`
 - `--with SONG` - Manual replacement song (auto-select if omitted)
 - `--pick` or `-p` - Interactively pick replacement song (single position only, cannot combine with `--with` or `--positions`)
+- `--keep-position` - Skip energy reordering after replacement; the new song stays at the exact requested position
 - `--date YYYY-MM-DD` - Target date (default: latest)
 - `--event-type TEXT` or `-e` - Event type slug
 - `--label TEXT` or `-l` - Setlist label
@@ -362,11 +367,11 @@ songbook replace --moment louvor --position 2 -e youth
 - `--history-dir PATH` - Custom history directory
 
 **Behavior:**
-- **Auto mode** (no `--with`, no `--pick`): System selects best available song based on recency and weights
-- **Pick mode** (`--pick`): Opens searchable menu filtered to the target moment, excluding songs already in setlist
-- **Manual mode** (`--with "Song"`): Uses specified song (validates existence and moment tag)
-- **Energy reordering**: Always reapplied after replacement to maintain emotional arc
-- **Batch mode** (`--positions`): Replaces multiple songs at once, ensures no duplicates
+- **Auto mode** (no `--with`, no `--pick`): System selects the best available song based on recency and weights, then reapplies energy ordering so the moment stays in its emotional arc. The new song's final position is dictated by its energy — when that differs from the requested position, the CLI prints a "moved to position N" note. Pass `--keep-position` to pin the new song to the exact requested position.
+- **Pick mode** (`--pick`): Opens a searchable menu filtered to the target moment, excluding songs already in the setlist. Once the user selects a song, the explicit pick wins: **energy ordering is skipped and the new song lands at the exact requested position**.
+- **Manual mode** (`--with "Song"`): Uses the specified song (validates existence and moment tag). Same as pick mode, the explicit choice wins: **energy ordering is skipped and the new song lands at the exact requested position**.
+- **(NEW) marker**: Tracks the new song's *title*, not its position. After energy reordering, the marker follows the song — it never lands on whichever song was bumped into the requested slot.
+- **Batch mode** (`--positions`): Always auto (`--with` is rejected for multi-position batches). Energy reorder applies unless `--keep-position` is passed.
 
 **Note:** When neither `--position` nor `--positions` is specified, defaults to position 1.
 

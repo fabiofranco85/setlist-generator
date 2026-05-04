@@ -279,6 +279,7 @@ def replace_songs_batch(
     history: list[dict[str, Any]],
     obs: Observability | None = None,
     config: GenerationConfig | None = None,
+    reorder_energy: bool = True,
 ) -> dict[str, Any]:
     """
     Replace multiple songs at once.
@@ -290,6 +291,9 @@ def replace_songs_batch(
         songs: All available songs
         history: Historical setlists
         obs: Observability container (defaults to noop)
+        reorder_energy: When True (default), reapply energy ordering to each
+            affected moment after replacement. Set to False to keep each new
+            song at the exact requested position.
 
     Returns:
         Updated setlist dict (new copy, original unchanged)
@@ -369,10 +373,14 @@ def replace_songs_batch(
     for moment, position, replacement in final_replacements:
         new_setlist["moments"][moment][position] = replacement
 
-    # Reorder each affected moment by energy
+    # Reorder each affected moment by energy (skip when caller asked us to
+    # keep replacements at their requested positions).
     affected_moments = {moment for moment, _, _ in replacements}
 
-    eo_enabled = config.energy_ordering_enabled if config else ENERGY_ORDERING_ENABLED
+    eo_enabled = (
+        reorder_energy
+        and (config.energy_ordering_enabled if config else ENERGY_ORDERING_ENABLED)
+    )
     eo_rules = config.energy_ordering_rules if config else ENERGY_ORDERING_RULES
     for moment in affected_moments:
         if eo_enabled and moment in eo_rules:

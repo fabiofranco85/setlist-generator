@@ -18,8 +18,60 @@ from library.replacer import (
 )
 
 
+def compute_position_drift(
+    requested_positions_zero_indexed: list[int],
+    replacement_titles: list[str],
+    new_moment_songs: list[str],
+) -> list[tuple[int, int, str]]:
+    """Return the list of replacements whose new song moved during reordering.
+
+    Each tuple is ``(requested_position_1_indexed, actual_position_1_indexed,
+    title)``. Replacements whose final position equals the requested
+    position are omitted. ``replacement_titles`` and
+    ``requested_positions_zero_indexed`` are paired by index — same length,
+    same order.
+
+    Used by the CLI to print a drift warning when energy reordering moves
+    the new song to a slot other than the one the user asked for.
+    """
+    if len(requested_positions_zero_indexed) != len(replacement_titles):
+        raise ValueError(
+            "requested_positions_zero_indexed and replacement_titles must "
+            "have the same length"
+        )
+
+    drift: list[tuple[int, int, str]] = []
+    for req_zero, title in zip(requested_positions_zero_indexed, replacement_titles):
+        try:
+            actual_zero = new_moment_songs.index(title)
+        except ValueError:
+            # Song dropped out of the moment entirely — shouldn't happen with
+            # normal replacement, but stay defensive instead of crashing the CLI.
+            continue
+        if actual_zero != req_zero:
+            drift.append((req_zero + 1, actual_zero + 1, title))
+    return drift
+
+
+def format_updated_moment_lines(
+    new_moment_songs: list[str],
+    replacement_titles: set[str],
+) -> list[str]:
+    """Render the "Updated songs in '<moment>':" block.
+
+    The ``(NEW)`` marker is attached by *song identity*, not by position —
+    so when energy reordering moves a new song to a different slot the
+    marker follows the song instead of staying on whichever song happened
+    to land at the originally requested position.
+    """
+    return [
+        f"  {idx}. {song}{' (NEW)' if song in replacement_titles else ''}"
+        for idx, song in enumerate(new_moment_songs, start=1)
+    ]
+
+
 def run(moment, position, positions, replacement, date, output_dir, history_dir, verbose=False, label="",
-        event_type="", pick=False):
+        event_type="", pick=False, keep_position=False):
     """
     Replace song in existing setlist.
 
@@ -119,7 +171,19 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir,
         marker = " (TO REPLACE)" if (idx - 1) in positions_zero_indexed else ""
         print(f"  {idx}. {song}{marker}")
 
+    # Whether to reapply energy ordering after the replacement.
+    #
+    # Manual user choices (`--with` or `--pick`) are an explicit commitment:
+    # the user picked a specific song AND a specific slot, so reapplying
+    # energy ordering would silently overrule the request. Auto mode is
+    # the opposite — the user is delegating both song *and* placement to
+    # the algorithm — so we keep the energy arc unless the user passes
+    # `--keep-position` to opt out.
+    is_manual_choice = pick or (replacement is not None)
+    reorder_after_replace = not is_manual_choice and not keep_position
+
     # Perform replacements
+    replacement_titles: list[str] = []
     try:
         if len(positions_zero_indexed) == 1:
             # Single replacement
@@ -162,7 +226,12 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir,
             )
 
             mode = "pick" if pick else ("manual" if replacement else "auto")
-            print(f"Selected replacement ({mode}): '{replacement_song}'")
+            mode_suffix = (
+                " — pinned to requested position, no energy reorder"
+                if is_manual_choice
+                else ""
+            )
+            print(f"Selected replacement ({mode}): '{replacement_song}'{mode_suffix}")
 
             # Apply replacement
             new_setlist_dict = replace_song_in_setlist(
@@ -171,12 +240,14 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir,
                 position=pos,
                 replacement_song=replacement_song,
                 songs=songs,
-                reorder_energy=True,
+                reorder_energy=reorder_after_replace,
                 obs=obs,
             )
+            replacement_titles = [replacement_song]
 
         else:
-            # Batch replacement
+            # Batch replacement (always auto — manual choice rejected above
+            # for multi-position; the only knob is --keep-position).
             if replacement:
                 handle_error("Cannot use manual replacement (--with) for multiple positions")
 
@@ -193,16 +264,63 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir,
                 songs=songs,
                 history=history,
                 obs=obs,
+                reorder_energy=not keep_position,
             )
+            # Recover the chosen replacement titles by diffing the moment.
+            old_titles_by_pos = {
+                pos: setlist_dict["moments"][moment][pos]
+                for pos in positions_zero_indexed
+            }
+            new_moment_for_diff = new_setlist_dict["moments"][moment]
+            old_set = set(setlist_dict["moments"][moment])
+            replacement_titles = [
+                title for title in new_moment_for_diff
+                if title not in old_set
+            ]
+            # Stable order: first appearance in the new moment list
+            seen: set[str] = set()
+            replacement_titles = [
+                t for t in replacement_titles
+                if not (t in seen or seen.add(t))
+            ]
 
     except ValueError as e:
         handle_error(str(e))
 
-    # Show updated setlist
+    # Show updated setlist — mark NEW songs by identity, not by position,
+    # so energy reordering doesn't mislabel which song is the replacement.
+    new_moment_songs = new_setlist_dict["moments"][moment]
     print(f"\nUpdated songs in '{moment}':")
-    for idx, song in enumerate(new_setlist_dict["moments"][moment], start=1):
-        marker = " (NEW)" if (idx - 1) in positions_zero_indexed else ""
-        print(f"  {idx}. {song}{marker}")
+    for line in format_updated_moment_lines(new_moment_songs, set(replacement_titles)):
+        print(line)
+
+    # Surface energy-reorder drift so users aren't surprised when the new
+    # song ends up at a different position than the one they requested.
+    # Only meaningful when energy reordering actually ran — i.e., auto mode
+    # without --keep-position. Manual choices (--with / --pick) skip the
+    # reorder entirely and so by definition cannot drift.
+    reorder_ran = (
+        len(positions_zero_indexed) == 1
+        and reorder_after_replace
+    ) or (
+        len(positions_zero_indexed) > 1
+        and not keep_position
+    )
+    if reorder_ran:
+        drift = compute_position_drift(
+            positions_zero_indexed, replacement_titles, new_moment_songs
+        )
+        if drift:
+            print(
+                "\nNote: energy reordering moved the new song(s) to a different "
+                "position than requested. Use --keep-position to disable "
+                "reordering for replace."
+            )
+            for requested_1idx, actual_1idx, title in drift:
+                print(
+                    f"  • '{title}' requested at position {requested_1idx}, "
+                    f"now at position {actual_1idx}"
+                )
 
     # Save updated files
     setlist_obj = Setlist(

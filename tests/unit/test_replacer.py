@@ -269,6 +269,63 @@ class TestReplaceSongInSetlist:
         )
         assert result["moments"]["prelúdio"] == setlist_dict["moments"]["prelúdio"]
 
+    def test_energy_reorder_can_move_new_song_off_requested_position(
+        self, setlist_dict, songs_dict
+    ):
+        """
+        Documents the surprising-but-intentional behavior that motivated the
+        --keep-position flag.
+
+        Setlist louvor is already sorted ascending by energy
+        [Upbeat(1), Moderate(2), Reflective(3), Worship(4)].
+
+        Replacing position 1 (Upbeat, energy 1) with a high-energy
+        replacement (Worship Song, energy 4) and re-applying the ascending
+        energy rule causes the new song to land at position 3 — *not*
+        position 1, where the user asked for it.
+
+        Without an identity-aware UI, a user passing ``--position 1`` would
+        see Moderate Song now at position 1 and the new song two slots
+        away, which is exactly the "erratic" symptom the bug report
+        described.
+        """
+        # New songs_dict entry: high-energy louvor candidate distinct from the
+        # song already at louvor position 4.
+        songs_dict["High Energy Replacement"] = make_song(
+            title="High Energy Replacement",
+            tags={"louvor": 3},
+            energy=4,
+        )
+
+        result = replace_song_in_setlist(
+            setlist_dict, "louvor", 0, "High Energy Replacement", songs_dict,
+            reorder_energy=True,
+        )
+        louvor = result["moments"]["louvor"]
+        assert "Upbeat Song" not in louvor, (
+            "the song originally at position 1 should be gone"
+        )
+        actual_index = louvor.index("High Energy Replacement")
+        assert actual_index != 0, (
+            f"regression guard: energy reorder moved the new song to index "
+            f"{actual_index} (position {actual_index + 1}); CLI display "
+            f"must not assume the new song stays at the requested position"
+        )
+
+    def test_keep_position_preserves_requested_slot(
+        self, setlist_dict, songs_dict
+    ):
+        """
+        With ``reorder_energy=False`` (the library hook the new
+        ``--keep-position`` CLI flag uses), the new song is guaranteed to
+        sit at exactly the requested position regardless of its energy.
+        """
+        result = replace_song_in_setlist(
+            setlist_dict, "louvor", 2, "Extra Song", songs_dict,
+            reorder_energy=False,
+        )
+        assert result["moments"]["louvor"][2] == "Extra Song"
+
 
 # ---------------------------------------------------------------------------
 # replace_songs_batch

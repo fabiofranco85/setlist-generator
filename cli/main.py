@@ -215,13 +215,14 @@ def list_moments(event_type):
 @click.option("--positions", help="Multiple positions (comma-separated)")
 @click.option("--with", "replacement", shell_complete=complete_song_names, help="Manual song selection")
 @click.option("--pick", "-p", is_flag=True, help="Interactively pick replacement song")
+@click.option("--keep-position", is_flag=True, help="Skip energy reordering — keep the new song at the requested position")
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
 @click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
 @click.option("--event-type", "-e", default="", help="Event type slug")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
 @click.pass_context
-def replace(ctx, moment, position, positions, replacement, pick, date, label, event_type, output_dir, history_dir):
+def replace(ctx, moment, position, positions, replacement, pick, keep_position, date, label, event_type, output_dir, history_dir):
     """Replace song in existing setlist.
 
     \b
@@ -230,12 +231,13 @@ def replace(ctx, moment, position, positions, replacement, pick, date, label, ev
       songbook replace --moment louvor --position 2
       songbook replace --moment louvor --position 2 --with "Oceanos"
       songbook replace --moment louvor --position 2 --pick
+      songbook replace --moment louvor --position 2 --keep-position
       songbook replace --moment louvor --position 2 -e youth
     """
     from cli.commands.replace import run
     run(moment, position, positions, replacement, date, output_dir, history_dir,
         verbose=ctx.obj.get("verbose", False), label=label, event_type=event_type,
-        pick=pick)
+        pick=pick, keep_position=keep_position)
 
 
 @cli.command()

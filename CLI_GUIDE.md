@@ -512,13 +512,24 @@ songbook replace --date 2025-12-25 --moment louvor --position 1
 1. Calculates recency scores for all songs (same date as original setlist)
 2. Builds exclusion set (all songs currently in setlist EXCEPT the one being replaced)
 3. Uses same selection algorithm as generation (weight × (recency + 0.1) + randomization)
-4. Reorders moment by energy to maintain emotional arc
+4. Reorders moment by energy to maintain emotional arc (skipped with `--keep-position`)
 
-**Manual Mode:**
+**Manual / Pick Mode:**
 1. Validates song exists and has required moment tag
 2. Validates song not already in setlist
 3. Replaces song at specified position
-4. Reorders by energy
+4. **Skips energy reordering** — explicit user choice wins, the song stays at the requested position
+
+**The "explicit choice wins" rule:**
+
+When you pass `--with "Song"` or use `--pick` to select a replacement, you've committed to both *which* song and *where* it goes. The CLI honors that commitment exactly: no energy reordering, no second-guessing. The new song lands at the exact position you asked for, regardless of its energy.
+
+Auto mode is the opposite — you're delegating both the song *and* the placement to the algorithm — so the moment is reapplied energy ordering. If the auto-picked song has a very different energy than the one it replaced, it will land at a different slot than requested. The CLI surfaces this with:
+
+- A `(NEW)` marker that follows the new song's *title*, not its position. You always see which line is the replacement.
+- A "moved to position N" note that explains what happened and points at `--keep-position`.
+
+Pass `--keep-position` in auto mode to disable energy reordering and pin the auto-picked song to the exact requested position.
 
 **Data Updated:**
 - `output/YYYY-MM-DD.md` — markdown with chords (always filesystem)
@@ -538,6 +549,7 @@ Both are completely regenerated to reflect the updated setlist.
 | `--positions N,M,..` | Replace multiple positions (auto mode only) |
 | `--with "SONG"` | Manual replacement with specific song |
 | `--pick`, `-p` | Interactively pick replacement song (single position only) |
+| `--keep-position` | Skip energy reordering — the new song stays at the exact requested position |
 | `--output-dir DIR` | Custom output directory |
 | `--history-dir DIR` | Custom history directory |
 

@@ -56,8 +56,9 @@ songbook view-song "Oceanos"         # View song details
 songbook view-song                   # Interactive song picker
 songbook info "Oceanos"              # Song statistics and history
 songbook info                        # Interactive picker → statistics
-songbook replace --moment louvor --position 2  # Replace song
+songbook replace --moment louvor --position 2  # Replace song (re-applies energy ordering)
 songbook replace --moment louvor --position 2 --pick  # Interactive picker
+songbook replace --moment louvor --position 2 --keep-position  # Don't reorder by energy
 songbook replace --moment louvor --position 2 --label evening  # Replace in labeled
 songbook label --date 2026-03-01 --to evening  # Add label to setlist
 songbook label --date 2026-03-01 --label evening --to night  # Rename label
@@ -203,10 +204,16 @@ songbook generate --date 2026-03-01 --label evening --replace all  # Replace all
 **Replace a song:**
 ```bash
 songbook replace --moment louvor --position 2
-songbook replace --moment louvor --position 2 --pick            # Interactive picker
-songbook replace --moment louvor --position 2 --with "Oceanos"  # Manual
-songbook replace --moment louvor --position 2 --label evening   # In labeled setlist
+songbook replace --moment louvor --position 2 --pick             # Interactive picker
+songbook replace --moment louvor --position 2 --with "Oceanos"   # Manual
+songbook replace --moment louvor --position 2 --keep-position    # Don't reorder by energy
+songbook replace --moment louvor --position 2 --label evening    # In labeled setlist
 ```
+
+**Replacement semantics:**
+
+- **Manual choice (`--with "Song"` or `--pick`)** always wins. The new song is pinned at the exact requested position, energy reordering is skipped, no surprises. This is what you want when you're sure both *which* song and *where*.
+- **Auto mode** (no `--with`, no `--pick`) keeps the moment's energy arc by reapplying energy ordering after the swap. A new song with very different energy can land at a different position than the one you asked for; the CLI prints a clear note when this happens and shows the actual new position. Pass `--keep-position` to opt out and pin the auto-picked song to the exact requested position.
 
 **Manage labels:**
 ```bash
