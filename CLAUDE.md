@@ -65,7 +65,8 @@ songbook label --date 2026-03-01 --label evening --remove  # Remove label
 songbook transpose "Oceanos" --to G  # Transpose chords (preview)
 songbook transpose "Oceanos" --to G --save  # Transpose and persist
 songbook view-song "Oceanos" -t G    # View song transposed
-songbook pdf --date 2026-02-15       # Generate PDF
+songbook pdf --date 2026-02-15       # Generate PDF (with chords)
+songbook pdf --date 2026-02-15 --no-chords  # Lyrics-only PDF for non-musicians
 songbook pdf --label evening         # Generate PDF for labeled setlist
 songbook markdown --date 2026-02-15  # Regenerate markdown from history
 songbook youtube --date 2026-02-15   # Create YouTube playlist from setlist
@@ -107,10 +108,10 @@ This is a **setlist generator** for church worship services. It intelligently se
 │   └── <event-type>/           # Non-default event types (subdirectory)
 │       └── YYYY-MM-DD.json
 ├── library/                     # Core package (modular architecture)
-│   ├── config.py               # Configuration constants
+│   ├── config.py               # Configuration constants + GenerationConfig
 │   ├── models.py               # Song and Setlist data structures
 │   ├── event_type.py           # Event type definitions and filtering
-│   ├── loader.py               # Data loading
+│   ├── loader.py               # Tag parsing utilities
 │   ├── labeler.py              # Setlist label management
 │   ├── selector.py             # Song selection algorithms
 │   ├── ordering.py             # Energy-based ordering
@@ -118,9 +119,11 @@ This is a **setlist generator** for church worship services. It intelligently se
 │   ├── generator.py            # Core setlist generation
 │   ├── replacer.py             # Song replacement + derivation
 │   ├── formatter.py            # Output formatting
-│   ├── pdf_formatter.py        # PDF generation (file + in-memory bytes)
-│   ├── sharing.py              # Song library merging + share validation
+│   ├── pdf_formatter.py        # PDF generation (file + in-memory bytes, lyrics-only variant)
+│   ├── paths.py                # Output path resolution (PathConfig dataclass)
+│   ├── sharing.py              # Song library merging + share validation (SaaS)
 │   ├── youtube.py              # YouTube playlist integration
+│   ├── observability/          # Structured logging / metrics / tracing (ports + adapters)
 │   └── repositories/           # Data access abstraction
 │       ├── filesystem/         # Default CSV+JSON backend
 │       ├── postgres/           # PostgreSQL backend (optional)
@@ -180,9 +183,14 @@ Where:
 **Generate setlist:**
 ```bash
 songbook generate --date 2026-02-15
-songbook generate --pdf  # Include PDF output
+songbook generate --pdf                       # Include PDF output (with chords)
+songbook generate --pdf --no-chords           # Also produce a lyrics-only PDF
 songbook generate -e youth --date 2026-03-20  # Generate for event type
 ```
+
+**Lyrics-only PDF (for singers / non-musicians):**
+
+`--no-chords` (on `pdf` and on `generate --pdf`) strips chord lines, the chord-key suffix from song titles, and from the table of contents. The variant is written next to the regular PDF with a `_lyrics` suffix (e.g. `output/2026-02-15_lyrics.pdf`) so both can coexist on disk.
 
 **Multiple setlists per date (labels):**
 ```bash
@@ -287,14 +295,16 @@ for moment, song_list in setlist.moments.items():
 ```
 
 **Key repository methods (label-aware and event-type-aware):**
+- `repos.history.backend_name` - Property returning the backend name (e.g. `"filesystem"`, `"postgres"`)
 - `repos.history.get_by_date(date, label="", event_type="")` - Get specific setlist
 - `repos.history.get_by_date_all(date)` - Get all setlists for a date (all labels/types)
 - `repos.history.exists(date, label="", event_type="")` - Check if setlist exists
 - `repos.history.update(date, data, label="", event_type="")` - Update a setlist
 - `repos.history.delete(date, label="", event_type="")` - Delete a setlist
 - `repos.output.save_markdown(date, content, label="", event_type="")` - Save markdown
+- `repos.output.save_pdf(setlist, songs, variant="")` - Save PDF; pass `variant="lyrics"` for the lyrics-only variant (filename gets `_lyrics` suffix)
 - `repos.output.get_markdown_path(date, label="", event_type="")` - Get output path
-- `repos.output.get_pdf_path(date, label="", event_type="")` - Get PDF path
+- `repos.output.get_pdf_path(date, label="", event_type="", variant="")` - Get PDF path (with optional variant suffix)
 - `repos.output.delete_outputs(date, label="", event_type="")` - Delete md + pdf files
 - `repos.event_types.get_all()` - Get all event types
 - `repos.event_types.get(slug)` - Get event type by slug
@@ -310,6 +320,8 @@ Key settings in `library/config.py`:
 - `RECENCY_DECAY_DAYS` - Recency calculation (default: 45 days)
 - `ENERGY_ORDERING_ENABLED` - Enable/disable energy ordering (default: True)
 - `DEFAULT_WEIGHT` - Default tag weight (default: 3)
+- `DEFAULT_ENERGY` - Fallback energy for songs without explicit energy (default: 2.5)
+- `GenerationConfig` - Frozen dataclass that bundles all of the above. `GenerationConfig.from_defaults()` reproduces the CLI behavior; `GenerationConfig.from_config_repo(repo)` reads per-org overrides for the SaaS API. Threaded through `SetlistGenerator`, `selector.calculate_recency_scores`, `ordering.apply_energy_ordering`, `loader.parse_tags`, and `replacer.*`.
 
 ### Storage Backend
 

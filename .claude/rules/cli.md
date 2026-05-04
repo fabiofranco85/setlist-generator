@@ -24,6 +24,7 @@ pip install -e .
 **Quick reference:**
 ```bash
 songbook --help                      # Main help
+songbook --verbose <command>         # Enable debug logging (also -v)
 songbook generate --date 2026-02-15  # Generate setlist
 songbook generate --label evening    # Derive labeled variant from primary
 songbook generate --label evening --replace 3  # Derive replacing 3 songs
@@ -41,7 +42,8 @@ songbook label --date 2026-03-01 --to evening  # Add label to setlist
 songbook label --date 2026-03-01 --label evening --to night  # Rename label
 songbook transpose "Oceanos" --to G  # Transpose chords (preview)
 songbook view-song "Oceanos" -t G    # View transposed (display-only)
-songbook pdf --date 2026-02-15       # Generate PDF
+songbook pdf --date 2026-02-15       # Generate PDF (with chords)
+songbook pdf --date 2026-02-15 --no-chords  # Lyrics-only PDF (singers/non-musicians)
 songbook pdf --label evening         # Generate PDF for labeled setlist
 songbook markdown --date 2026-02-15  # Regenerate markdown from history
 songbook youtube --date 2026-02-15   # Create YouTube playlist from setlist
@@ -69,6 +71,9 @@ songbook generate --date 2026-02-15
 # Generate with PDF output
 songbook generate --pdf
 songbook generate --date 2026-02-15 --pdf
+
+# Also generate a lyrics-only PDF variant (no chords) for singers
+songbook generate --date 2026-02-15 --pdf --no-chords
 
 # Generate for a specific event type
 songbook generate -e youth --date 2026-03-20
@@ -100,7 +105,9 @@ songbook generate --output-dir custom/output --history-dir custom/history
 - `--replace N` or `-r` - Songs to replace when deriving (number or "all", default: random). Only valid with `--label`
 - `--override "moment:song1,song2"` - Force specific songs for a moment (can be used multiple times)
 - `--pdf` - Generate PDF output in addition to markdown
+- `--no-chords` - When combined with `--pdf`, generate a lyrics-only PDF (no chord lines, no key suffixes) for non-musicians. Filename gets a `_lyrics` suffix
 - `--no-save` - Dry run mode, don't save to history
+- `--output PATH` - Custom output filename for the markdown file
 - `--output-dir PATH` - Custom output directory for markdown files
 - `--history-dir PATH` - Custom history directory for JSON tracking
 
@@ -419,12 +426,18 @@ songbook pdf --date 2026-03-01 --label evening
 
 # Generate PDF for an event-type-specific setlist
 songbook pdf --date 2026-03-20 -e youth
+
+# Generate a lyrics-only PDF (singers/non-musicians)
+songbook pdf --date 2026-02-15 --no-chords
 ```
 
 **Options:**
-- `--date YYYY-MM-DD` - Target date (default: today)
+- `--date YYYY-MM-DD` - Target date (default: latest)
 - `--event-type TEXT` or `-e` - Event type slug
 - `--label TEXT` or `-l` - Setlist label
+- `--no-chords` - Generate a lyrics-only PDF (chord lines stripped, no key suffix in titles or TOC); written with a `_lyrics` filename suffix so it coexists with the regular PDF
+- `--output-dir PATH` - Custom output directory
+- `--history-dir PATH` - Custom history directory
 
 **PDF Format:**
 - **Page 1**: Table of contents with song list and page numbers
@@ -828,6 +841,16 @@ songbook generate --date 2026-03-01 --no-save
 - Uses Click library for command-line interface
 - Subcommands organized in `cli/commands/`
 - Entry point: `cli/main.py`
+
+### Top-level Options
+
+- `--verbose` / `-v` (on the `songbook` group itself, before the subcommand) - Switch the observability log level from WARNING to DEBUG. Threaded into `replace` and `generate` via `ctx.obj["verbose"]`. See `.claude/rules/observability.md` for the underlying ports-and-adapters layer.
+- `--version` - Print the songbook version.
+
+```bash
+songbook -v generate --date 2026-02-15   # Verbose generation
+songbook --verbose replace --moment louvor --position 2
+```
 
 ### Command Registration
 All commands are registered in `cli/main.py` using Click's group system:

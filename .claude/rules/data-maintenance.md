@@ -1,163 +1,69 @@
 ---
 paths:
   - "cli/commands/maintenance.py"
+  - "scripts/**/*.py"
+  - "scripts/**/*.sql"
   - "migrate_folders.py"
-  - "test_*.py"
 ---
 
 # Data Maintenance Utilities
 
-This document describes the data quality and maintenance tools available in the project. This documentation is loaded when working on maintenance scripts.
+This document describes the data-maintenance commands and migration scripts in the project. It loads when working on maintenance code, the `scripts/` directory, or `migrate_folders.py`.
 
 ## Overview
 
-The project includes several utility scripts for maintaining data quality and importing external data. These tools help ensure consistency between the song database and historical performance records.
+Maintenance work splits into two layers:
 
-## songbook cleanup
+1. **CLI maintenance commands** — `songbook cleanup`, `songbook fix-punctuation`, `songbook import-history`. Implemented as thin shims in `cli/commands/maintenance.py` that defer to top-level helper modules (`cleanup_history`, `fix_punctuation`, `import_real_history`).
+2. **Migration scripts** — one-shot `scripts/*.py` and `scripts/*.sql` files plus `migrate_folders.py` at the project root. Used during schema upgrades or storage-backend transitions.
 
-**Purpose:** Automated data quality checker and fixer for history files.
+> **Status note:** The shim commands reference helper modules (`cleanup_history`, `fix_punctuation`, `import_real_history`) that are not currently checked into the repository. As a result, `songbook cleanup`, `songbook fix-punctuation`, and `songbook import-history` will raise `ModuleNotFoundError` until those helpers are added (or the shims are rewritten in-place). When fixing or extending these commands, treat `cli/commands/maintenance.py` as the integration boundary — the actual algorithms live (or should live) in the helper modules.
 
-**Module:** `cli/commands/maintenance.py` (cleanup command)
+## CLI Commands
 
-**What it does:**
-- Analyzes all history files for inconsistencies with database.csv
-- Automatically fixes capitalization mismatches (e.g., "deus grandão" → "Deus Grandão")
-- Identifies songs in history that don't exist in database.csv
-- Provides fuzzy matching suggestions for similar song names
-- Creates timestamped backups before making changes
+### songbook cleanup
 
-**When to use:**
-- After importing external data
-- When you suspect data quality issues
-- As a periodic health check (monthly/quarterly)
-- Before major changes to database.csv
+**Module:** `cli/commands/maintenance.py:run_cleanup`
+**Defers to:** `cleanup_history.main()` (top-level helper, not in `library/`)
 
-**Usage:**
+Intended behavior — automated quality check for history files:
+
+- Analyse all history files for inconsistencies with `database.csv`
+- Auto-fix capitalization mismatches (e.g. `"deus grandão" → "Deus Grandão"`)
+- Identify songs in history not present in `database.csv`
+- Suggest similar database entries via fuzzy match
+- Snapshot a backup of the `history/` directory before changing anything
+
 ```bash
 songbook cleanup
 ```
 
-**Output:**
-- Shows capitalization fixes applied
-- Lists missing songs with suggestions
-- Creates backup directory (e.g., `history_backup_20260129_105330`)
+**Caveat:** the shim accepts `--history-dir` but the underlying script uses a hardcoded `./history` path; the shim prints a warning when a custom dir is supplied. Fix this when you reintroduce/modify the helper.
 
-**Example output:**
-```
-Step 1: Analyzing history files...
-  ✓ Loaded 57 songs from database.csv
-  ✓ Found 11 issue(s)
+### songbook fix-punctuation
 
-Step 2: Applying capitalization fixes...
-  📝 2025-08-31.json
-     • 'Reina em mim' → 'Reina em Mim'
+**Module:** `cli/commands/maintenance.py:run_fix_punctuation`
+**Defers to:** `fix_punctuation.main()`
 
-Step 3: Songs that need to be added to database.csv
-  ❌ 'New Song Title'
-      → Not found in database.csv
-      → Suggested action: Add to database.csv with energy and moment tags
-```
+Intended behavior — normalize punctuation differences in history files (commas, hyphens) to match canonical names from `database.csv`. Same `--history-dir` caveat as `cleanup`.
 
-### Implementation Details
-
-**Algorithm:**
-1. Load canonical song names from `database.csv`
-2. Scan all `history/*.json` files
-3. For each song in history:
-   - Check exact match with database
-   - If no match, try case-insensitive match (capitalization fix)
-   - If still no match, mark as missing and suggest similar songs (fuzzy matching)
-4. Create timestamped backup of history directory
-5. Apply capitalization fixes to history files
-6. Report missing songs to user
-
-**Backup Strategy:**
-- Creates `history_backup_YYYYMMDD_HHMMSS/` directory
-- Copies all history files before making changes
-- Preserves original state for rollback if needed
-
-**Fuzzy Matching:**
-Uses string similarity (difflib) to suggest similar song names:
-```python
-from difflib import get_close_matches
-
-suggestions = get_close_matches(
-    missing_song,
-    canonical_songs,
-    n=3,          # Top 3 suggestions
-    cutoff=0.6    # 60% similarity threshold
-)
-```
-
----
-
-## fix-punctuation
-
-**Purpose:** Normalize punctuation differences in history files to match canonical song names.
-
-**What it does:**
-- Fixes punctuation variants (commas, hyphens) to match database.csv
-- Handles common variations like "Em Espírito, Em Verdade" → "Em Espírito Em Verdade"
-- Updates history files in place
-
-**When to use:**
-- After running `songbook cleanup` and finding punctuation mismatches
-- When importing data with inconsistent punctuation
-- As a follow-up to manual history edits
-
-**Usage:**
 ```bash
 songbook fix-punctuation
 ```
 
-**Implementation:**
-```python
-PUNCTUATION_FIXES = {
-    "Em Espírito, Em Verdade": "Em Espírito Em Verdade",
-    "Santo, Santo, Santo": "Santo Santo Santo",
-    # Add more mappings as needed
-}
+### songbook import-history
 
-# Apply fixes to all history files
-for history_file in history_dir.glob("*.json"):
-    data = json.loads(history_file.read_text())
-    for moment, songs in data["moments"].items():
-        data["moments"][moment] = [
-            PUNCTUATION_FIXES.get(song, song)
-            for song in songs
-        ]
-    history_file.write_text(json.dumps(data, indent=2))
+**Module:** `cli/commands/maintenance.py:run_import`
+**Defers to:** `import_real_history.main()`
+
+Interactive workflow that imports external setlist data into the internal `history/*.json` format. The shim prompts the user to confirm they have edited the helper script's `raw_data` dictionary before running.
+
+```bash
+songbook import-history
 ```
 
-**Note:** This script has a predefined mapping of punctuation variants. Edit the `PUNCTUATION_FIXES` dictionary to add new mappings.
+Expected external format (per the shim's interactive prompt and historical helper behavior):
 
-**Best Practice:** Run `songbook cleanup` first to identify punctuation mismatches, then add them to `PUNCTUATION_FIXES` mapping.
-
----
-
-## import-history
-
-**Purpose:** Import external setlist data and convert it to the internal history format.
-
-**Module:** `cli/commands/maintenance.py` (import-history command)
-
-**What it does:**
-- Parses setlist data from external JSON format
-- Maps moment names (e.g., "Oferta" → "ofertório", "Comunhão" → "saudação")
-- Filters for supported formats (setlist_with_moments)
-- Deletes existing fake/example history files
-- Creates properly formatted history/*.json files
-
-**When to use:**
-- Initial project setup with existing service history
-- Migrating from another system
-- Importing bulk historical data
-
-**Usage:**
-1. Edit the `raw_data` dictionary in the script with your data
-2. Run: `songbook import-history`
-
-**Data format expected:**
 ```json
 {
   "2025-12-28": {
@@ -167,228 +73,110 @@ for history_file in history_dir.glob("*.json"):
       "Louvor": [
         {"title": "Song 1", "key": "G"},
         {"title": "Song 2", "key": "C"}
-      ],
-      "Oferta": [{"title": "Offering Song", "key": "A"}],
-      "Comunhão": [{"title": "Communion Song", "key": "E"}],
-      "Crianças": [{"title": "Children's Song", "key": "C"}],
-      "Poslúdio": [{"title": "Closing Song", "key": "F"}]
+      ]
     }
   }
 }
 ```
 
-**Moment Name Mapping:**
-```python
-MOMENT_MAPPING = {
-    "Prelúdio": "prelúdio",
-    "Louvor": "louvor",
-    "Oferta": "ofertório",
-    "Comunhão": "saudação",
-    "Crianças": "crianças",
-    "Poslúdio": "poslúdio",
-}
-```
+Suggested moment-name mapping for any reimplementation:
 
-**Output Format:**
-Creates `history/YYYY-MM-DD.json` files:
-```json
-{
-  "date": "2025-12-28",
-  "moments": {
-    "prelúdio": ["Song Name"],
-    "louvor": ["Song 1", "Song 2"],
-    "ofertório": ["Offering Song"],
-    "saudação": ["Communion Song"],
-    "crianças": ["Children's Song"],
-    "poslúdio": ["Closing Song"]
-  }
-}
-```
-
-**Implementation Details:**
-
-```python
-def import_history(raw_data):
-    """Import external setlist data to internal format."""
-    # Clear existing history
-    for old_file in history_dir.glob("*.json"):
-        old_file.unlink()
-
-    # Process each date
-    for date_str, entry in raw_data.items():
-        if entry.get("format") != "setlist_with_moments":
-            print(f"⚠️  Skipping {date_str}: unsupported format")
-            continue
-
-        # Map moment names and extract song titles
-        moments = {}
-        for external_moment, songs in entry["service_moments"].items():
-            internal_moment = MOMENT_MAPPING.get(external_moment)
-            if not internal_moment:
-                print(f"⚠️  Unknown moment: {external_moment}")
-                continue
-
-            moments[internal_moment] = [song["title"] for song in songs]
-
-        # Save to history
-        output_file = history_dir / f"{date_str}.json"
-        output_file.write_text(json.dumps({
-            "date": date_str,
-            "moments": moments
-        }, indent=2, ensure_ascii=False))
-
-        print(f"✓ Imported {date_str}")
-```
-
-**Note:** Only processes entries with `format: "setlist_with_moments"`. Other formats are ignored.
-
----
-
-## Data Quality Best Practices
-
-### 1. Run cleanup regularly
-Catches issues early before they accumulate:
-```bash
-# Monthly health check
-songbook cleanup
-```
-
-### 2. Verify after imports
-Always run cleanup after importing external data:
-```bash
-songbook import-history
-songbook cleanup
-```
-
-### 3. Keep backups
-The cleanup script creates backups automatically:
-- Backup location: `history_backup_YYYYMMDD_HHMMSS/`
-- Preserves original state for rollback
-- Can be deleted after verifying changes
-
-### 4. Fix root causes
-If punctuation issues recur, update data entry processes:
-- Standardize punctuation in external sources
-- Update import scripts to normalize punctuation
-- Document canonical forms in database.csv comments
-
-### 5. Document moment mappings
-Keep track of external → internal moment name mappings:
-```python
-# External system uses Portuguese long-form
-EXTERNAL_MOMENTS = {
-    "Momento de Adoração": "louvor",
-    "Momento de Oferta": "ofertório",
-    "Momento de Comunhão": "saudação",
-}
-```
-
----
-
-## Workflow: Importing External Data
-
-Complete workflow for importing and validating external setlist data:
-
-```bash
-# 1. Prepare your data in the import script
-# Edit raw_data dictionary in import_real_history.py
-
-# 2. Run import
-songbook import-history
-
-# 3. Check for data quality issues
-songbook cleanup
-
-# 4. Fix punctuation if needed (if step 3 found issues)
-songbook fix-punctuation
-
-# 5. Verify final state (should show 0 issues)
-songbook cleanup
-
-# 6. Test generation with imported data
-songbook generate --date 2026-03-01 --no-save
-
-# 7. Verify generated setlist avoids recently used songs
-songbook view-setlist --date 2026-03-01 --keys
-```
-
----
-
-## Common Issues and Solutions
-
-### Issue: Capitalization mismatches
-**Symptom:** "oceanos" in history, "Oceanos" in database.csv
-**Solution:** Run `songbook cleanup` (auto-fixes capitalization)
-
-### Issue: Punctuation variants
-**Symptom:** "Em Espírito, Em Verdade" vs "Em Espírito Em Verdade"
-**Solution:**
-1. Add mapping to `PUNCTUATION_FIXES` dictionary
-2. Run `songbook fix-punctuation`
-
-### Issue: Song doesn't exist in database
-**Symptom:** Cleanup reports missing song
-**Solution:**
-1. Check fuzzy matching suggestions
-2. Either:
-   - Add song to database.csv with energy and tags
-   - Fix typo in history file using suggested song name
-
-### Issue: Import fails with unknown moment
-**Symptom:** "Unknown moment: XYZ"
-**Solution:** Add mapping to `MOMENT_MAPPING` dictionary
-
-### Issue: Imported songs have wrong dates
-**Symptom:** History files created with wrong dates
-**Solution:** Check date format in raw_data (must be YYYY-MM-DD)
-
----
-
-## Testing Data Maintenance
-
-### Unit Testing
-```python
-def test_capitalization_fix():
-    """Test that capitalization fixes work correctly."""
-    songs = {"Oceanos": Song(...)}
-    history = [{"moments": {"louvor": ["oceanos"]}}]
-
-    issues = find_data_issues(songs, history)
-    assert issues[0]["type"] == "capitalization"
-    assert issues[0]["fix"] == "Oceanos"
-
-def test_fuzzy_matching():
-    """Test that similar songs are suggested."""
-    songs = {"Oceanos": Song(...)}
-    missing = "Oceanos de Fe"  # Typo
-
-    suggestions = find_similar_songs(missing, songs)
-    assert "Oceanos" in suggestions
-```
-
-### Integration Testing
-```bash
-# Test full workflow
-songbook import-history
-songbook cleanup > output.txt
-grep "0 issue" output.txt  # Should pass
-
-# Test with intentional errors
-# Add bad data to history
-echo '{"date":"2026-01-01","moments":{"louvor":["bad song"]}}' > history/2026-01-01.json
-songbook cleanup | grep "bad song"  # Should detect issue
-```
-
----
+| External (Portuguese long form) | Internal moment slug |
+|---------------------------------|----------------------|
+| Prelúdio                        | prelúdio             |
+| Louvor                          | louvor               |
+| Oferta                          | ofertório            |
+| Comunhão                        | saudação             |
+| Crianças                        | crianças             |
+| Poslúdio                        | poslúdio             |
 
 ## Migration Scripts
 
-### migrate_folders.py
-**Purpose:** Migrate from old folder structure to new structure
+Located in `scripts/` and at the project root.
 
-**When to use:**
-- One-time migration when restructuring project
-- Moving from flat structure to organized folders
-- Consolidating scattered data files
+### scripts/schema.sql / scripts/supabase_schema.sql
 
-**Note:** This is typically a one-time operation. After successful migration, the script can be archived or deleted.
+DDL for the PostgreSQL and Supabase backends respectively. Idempotent (`IF NOT EXISTS` / `ON CONFLICT DO NOTHING`). Apply with `psql $DATABASE_URL -f scripts/schema.sql`.
+
+### scripts/supabase_seed.sql
+
+Seeds the `system_config` table with values matching `library/config.py` defaults, so a fresh Supabase project starts in a working state.
+
+### scripts/migrate_event_types.sql
+
+For existing PostgreSQL databases — adds the event-type columns and `event_types` table introduced by commit `f507027`.
+
+### scripts/migrate_moments_order.sql
+
+Adds the `moments_order` column to existing `event_types` tables (introduced by commits `775aadf` / `3696d7d`).
+
+### scripts/migrate_set_org_context.sql
+
+Helper SQL for setting Supabase RLS context (`current_setting('app.org_id', true)::UUID`).
+
+### scripts/migrate_to_postgres.py
+
+One-shot migration of filesystem data (`database.csv`, `chords/`, `history/`, `event_types.json`) into PostgreSQL. Idempotent — uses `ON CONFLICT DO UPDATE` everywhere.
+
+```bash
+python scripts/migrate_to_postgres.py --database-url postgresql://user:pass@host/db
+python scripts/migrate_to_postgres.py --database-url $DATABASE_URL --apply-schema
+```
+
+### scripts/migrate_chords_to_postgres.py
+
+Backfills `songs.content` (chord markdown) from `chords/*.md` into PostgreSQL. Useful when the schema migration ran before the chord files were imported.
+
+### migrate_folders.py (project root)
+
+One-shot reorganisation that splits the legacy `setlists/` directory into `output/` (markdown) and `history/` (JSON). Run from the project root once; safe to delete after a successful migration.
+
+```bash
+python migrate_folders.py
+```
+
+## Workflow: Importing External Data
+
+Once the helper modules are in place, the canonical end-to-end workflow is:
+
+```bash
+# 1. Edit raw_data in the helper script (import_real_history.py)
+# 2. Import
+songbook import-history
+
+# 3. Check for data-quality issues
+songbook cleanup
+
+# 4. Normalize punctuation if cleanup flagged any
+songbook fix-punctuation
+
+# 5. Re-run cleanup to verify (should report 0 issues)
+songbook cleanup
+
+# 6. Smoke-test generation against the imported history
+songbook generate --date 2026-03-01 --no-save
+songbook view-setlist --date 2026-03-01 --keys
+```
+
+## Common Issues
+
+| Symptom | Diagnosis | Fix |
+|---------|-----------|-----|
+| `ModuleNotFoundError: cleanup_history` (or similar) | Helper module not in the repo yet | Add the helper module at the project root, or rewrite `maintenance.py` to inline the algorithm |
+| Cleanup reports a song that exists in `database.csv` | Capitalization or punctuation drift | `songbook cleanup` auto-fixes capitalization; punctuation needs `fix-punctuation` mappings |
+| `songbook cleanup --history-dir custom/` ignores the flag | Shim limitation: helper uses hardcoded `./history` | Update the helper to accept a `--history-dir` argument |
+| Import skips dates with `Unknown moment: XYZ` | External moment name not in the mapping | Extend the mapping table in the helper |
+
+## Testing
+
+Until the helper modules are reintroduced, the shim commands cannot be exercised end-to-end. When adding tests for new helpers:
+
+```python
+def test_capitalization_fix(tmp_path):
+    """Capitalization fixes match canonical database entries."""
+    # 1. Seed a tmp_path with database.csv + history/*.json
+    # 2. Invoke the cleanup helper with cwd=tmp_path
+    # 3. Assert the history JSON now uses canonical capitalization
+```
+
+For migration scripts, prefer integration tests against a temporary database (`postgres` marker) over unit tests with mocks — the value is in the SQL doing the right thing.

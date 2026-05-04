@@ -90,7 +90,7 @@ class RepositoryFactory:
         """Create repositories for the specified backend.
 
         Args:
-            backend: Backend name ("filesystem", "postgres", "mongodb", etc.)
+            backend: Backend name ("filesystem", "postgres", "supabase", etc.)
             **kwargs: Backend-specific configuration
 
         Returns:

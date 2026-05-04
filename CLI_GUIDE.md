@@ -82,7 +82,13 @@ songbook event-type add youth --name "Youth Service"
 # Get help
 songbook --help
 songbook generate --help
+
+# Verbose mode (DEBUG-level logging, threaded through generate/replace)
+songbook -v generate --date 2026-02-15
+songbook --verbose replace --moment louvor --position 2
 ```
+
+> **Note:** `--verbose` / `-v` is a top-level flag — place it *before* the subcommand (`songbook -v generate ...`, not `songbook generate -v`).
 
 ---
 
@@ -104,6 +110,10 @@ songbook generate --date 2026-02-15
 # Generate with PDF output
 songbook generate --pdf
 songbook generate --date 2026-02-15 --pdf
+
+# Generate a lyrics-only PDF variant alongside the regular one
+# (chord lines stripped — for singers / non-musicians)
+songbook generate --date 2026-02-15 --pdf --no-chords
 ```
 
 **Using Overrides:**
@@ -201,6 +211,7 @@ When using `-e`, the generator:
 | `--replace N`, `-r` | Songs to replace when deriving (number or "all"). Requires `--label` |
 | `--override MOMENT:SONGS` | Force specific songs (can be used multiple times) |
 | `--pdf` | Generate PDF in addition to markdown |
+| `--no-chords` | Combined with `--pdf`, also produce a lyrics-only PDF (no chords, no key suffixes). Filename gets a `_lyrics` suffix |
 | `--no-save` | Preview mode - don't save to history |
 | `--output PATH` | Custom output file path |
 | `--output-dir DIR` | Custom output directory |
@@ -960,6 +971,9 @@ songbook pdf
 
 # Generate PDF for specific date
 songbook pdf --date 2026-01-25
+
+# Generate a lyrics-only PDF variant (no chords) for singers
+songbook pdf --date 2026-01-25 --no-chords
 ```
 
 **PDF Features:**
@@ -968,6 +982,7 @@ songbook pdf --date 2026-01-25
 - 🎼 **Monospace chords**: Perfect alignment for guitar/piano notation
 - 🇧🇷 **Portuguese formatting**: "Domingo, 25 de Janeiro de 2026"
 - 🏛️ **Church terminology**: Uses "Oferta" and "Comunhão" instead of internal names
+- 🎤 **Lyrics-only variant** (`--no-chords`): Strips chord lines, the chord-key suffix from song titles, and from the table of contents. Written with a `_lyrics` filename suffix (e.g. `2026-02-15_lyrics.pdf`) so the chord and lyrics versions can coexist on disk
 
 **How it works:**
 
@@ -990,6 +1005,7 @@ The PDF uses church-specific terminology:
 | `--date YYYY-MM-DD` | Generate PDF for specific date (default: latest) |
 | `--event-type TEXT`, `-e` | Event type slug |
 | `--label TEXT`, `-l` | Setlist label |
+| `--no-chords` | Generate a lyrics-only PDF (no chord lines, no key suffixes); written with a `_lyrics` filename suffix |
 | `--output-dir DIR` | Custom output directory |
 | `--history-dir DIR` | Custom history directory |
 

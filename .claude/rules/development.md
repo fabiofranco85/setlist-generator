@@ -15,18 +15,22 @@ The `library/` package is organized into focused modules:
 **Purpose:** Configuration constants and settings
 
 **Contents:**
-- `MOMENTS_CONFIG` - Service moments with counts and descriptions
+- `MOMENTS_CONFIG` - Service moments with counts (default for the main event type)
 - `DEFAULT_WEIGHT` - Default tag weight (3)
 - `RECENCY_DECAY_DAYS` - Recency calculation parameter (45 days)
 - `ENERGY_ORDERING_ENABLED` - Toggle energy ordering (True)
 - `ENERGY_ORDERING_RULES` - Per-moment ordering rules
+- `DEFAULT_ENERGY` - Fallback energy for songs without explicit energy (2.5)
 - `DEFAULT_OUTPUT_DIR` - Markdown output directory ("output")
 - `DEFAULT_HISTORY_DIR` - History tracking directory ("history")
+- `canonical_moment_order(moments, reference_config=None)` - Sort moment keys: `reference_config` order first, extras alphabetically. Used by formatter, PDF formatter, and YouTube playlist builder to keep ordering consistent across surfaces.
+- `GenerationConfig` (frozen dataclass) - Immutable bundle of all generation params (`moments_config`, `recency_decay_days`, `default_weight`, `energy_ordering_enabled`, `energy_ordering_rules`, `default_energy`). Two factory classmethods: `from_defaults()` (CLI / standalone) and `from_config_repo(repo)` (per-org overrides via `ConfigRepository`). Threaded through `SetlistGenerator`, `selector.calculate_recency_scores`, `ordering.apply_energy_ordering`, `loader.parse_tags`, and the `replacer.*` functions.
 
 **When to modify:**
 - Adding new service moments
 - Adjusting selection behavior
 - Changing default paths
+- Adding new generation parameters (extend `GenerationConfig` and the matching `ConfigRepository` method)
 
 ### models.py
 **Purpose:** Data structures
@@ -85,7 +89,8 @@ class Setlist:
 **Purpose:** Event type model, validation, song filtering, and persistence
 
 **Contents:**
-- `EventType` dataclass - Event type with slug, name, description, moments config
+- `EventType` dataclass - Event type with slug, name, description, `moments`, `moments_order`
+- `EventType.ordered_moments` (property) - Returns `moments` reordered by `moments_order` so callers (formatter, PDF, YouTube) render them in the user-defined sequence
 - `DEFAULT_EVENT_TYPE_SLUG` / `DEFAULT_EVENT_TYPE_NAME` - Constants for the default type
 - `validate_event_type_slug(slug)` - Validates and normalizes slug (lowercase alphanumeric + hyphens)
 - `is_default_event_type(slug)` - Returns True for default slug or empty string
@@ -96,6 +101,7 @@ class Setlist:
 
 **Key design decisions:**
 - `EventType.moments` defaults to `dict(MOMENTS_CONFIG)` via `__post_init__`
+- `EventType.moments_order` defaults to `list(moments.keys())` via `__post_init__` (preserves insertion order from JSON)
 - `filter_songs_for_event_type("")` returns only unbound songs
 - `load_event_types()` does NOT create the file (repo's job on first access)
 - Slug validation: `^[a-z0-9][a-z0-9-]*$`, max 30 chars
@@ -104,6 +110,7 @@ class Setlist:
 - Adding new event type properties
 - Changing slug validation rules
 - Modifying song filtering logic
+- Changing how `moments_order` is propagated (note: it flows from EventType → CLI → generator → formatter / PDF / YouTube; `0e7ed13` wired the API path through the same channel)
 
 ### loader.py
 **Purpose:** Tag parsing utilities
@@ -165,8 +172,11 @@ repositories/
 
 **Key Components:**
 - `get_repositories()` - Factory function, reads STORAGE_BACKEND env var
-- `RepositoryContainer` - Bundles all repository instances (including `event_types`)
-- Protocols: `SongRepository`, `HistoryRepository`, `ConfigRepository`, `OutputRepository`, `EventTypeRepository`
+- `RepositoryContainer` - Bundles core repository instances (`songs`, `history`, `config`, `output`, `event_types`)
+- `SaaSRepositoryContainer` - Extends the above with `users`, `share_requests`, `cloud_output` for multi-tenant deployments
+- Core protocols: `SongRepository`, `HistoryRepository`, `ConfigRepository`, `OutputRepository`, `EventTypeRepository`
+- SaaS protocols (in the same `protocols.py`): `MultiTenantSongRepository`, `ShareRequestRepository`, `UserRepository`, `CloudOutputRepository`
+- `HistoryRepository.backend_name` - Property that returns the human-readable backend name (e.g. `"filesystem"`, `"postgres"`); used by CLI commands to label output
 
 **Usage:**
 ```python
@@ -193,10 +203,12 @@ repos.output.save_markdown(setlist.date, markdown_content)
 
 **Environment Configuration:**
 ```bash
-STORAGE_BACKEND=filesystem  # Default (CSV + JSON files)
-STORAGE_BACKEND=postgres    # PostgreSQL (requires psycopg, set DATABASE_URL too)
-STORAGE_BACKEND=mongodb     # MongoDB (future)
+STORAGE_BACKEND=filesystem  # Default (CSV + JSON files, no extra deps)
+STORAGE_BACKEND=postgres    # PostgreSQL (requires psycopg + DATABASE_URL)
+STORAGE_BACKEND=supabase    # Supabase multi-tenant (requires `supabase` + SUPABASE_URL + SUPABASE_KEY)
 ```
+
+The `supabase` backend powers the SaaS API layer in `api/`. Output repositories are independent: filesystem ships with all three data backends; the SaaS deployment additionally has an S3-compatible `CloudOutputRepository` (`library/repositories/s3/`, requires `boto3`) for storing markdown/PDF in AWS S3, Cloudflare R2, or MinIO.
 
 **When to modify:**
 - Adding new storage backends
@@ -302,22 +314,26 @@ ENERGY_ORDERING_RULES = {
 **Purpose:** Orchestrates setlist generation
 
 **Contents:**
-- `SetlistGenerator` class - Stateful generator with recency management
-- `generate_setlist()` function - Backward-compatible functional API
+- `SetlistGenerator` class - Stateful generator with recency management. Constructor accepts `songs`, `history`, optional `obs: Observability`, and optional `config: GenerationConfig` (defaults to `GenerationConfig.from_defaults()`).
+- `SetlistGenerator.from_repositories(songs_repo, history_repo, obs=None, config_repo=None)` - Builds from the repository pattern. When `config_repo` is provided, uses `GenerationConfig.from_config_repo(config_repo)` for per-org overrides.
+- `SetlistGenerator.generate(date, overrides=None, label="", event_type="", moments_config=None)` - Returns a `Setlist`. When `moments_config` is supplied (custom event type), generation runs in **strict mode** — `_generate_moment` raises `ValueError` for any moment that has no candidate songs after filtering.
 
 **SetlistGenerator workflow:**
-1. Initialize with songs and history
-2. Calculate recency scores for target date
-3. For each moment:
+1. Initialize with songs, history, and a `GenerationConfig`
+2. Filter songs by event type if specified
+3. Calculate recency scores for target date (using `config.recency_decay_days`)
+4. For each moment in the effective moments config:
    - Apply overrides if provided
-   - Select songs using scoring algorithm
-   - Apply energy ordering
-4. Return Setlist object (with optional `label`)
+   - Select songs using the scoring algorithm
+   - Apply energy ordering (using `config.energy_ordering_*`)
+   - In **strict mode** (custom moments config supplied), raise `ValueError` if no songs are available
+5. Return `Setlist` with optional `label` and `event_type`
 
 **When to modify:**
 - Adding new generation strategies
 - Implementing batch generation
 - Adding validation logic
+- Adjusting strict-mode behavior (today only fires when an event type supplies its own moments config)
 
 **Example:**
 ```python
@@ -326,6 +342,11 @@ setlist = generator.generate(
     date="2026-02-15",
     overrides={"louvor": ["Oceanos"]},
     label="evening"  # Optional: creates labeled setlist
+)
+
+# Per-org config override (SaaS path)
+generator = SetlistGenerator.from_repositories(
+    repos.songs, repos.history, config_repo=repos.config,
 )
 ```
 
@@ -346,9 +367,19 @@ setlist = generator.generate(
 **Purpose:** PDF generation
 
 **Contents:**
-- `generate_setlist_pdf(setlist, songs, output_path)` - Create professional PDF
+- `generate_setlist_pdf(setlist, songs, output_path, event_type_name="", moments_order=None, include_chords=True)` - Create professional PDF
+- `generate_setlist_pdf_bytes(setlist, songs, event_type_name="", moments_order=None, include_chords=True) -> bytes` - Same output written to a `BytesIO` buffer (used by the API and for cloud storage)
+- `_filter_out_chord_lines(content)` - Lyrics-only helper that drops both pure and "mixed" chord lines (e.g. `C D G (Dm G7)`, `Eb F Bb Riff`) using both `is_chord_line` and `_is_mixed_chord_line` from `library/transposer`. Section markers like `[Refrão]` are preserved
+- `MOMENT_DISPLAY_NAMES` - Internal-to-PDF moment name map (e.g. `ofertório → Oferta`)
 - Table of contents on page 1
 - Each moment on separate page with chords
+
+**Lyrics-only variant** (`include_chords=False`):
+- Strips chord lines from the rendered content
+- Removes the chord-key suffix from song titles
+- Removes the chord-key suffix from the table of contents
+- Wired up via `--no-chords` (CLI: `pdf` + `generate --pdf`) and `?no_chords=true` (API: `GET /setlists/{date}/pdf`). Files are written with a `_lyrics` suffix so both variants coexist on disk
+- See `OutputRepository.save_pdf(setlist, songs, variant="")` and `OutputRepository.get_pdf_path(..., variant="")` for filesystem routing
 
 **Dependencies:**
 - `reportlab` library
@@ -357,24 +388,75 @@ setlist = generator.generate(
 - Changing PDF layout
 - Adding new typography
 - Customizing page formatting
+- Tightening / loosening chord-line classification for the lyrics-only variant (see also `transposer.is_chord_line` and `_is_mixed_chord_line`)
 
 ### paths.py
 **Purpose:** Path resolution utilities
 
 **Contents:**
 - `get_output_paths(base_path, cli_output_dir, cli_history_dir)` - Resolve output paths with priority
-- `OutputPaths` dataclass - Container for resolved paths
+- `PathConfig` dataclass - Container for resolved paths (`output_dir`, `history_dir`)
 
 **Priority order:**
 1. CLI arguments
-2. Environment variables
-3. Config file defaults
-4. Hardcoded fallbacks
+2. Environment variables (`SETLIST_OUTPUT_DIR`, `SETLIST_HISTORY_DIR`)
+3. Config file defaults (`DEFAULT_OUTPUT_DIR`, `DEFAULT_HISTORY_DIR`)
+4. Hardcoded fallbacks (`output/`, `history/`)
 
 **When to modify:**
 - Adding new path types
 - Changing priority rules
 - Implementing path validation
+
+### sharing.py
+**Purpose:** Cross-tenant song library merging and share-request validation (used by the SaaS API layer)
+
+**Contents:**
+- `merge_effective_library(global_songs, org_songs, user_songs)` - Pure function that combines visibility scopes via `dict.update`. Priority: `user > org > global` (later updates override earlier).
+- `validate_share_request(song, from_scope, to_scope)` - Raises `ValueError` unless the request *widens* visibility (`user → org`, `user → global`, `org → global`). Narrowing and same-scope requests are rejected.
+- `VALID_SCOPES` / `SCOPE_ORDER` - Module-level constants for the visibility lattice.
+
+**When to modify:**
+- Adding new visibility scopes
+- Changing share-request validity rules
+- Adjusting how user/org/global libraries are merged
+
+### observability/
+**Purpose:** Structured logging, metrics, and tracing — ports-and-adapters layer
+
+**Layout:**
+```
+observability/
+├── __init__.py        # Re-exports Observability container + ports + noop adapters
+├── protocols.py       # LoggerPort, MetricsPort, TracerPort, Span (Protocol classes)
+├── container.py       # Observability dataclass (factories: noop(), for_cli(level=...))
+├── noop.py            # NullLogger, NullMetrics, NullTracer, NullSpan (zero-cost defaults)
+└── cli/               # Human-readable stderr adapter (CLI use)
+```
+
+**Key conventions** (mirrored in `.claude/rules/observability.md`):
+- Every function/class accepting `obs` must default to `Observability.noop()` so non-instrumented paths stay zero-cost.
+- Instrument at orchestration boundaries only (`generator.py`, `replacer.py`, CLI commands). Pure algorithms (`selector.py`, `ordering.py`, `transposer.py`) stay uninstrumented.
+- The CLI `--verbose` / `-v` flag (defined on the Click group in `cli/main.py:48`) flips log level from WARNING to DEBUG and is threaded into command `run()` functions via `ctx.obj["verbose"]`.
+
+**When to modify:**
+- Adding a new backend (e.g. OpenTelemetry) — implement the three ports, add an `Observability.for_*()` factory, wire it from the CLI/API entry point.
+
+### youtube.py
+**Purpose:** YouTube playlist creation from a setlist
+
+**Contents:**
+- `extract_video_id(url)` - Parse a YouTube watch / short URL into a video ID
+- `format_playlist_name(date, label="", event_type_name="")` - Build the playlist title (Portuguese date with event type / label suffixes)
+- `resolve_setlist_videos(setlist, songs)` - Map a setlist's songs to `(title, video_id)` pairs in service order; songs without YouTube URLs are skipped with a warning
+- `create_setlist_playlist(setlist, songs)` - End-to-end: build name, OAuth-authenticate, create unlisted playlist, add videos. Re-authenticates automatically when the cached token is expired.
+
+**Dependencies:** `google-api-python-client`, `google-auth-oauthlib`, `google-auth-httplib2` (all installed by `uv sync`).
+
+**When to modify:**
+- Changing playlist privacy / naming conventions (`YOUTUBE_PLAYLIST_*` constants in `library/config.py`)
+- Adding support for YouTube Music or other platforms
+- Changing OAuth credential file locations
 
 ---
 

@@ -39,7 +39,19 @@ tests/
 
 Markers `unit` and `integration` are **auto-applied** by directory via `pytest_collection_modifyitems` in the root conftest. You never need to decorate tests with `@pytest.mark.unit` or `@pytest.mark.integration`.
 
-Use `@pytest.mark.slow` explicitly for tests that take more than a few seconds.
+Apply the others explicitly:
+
+| Marker | Apply to | Auto-skipped when |
+|--------|----------|-------------------|
+| `slow` | Tests that take more than a few seconds | — |
+| `postgres` | Integration tests that need a real PostgreSQL database (`DATABASE_URL` env var) | DB unavailable |
+| `supabase` | API integration tests that need a local Supabase instance (`npx supabase start`) | Supabase not running |
+
+All five markers are registered in `pyproject.toml` under `[tool.pytest.ini_options].markers`.
+
+`filterwarnings` in `pyproject.toml` is set to `error` (with explicit exceptions for `DeprecationWarning` and the Supabase SDK's `PytestUnraisableExceptionWarning`). New code should not introduce other warning categories.
+
+Coverage runs against `library/` only (`source = ["library"]` in `[tool.coverage.run]`); CLI commands are exercised via integration tests but not measured. The 80% threshold (`fail_under = 80`) applies to that scope.
 
 ## Naming Conventions
 

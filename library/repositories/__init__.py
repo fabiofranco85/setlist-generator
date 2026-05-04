@@ -4,8 +4,8 @@ This module provides a clean abstraction layer for data access, allowing
 the application to switch between different storage backends:
 
 - **filesystem** (default): CSV files + JSON files (current behavior)
-- **postgres** (future): PostgreSQL/Supabase database
-- **mongodb** (future): MongoDB document database
+- **postgres**: PostgreSQL database (requires psycopg)
+- **supabase**: Supabase multi-tenant Postgres + Auth + RLS (requires supabase)
 
 Usage:
     >>> from library.repositories import get_repositories
@@ -14,17 +14,17 @@ Usage:
     >>> history = repos.history.get_all()
 
 Configuration via environment variables:
-    STORAGE_BACKEND=filesystem  # Default (current file-based behavior)
-    STORAGE_BACKEND=postgres    # PostgreSQL/Supabase
-    STORAGE_BACKEND=mongodb     # MongoDB
+    STORAGE_BACKEND=filesystem  # Default (CSV + JSON files)
+    STORAGE_BACKEND=postgres    # PostgreSQL
+    STORAGE_BACKEND=supabase    # Supabase multi-tenant (paired with the SaaS API in api/)
 
 Backend-specific configuration:
     # PostgreSQL
     DATABASE_URL=postgresql://user:pass@host:5432/db
 
-    # MongoDB
-    MONGODB_URI=mongodb://localhost:27017
-    MONGODB_DATABASE=setlist
+    # Supabase
+    SUPABASE_URL=https://your-project.supabase.co
+    SUPABASE_KEY=your-service-role-key
 """
 
 from .protocols import (

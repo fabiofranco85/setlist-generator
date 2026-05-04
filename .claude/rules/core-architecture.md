@@ -74,14 +74,19 @@ Where:
     ├── generator.py         # Core setlist generation (label + event-type aware)
     ├── replacer.py          # Song replacement + derive_setlist()
     ├── repositories/        # Data access abstraction layer
-    │   ├── protocols.py     # Repository interfaces (label + event-type aware)
-    │   ├── factory.py       # Backend factory + RepositoryContainer
-    │   ├── filesystem/      # Filesystem backend implementation
+    │   ├── protocols.py     # Repository interfaces (core + SaaS protocols)
+    │   ├── factory.py       # Backend factory + RepositoryContainer + SaaSRepositoryContainer
+    │   ├── filesystem/      # Filesystem backend (default, no extra deps)
     │   │   └── event_types.py  # FilesystemEventTypeRepository
-    │   └── postgres/        # PostgreSQL backend (optional, requires psycopg)
-    │       └── event_types.py  # PostgresEventTypeRepository
+    │   ├── postgres/        # PostgreSQL backend (optional, requires psycopg)
+    │   │   └── event_types.py  # PostgresEventTypeRepository
+    │   ├── supabase/        # Supabase multi-tenant backend (optional, requires supabase)
+    │   │   └── event_types.py  # SupabaseEventTypeRepository (+ users, share_requests)
+    │   └── s3/              # S3-compatible CloudOutputRepository (optional, requires boto3)
+    ├── observability/       # LoggerPort / MetricsPort / TracerPort (ports + noop + cli adapters)
+    ├── sharing.py           # Multi-tenant library merging + share-request validation
     ├── formatter.py         # Output formatting (markdown, JSON)
-    ├── pdf_formatter.py     # PDF generation (ReportLab)
+    ├── pdf_formatter.py     # PDF generation (ReportLab; lyrics-only variant via include_chords)
     └── youtube.py           # YouTube playlist integration
 ```
 
@@ -96,17 +101,20 @@ The codebase is organized into focused modules for better maintainability and re
 - **Reusability**: Can be imported by other scripts or used to build a web API
 
 **Module Responsibilities:**
-- `config.py` - Configuration constants (moments, weights, energy rules)
+- `config.py` - Configuration constants + `GenerationConfig` frozen dataclass + `canonical_moment_order()`
 - `models.py` - Data structures (Song with `event_types`, Setlist with `label` + `event_type` + `setlist_id`)
-- `event_type.py` - EventType dataclass, slug validation, song filtering, load/save event_types.json
+- `event_type.py` - EventType dataclass (incl. `moments_order` + `ordered_moments`), slug validation, song filtering, load/save event_types.json
 - `loader.py` - Tag parsing utilities (`parse_tags()`)
 - `labeler.py` - Setlist label management (`relabel_setlist()` — add, rename, or remove labels)
 - `selector.py` - Song selection algorithms (scoring, recency calculation, usage queries)
+- `paths.py` - Output path resolution (`PathConfig` dataclass, CLI/env/default cascade)
 - `ordering.py` - Energy-based ordering for emotional arcs
 - `transposer.py` - Deterministic chromatic chord transposition (pure functions, `re` only)
-- `generator.py` - Orchestrates the complete setlist generation (includes SetlistGenerator class, label + event-type aware)
+- `generator.py` - Orchestrates setlist generation (`SetlistGenerator`, label + event-type aware, strict mode for custom moments configs)
 - `replacer.py` - Song replacement, batch replacement, and `derive_setlist()` for creating labeled variants
 - `formatter.py` - Output formatting (markdown, JSON; label + event type name in header)
+- `sharing.py` - Multi-tenant library merging + share-request validation (used by SaaS API)
+- `observability/` - LoggerPort / MetricsPort / TracerPort ports plus noop + CLI adapters
 - `pdf_formatter.py` - PDF generation using ReportLab (label + event type name in subtitle)
 - `youtube.py` - YouTube playlist integration (URL parsing, OAuth, API; label + event type name in playlist name)
 
@@ -355,9 +363,13 @@ The repository pattern provides a clean abstraction for data access with pluggab
 
 - **filesystem** (default): CSV + JSON files, zero external dependencies
 - **postgres**: PostgreSQL database, requires `psycopg[binary,pool]>=3.1`
+- **supabase**: Supabase multi-tenant Postgres + Auth + RLS, requires `supabase>=2.0` (paired with the SaaS API in `api/`)
 
 Backend is selected via `STORAGE_BACKEND` env var (default: `filesystem`).
-PostgreSQL also requires `DATABASE_URL` env var.
+- PostgreSQL also requires `DATABASE_URL`.
+- Supabase also requires `SUPABASE_URL` and `SUPABASE_KEY`.
+
+Output storage is independent: filesystem ships with all data backends; the SaaS layer can additionally use an S3-compatible `CloudOutputRepository` (`library/repositories/s3/`, requires `boto3>=1.28`).
 
 **Filesystem backend:**
 
@@ -483,7 +495,9 @@ transposed = transpose_content(song.content, semitones, use_flats)
 ## Dependencies
 
 - Python 3.12+
-- Standard library only (no external dependencies for core functionality)
-- Optional: `reportlab` for PDF generation
+- Standard library plus `click` (CLI) and `reportlab` (PDF generation) — both pulled in by `uv sync`
+- `simple-term-menu` — interactive song picker used by `view-song`, `info`, and `replace --pick`
+- YouTube integration: `google-api-python-client`, `google-auth-oauthlib`, `google-auth-httplib2`
 - Optional: `psycopg[binary,pool]>=3.1` for PostgreSQL backend (`uv sync --group postgres`)
+- Optional SaaS layer (`uv sync --group saas`): `supabase>=2.0`, `boto3>=1.28`, `fastapi>=0.115`, `uvicorn>=0.30`
 - Optional: `uv` for package management

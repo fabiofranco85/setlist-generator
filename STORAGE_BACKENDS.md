@@ -8,8 +8,11 @@ The setlist generator uses a **repository pattern** to abstract data access, all
 |---------|---------|--------------|----------|
 | `filesystem` (default) | CSV + JSON + `.md` files | None (built-in) | Local use, single user |
 | `postgres` | PostgreSQL database | `psycopg[binary,pool]` | Teams, servers, web apps |
+| `supabase` | Supabase (Postgres + Auth + RLS) | `supabase>=2.0` | Multi-tenant SaaS deployments (paired with the FastAPI layer in `api/`) |
 
 The backend is selected via the `STORAGE_BACKEND` environment variable (default: `filesystem`). All CLI commands and programmatic APIs work identically regardless of backend.
+
+**Output storage is independent.** All three data backends ship with a filesystem `OutputRepository` for markdown/PDF files. The SaaS API layer can additionally use an **S3-compatible** `CloudOutputRepository` (`library/repositories/s3/`, requires `boto3>=1.28`) to store outputs in AWS S3, Cloudflare R2, or MinIO — see `.claude/rules/api.md` for the cloud deployment story.
 
 ## Filesystem Backend (Default)
 
@@ -223,15 +226,61 @@ If songs or history seem outdated after editing `database.csv`, re-run the migra
 python scripts/migrate_to_postgres.py --database-url $DATABASE_URL
 ```
 
+## Supabase Backend
+
+The Supabase backend is the multi-tenant variant used by the SaaS API layer in `api/`. It uses Supabase's Postgres database with Row-Level Security policies for tenant isolation, and pairs with S3 (or an S3-compatible service) for output storage.
+
+### Prerequisites
+
+- A Supabase project (or local instance via `npx supabase start`)
+- Python package: `supabase>=2.0` (and typically `boto3>=1.28` for S3 outputs)
+
+### Installation
+
+```bash
+# Installs supabase, boto3, fastapi, uvicorn
+uv sync --group saas
+```
+
+### Database Setup
+
+```bash
+# Apply the multi-tenant schema (RLS-enforced) and seed system config
+psql $SUPABASE_DB_URL -f scripts/supabase_schema.sql
+psql $SUPABASE_DB_URL -f scripts/supabase_seed.sql
+```
+
+The schema adds tenant tables (`orgs`, `memberships`, `system_admins`), a multi-tenant version of the data model, and a `share_requests` table for cross-org song sharing.
+
+### Configuration
+
+```bash
+export STORAGE_BACKEND=supabase
+export SUPABASE_URL=https://your-project.supabase.co
+export SUPABASE_KEY=your-service-role-key
+```
+
+Per-request, the API also expects:
+- `Authorization: Bearer <jwt>` — Supabase user JWT
+- `X-Org-Id: <uuid>` — Organization UUID (passed into RLS via `app.org_id`)
+
+### Notes
+
+- **Songs** have three visibility scopes (`global`, `org`, `user`) merged with priority `user > org > global` (`library/sharing.py:merge_effective_library`).
+- **Config cascade**: `org_config` → `system_config` → Python constants in `library/config.py`.
+- **Output**: filesystem by default; switch to `library/repositories/s3/S3OutputRepository` for cloud deployments (compatible with AWS S3, Cloudflare R2, and MinIO via `endpoint_url`).
+- See `.claude/rules/api.md` for the full SaaS architecture, RBAC roles, and endpoint reference.
+
 ## Choosing a Backend
 
-| Consideration | Filesystem | PostgreSQL |
-|--------------|-----------|------------|
-| Setup complexity | None | Moderate (requires PostgreSQL) |
-| External dependencies | None | `psycopg[binary,pool]` |
-| Multi-user access | No (file conflicts) | Yes (concurrent access) |
-| Web app integration | Limited | Natural fit |
-| Backup | Copy files | `pg_dump` |
-| Query flexibility | Read JSON files | SQL queries |
-| Performance (small dataset) | Fast | Fast |
-| Performance (large dataset) | Adequate | Better (indexed queries) |
+| Consideration | Filesystem | PostgreSQL | Supabase |
+|--------------|-----------|------------|----------|
+| Setup complexity | None | Moderate (requires PostgreSQL) | Moderate (Supabase project + S3 bucket) |
+| External dependencies | None | `psycopg[binary,pool]` | `supabase>=2.0` (+ `boto3` for S3 outputs) |
+| Multi-user access | No (file conflicts) | Yes (concurrent access) | Yes (multi-tenant with RLS) |
+| Multi-tenant isolation | No | No | Yes (per-org via RLS) |
+| Web app integration | Limited | Natural fit | Designed for it (paired with `api/`) |
+| Backup | Copy files | `pg_dump` | Supabase backups + S3 versioning |
+| Query flexibility | Read JSON files | SQL queries | SQL + PostgREST |
+| Performance (small dataset) | Fast | Fast | Fast |
+| Performance (large dataset) | Adequate | Better (indexed queries) | Better (indexed queries) |

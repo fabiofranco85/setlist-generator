@@ -754,6 +754,16 @@ Professional PDF setlist for print or digital use (generated with `--pdf` flag).
 - Full chord notation in monospace font (Courier)
 - Clean, professional typography
 
+### Lyrics-only PDF (`output/YYYY-MM-DD[_label]_lyrics.pdf`)
+
+A second PDF variant for singers and other non-musicians, generated with `--no-chords` (on `songbook pdf` or on `songbook generate --pdf`). It strips:
+
+- All chord lines (pure and mixed, including parenthesized groupings like `(Dm G7)` and chord+annotation lines like `Eb F Bb Riff`)
+- The chord-key suffix from song titles
+- The chord-key suffix from the table of contents
+
+Section markers like `[Refrão]` and `[Verso 1]` are preserved so singers can still follow song structure. The `_lyrics` filename suffix lets the full and lyrics variants coexist on disk.
+
 **Moment Name Mapping:**
 The PDF uses church-specific terminology:
 - `prelúdio` → "Prelúdio"

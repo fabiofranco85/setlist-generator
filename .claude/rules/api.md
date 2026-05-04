@@ -157,7 +157,7 @@ System admins bypass all role checks.
 | GET | `/setlists/{date}` | all | Get setlist (?label, ?event_type) |
 | POST | `/setlists/{date}/replace` | editor+ | Replace song (body: `ReplaceRequest`) |
 | POST | `/setlists/{date}/derive` | editor+ | Derive variant (body: `DeriveRequest`) |
-| GET | `/setlists/{date}/pdf` | all | Download PDF (?label, ?event_type) |
+| GET | `/setlists/{date}/pdf` | all | Download PDF (?label, ?event_type, ?no_chords). `no_chords=true` returns the lyrics-only variant — chord lines stripped, key suffixes removed, filename suffixed with `-lyrics` |
 
 ### Event Types (`/event-types`)
 
@@ -197,6 +197,16 @@ System admins bypass all role checks.
 | Method | Path | Roles | Description |
 |--------|------|-------|-------------|
 | GET | `/admin/songs/global` | system_admin | List all global songs |
+
+### Health (`/health`)
+
+| Method | Path | Roles | Description |
+|--------|------|-------|-------------|
+| GET | `/health` | none (public) | Liveness check; returns `{"status": "ok"}`. Defined in `api/app.py` |
+
+### moments_order propagation
+
+The `moments_order` list on each `EventType` (introduced in commit `775aadf`, wired through the API in `0e7ed13`) governs the rendered order of moments in markdown, PDF, and the YouTube playlist. Every endpoint that produces output (`POST /setlists/generate`, `GET /setlists/{date}/pdf`, `POST /setlists/{date}/replace`, `POST /setlists/{date}/derive`) loads the event type and threads `moments_order` into `format_setlist_markdown` and `generate_setlist_pdf_bytes`. The field is **not yet exposed** on `EventTypeResponse` — clients that need to display or edit it should be unblocked by adding it to `api/schemas/event_types.py`.
 
 ## Error Handling
 
@@ -323,7 +333,7 @@ The API reuses existing library functions rather than reimplementing:
 | `find_target_setlist()` | `library/replacer.py` | `POST /setlists/{date}/replace` |
 | `relabel_setlist()` | `library/labeler.py` | `POST /labels`, `PATCH /labels/{label}` |
 | `format_setlist_markdown()` | `library/formatter.py` | `POST /setlists/generate` |
-| `generate_setlist_pdf_bytes()` | `library/pdf_formatter.py` | `GET /setlists/{date}/pdf` |
+| `generate_setlist_pdf_bytes()` | `library/pdf_formatter.py` | `GET /setlists/{date}/pdf` (passes `include_chords=not no_chords`) |
 | `transpose_content()` | `library/transposer.py` | `POST /songs/{title}/transpose` |
 | `get_song_usage_history()` | `library/selector.py` | `GET /songs/{title}/info` |
 | `get_days_since_last_use()` | `library/selector.py` | `GET /songs/{title}/info` |
