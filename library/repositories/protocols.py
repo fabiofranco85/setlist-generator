@@ -69,6 +69,25 @@ class SongRepository(Protocol):
         """
         ...
 
+    def update_tags(self, title: str, tags: dict[str, int]) -> None:
+        """Replace a song's full tag set (moment → weight mapping).
+
+        This is a full-replacement operation: every existing tag for the song
+        is overwritten with ``tags``. Pass the song's current tag dict with the
+        edited weights to preserve untouched moments; pass an empty dict to
+        clear all tags.
+
+        Args:
+            title: Song title to update
+            tags: New ``{moment: weight}`` mapping. Weights must be positive
+                integers (typically 1–10).
+
+        Raises:
+            KeyError: If song with title doesn't exist
+            ValueError: If any weight is not a positive integer
+        """
+        ...
+
     def exists(self, title: str) -> bool:
         """Check if a song exists.
 

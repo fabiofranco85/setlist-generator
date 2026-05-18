@@ -13,6 +13,23 @@ from ...models import Song
 from ...loader import parse_tags
 
 
+def serialize_tags(tags: dict[str, int], default_weight: int = DEFAULT_WEIGHT) -> str:
+    """Render a tag dict back to the comma-separated CSV form.
+
+    Weights equal to ``default_weight`` are written bare (``"louvor"``); other
+    weights are written with parentheses (``"louvor(5)"``). This is the inverse
+    of :func:`library.loader.parse_tags` and produces minimal diffs when the
+    weight matches the default.
+    """
+    parts: list[str] = []
+    for moment, weight in tags.items():
+        if weight == default_weight:
+            parts.append(moment)
+        else:
+            parts.append(f"{moment}({weight})")
+    return ",".join(parts)
+
+
 class FilesystemSongRepository:
     """Song repository backed by filesystem storage.
 
@@ -161,6 +178,57 @@ class FilesystemSongRepository:
             content=content,
             youtube_url=songs[title].youtube_url,
         )
+
+    def update_tags(self, title: str, tags: dict[str, int]) -> None:
+        """Rewrite a song's tag row in ``database.csv``.
+
+        Reads the CSV row-by-row, replaces the ``tags`` column for the target
+        song, and writes the file back preserving the original column order
+        (including the optional ``youtube`` and ``event_types`` columns).
+
+        Args:
+            title: Song title to update.
+            tags: New ``{moment: weight}`` mapping. Empty dict clears all tags.
+
+        Raises:
+            KeyError: If song with ``title`` doesn't exist.
+            ValueError: If any weight is not a positive integer.
+        """
+        for moment, weight in tags.items():
+            if not isinstance(weight, int) or weight < 1:
+                raise ValueError(
+                    f"Invalid weight for '{moment}': {weight!r}. "
+                    "Weights must be positive integers."
+                )
+
+        if not self._database_file.exists():
+            raise FileNotFoundError(
+                f"Song database not found: {self._database_file}"
+            )
+
+        with open(self._database_file, "r", encoding="utf-8", newline="") as f:
+            reader = csv.DictReader(f, delimiter=";")
+            fieldnames = reader.fieldnames or []
+            rows = list(reader)
+
+        found = False
+        new_tags_str = serialize_tags(tags)
+        for row in rows:
+            if row.get("song") == title:
+                row["tags"] = new_tags_str
+                found = True
+                break
+
+        if not found:
+            raise KeyError(f"Song '{title}' not found in database")
+
+        with open(self._database_file, "w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=";")
+            writer.writeheader()
+            writer.writerows(rows)
+
+        # Invalidate cache so subsequent reads pick up the new tags
+        self._songs_cache = None
 
     def exists(self, title: str) -> bool:
         """Check if a song exists.

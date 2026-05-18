@@ -68,6 +68,9 @@ songbook replace --moment louvor --position 2 --label evening  # Replace in labe
 songbook label --date 2026-03-01 --to evening  # Add label to setlist
 songbook label --date 2026-03-01 --label evening --to night  # Rename label
 songbook label --date 2026-03-01 --label evening --remove  # Remove label
+songbook weights                     # Interactively edit song weights (pick moment → table)
+songbook weights --moment louvor     # Jump straight to the louvor weights table
+songbook weights -m louvor -e youth  # Same, scoped to the youth song pool
 songbook transpose "Oceanos" --to G  # Transpose chords (preview)
 songbook transpose "Oceanos" --to G --save  # Transpose and persist
 songbook view-song "Oceanos" -t G    # View song transposed
@@ -245,6 +248,20 @@ songbook info            # Interactive picker → statistics
 songbook info "Oceanos"  # Metadata, recency, and usage history
 ```
 
+**Edit song-moment weights:**
+```bash
+songbook weights                        # Interactive moment picker, then song table
+songbook weights --moment louvor        # Skip the moment picker
+songbook weights -m louvor -e youth     # Same, filtered to the youth song pool
+```
+
+The command lists songs tagged for the chosen moment with their current weight,
+opens a searchable menu, and prompts for a new weight on `Enter`. Each edit is
+saved immediately via `repos.songs.update_tags()` — no separate "save" step,
+no risk of losing changes on `Ctrl+C`. Weights must be integers between 1 and
+10. Adding a song to a *new* moment (one it isn't tagged for yet) is out of
+scope for this command — do that via `database.csv` or your storage backend.
+
 **Transpose a song:**
 ```bash
 songbook transpose "Oceanos" --to G          # Preview only
@@ -325,6 +342,7 @@ for moment, song_list in setlist.moments.items():
 ```
 
 **Key repository methods (label-aware and event-type-aware):**
+- `repos.songs.update_tags(title, tags)` - Replace a song's full ``{moment: weight}`` mapping (used by `songbook weights`). Raises `KeyError` if the song is missing, `ValueError` for invalid weights.
 - `repos.history.backend_name` - Property returning the backend name (e.g. `"filesystem"`, `"postgres"`)
 - `repos.history.get_by_date(date, label="", event_type="")` - Get specific setlist
 - `repos.history.get_by_date_all(date)` - Get all setlists for a date (all labels/types)

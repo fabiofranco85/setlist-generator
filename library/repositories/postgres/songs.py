@@ -114,6 +114,49 @@ class PostgresSongRepository:
         # Invalidate cache so next read picks up the change
         self._songs_cache = None
 
+    def update_tags(self, title: str, tags: dict[str, int]) -> None:
+        """Replace a song's tag rows atomically.
+
+        Verifies the song exists, deletes all existing rows in ``song_tags``
+        for the title, then inserts the new ``{moment: weight}`` pairs. The
+        whole operation runs inside a single transaction so a failure mid-way
+        leaves the previous tags untouched. Pass an empty dict to clear all
+        tags for the song.
+
+        Args:
+            title: Song title to update.
+            tags: New ``{moment: weight}`` mapping.
+
+        Raises:
+            KeyError: If song with ``title`` doesn't exist.
+            ValueError: If any weight is not a positive integer.
+        """
+        for moment, weight in tags.items():
+            if not isinstance(weight, int) or weight < 1:
+                raise ValueError(
+                    f"Invalid weight for '{moment}': {weight!r}. "
+                    "Weights must be positive integers."
+                )
+
+        with self._pool.connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1 FROM songs WHERE title = %s", (title,))
+                if cur.fetchone() is None:
+                    raise KeyError(f"Song '{title}' not found in database")
+
+                cur.execute(
+                    "DELETE FROM song_tags WHERE song_title = %s", (title,)
+                )
+                for moment, weight in tags.items():
+                    cur.execute(
+                        "INSERT INTO song_tags (song_title, moment, weight) "
+                        "VALUES (%s, %s, %s)",
+                        (title, moment, weight),
+                    )
+                conn.commit()
+
+        self._songs_cache = None
+
     def exists(self, title: str) -> bool:
         """Check if a song exists."""
         return title in self._ensure_loaded()

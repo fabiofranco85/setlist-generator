@@ -218,6 +218,46 @@ class TestPostgresSongRepository:
         song = repo.get_by_title("Song A")
         assert song.energy == 2.5  # DEFAULT_ENERGY
 
+    def test_update_tags_replaces_existing_rows(self, _import):
+        Repo = _import
+        # First fetchone() (SELECT 1 FROM songs ...) returns a row → song exists
+        pool, cursor = make_pool(results=[[(1,)]])
+        repo = Repo(pool)
+        # Seed cache so we can verify it gets invalidated
+        repo._songs_cache = {"Song A": object()}  # type: ignore[assignment]
+
+        repo.update_tags("Song A", {"louvor": 7, "prelúdio": 3})
+
+        # The repository should: SELECT existence, DELETE old tags, INSERT new ones
+        assert any("SELECT 1 FROM songs" in q for q in cursor.queries)
+        assert any("DELETE FROM song_tags" in q for q in cursor.queries)
+        # Cache is invalidated for the next read
+        assert repo._songs_cache is None
+
+    def test_update_tags_unknown_song_raises(self, _import):
+        Repo = _import
+        # fetchone() returns None for the existence check → KeyError
+        pool, _ = make_pool(results=[[]])
+        repo = Repo(pool)
+        with pytest.raises(KeyError, match="Ghost"):
+            repo.update_tags("Ghost", {"louvor": 5})
+
+    def test_update_tags_rejects_invalid_weight(self, _import):
+        Repo = _import
+        pool, _ = make_pool()
+        repo = Repo(pool)
+        with pytest.raises(ValueError, match="positive integers"):
+            repo.update_tags("Song A", {"louvor": 0})
+
+    def test_update_tags_empty_dict_clears_tags(self, _import):
+        Repo = _import
+        pool, cursor = make_pool(results=[[(1,)]])
+        repo = Repo(pool)
+        repo.update_tags("Song A", {})
+        # SELECT and DELETE should run, but no INSERT (executemany not called)
+        assert any("DELETE FROM song_tags" in q for q in cursor.queries)
+        assert not any("INSERT INTO song_tags" in q for q in cursor.queries)
+
 
 # ---------------------------------------------------------------------------
 # PostgresHistoryRepository

@@ -116,6 +116,47 @@ class SupabaseSongRepository:
         ).eq("id", uuid).execute()
         self._invalidate_cache()
 
+    def update_tags(self, title: str, tags: dict[str, int]) -> None:
+        """Replace a song's tag rows in ``song_tags``.
+
+        Looks up the song's UUID, deletes all existing rows in
+        ``song_tags`` for that ``song_id``, then inserts the new pairs.
+        The Supabase schema enforces ``weight BETWEEN 1 AND 10`` — this
+        method validates locally for a friendlier error before hitting
+        the database.
+
+        Args:
+            title: Song title to update.
+            tags: New ``{moment: weight}`` mapping.
+
+        Raises:
+            KeyError: If song with ``title`` doesn't exist.
+            ValueError: If any weight is not in 1..10.
+        """
+        for moment, weight in tags.items():
+            if not isinstance(weight, int) or weight < 1 or weight > 10:
+                raise ValueError(
+                    f"Invalid weight for '{moment}': {weight!r}. "
+                    "Weights must be integers between 1 and 10."
+                )
+
+        uuid = self._uuid_map.get(title)
+        if not uuid:
+            self.get_all()
+            uuid = self._uuid_map.get(title)
+        if not uuid:
+            raise KeyError(f"Song '{title}' not found")
+
+        self._client.table("song_tags").delete().eq("song_id", uuid).execute()
+        if tags:
+            rows = [
+                {"song_id": uuid, "moment": moment, "weight": weight}
+                for moment, weight in tags.items()
+            ]
+            self._client.table("song_tags").insert(rows).execute()
+
+        self._invalidate_cache()
+
     def exists(self, title: str) -> bool:
         """Check if a song exists."""
         library = self.get_all()

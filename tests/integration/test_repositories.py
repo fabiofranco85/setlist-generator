@@ -70,6 +70,20 @@ class TestFilesystemSongRepository:
         with pytest.raises(KeyError, match="not found"):
             repo.update_content("Ghost", "content")
 
+    def test_update_tags_persists_and_invalidates_cache(self, repo, tmp_project):
+        # Round-trip: prime cache, change a weight, observe both cache and CSV
+        # reflect the change (and a fresh repo over the same dir agrees).
+        repo.update_tags("Upbeat Song", {"louvor": 9, "prelúdio": 3})
+        song = repo.get_by_title("Upbeat Song")
+        assert song is not None and song.tags["louvor"] == 9
+        fresh = FilesystemSongRepository(tmp_project)
+        fresh_song = fresh.get_by_title("Upbeat Song")
+        assert fresh_song is not None and fresh_song.tags["louvor"] == 9
+
+    def test_update_tags_unknown_song_raises(self, repo):
+        with pytest.raises(KeyError, match="Ghost"):
+            repo.update_tags("Ghost", {"louvor": 5})
+
     def test_exists_true(self, repo):
         assert repo.exists("Upbeat Song") is True
 

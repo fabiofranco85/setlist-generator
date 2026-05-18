@@ -43,6 +43,8 @@ songbook replace --moment louvor --position 2 --keep-position  # Pin to position
 songbook replace --moment louvor --position 2 --label evening  # Replace in labeled
 songbook label --date 2026-03-01 --to evening  # Add label to setlist
 songbook label --date 2026-03-01 --label evening --to night  # Rename label
+songbook weights                     # Interactive weights editor (pick moment, then song)
+songbook weights --moment louvor     # Jump straight to the louvor weights table
 songbook transpose "Oceanos" --to G  # Transpose chords (preview)
 songbook view-song "Oceanos" -t G    # View transposed (display-only)
 songbook pdf --date 2026-02-15       # Generate PDF (with chords)
@@ -394,6 +396,72 @@ songbook transpose "Lugar Secreto" --to A
 - Slash: `A/C#`, `E/G#`, `Em7(11)/B`
 - Extended: `F7M(9)`, `Dm7(9)`, `G4(6)`, `A7M`, `C#7(9+)`, `B7(13-)`
 - Section markers (`[Intro]`, `[Refrão]`, etc.) are preserved
+
+---
+
+### songbook weights
+
+Interactively edit the per-moment weight of songs.
+
+A song's weight for a moment drives the selection scoring formula
+(`score = weight × (recency + 0.1) + random(0, 0.5)`), so raising a song's
+weight makes the generator pick it more often for that moment without
+removing it from rotation.
+
+**Usage:**
+```bash
+# Interactive flow: pick a moment, then edit weights for songs tagged in it
+songbook weights
+
+# Skip the moment picker
+songbook weights --moment louvor
+songbook weights -m louvor
+
+# Filter the song pool by event type (uses that type's moments config too)
+songbook weights -m louvor -e youth
+```
+
+**Options:**
+- `--moment TEXT` or `-m` — Pre-select a moment slug (e.g. `louvor`). When
+  omitted, the command opens a moment picker.
+- `--event-type TEXT` or `-e` — Event type slug. Filters which songs are
+  visible (unbound songs are always visible; bound songs only appear when
+  the event type matches) and resolves the moments config from that event
+  type.
+
+**Flow:**
+1. The command lists moments. The user picks one (or `--moment` skips this
+   step).
+2. The command queries `repos.songs.get_all()`, filters to songs tagged for
+   the chosen moment (and bound to the chosen event type, if any), and
+   shows a searchable table with each song's current weight, sorted by
+   weight descending (then alphabetical).
+3. The user picks a row → the CLI prompts for a new integer weight
+   (1-10, blank to cancel). Out-of-range or non-integer input re-prompts
+   in the same loop.
+4. The new weight is saved immediately through `repos.songs.update_tags`.
+   The menu re-opens with the refreshed weight ordering until the user
+   hits `Esc` / `q`.
+
+**Save semantics:**
+- Save-on-each-edit. Every confirmed weight change is committed
+  synchronously before the menu re-opens, so closing the terminal or
+  hitting `Ctrl+C` never loses prior edits.
+- Edits are full-replacement on the song's tag set: the command reads the
+  song's current tags, swaps the target moment's weight, and writes the
+  whole dict back. Other moments on the same song are preserved.
+
+**Scope (not supported):**
+- Adding a song to a moment it isn't tagged for yet. The picker only shows
+  songs that already have a tag for the chosen moment. To add a tag, edit
+  the song's row in `database.csv` (filesystem backend) or insert into
+  `song_tags` directly (Postgres/Supabase).
+- Bulk edits across moments. Each invocation operates on one moment.
+
+**Non-interactive mode:**
+When stdin/stdout aren't a TTY (CI, redirected input, etc.), the command
+falls back to a numbered list and prompts. It exits after a single save —
+no infinite loop — to keep automation predictable.
 
 ---
 

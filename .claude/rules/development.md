@@ -177,6 +177,7 @@ repositories/
 - Core protocols: `SongRepository`, `HistoryRepository`, `ConfigRepository`, `OutputRepository`, `EventTypeRepository`
 - SaaS protocols (in the same `protocols.py`): `MultiTenantSongRepository`, `ShareRequestRepository`, `UserRepository`, `CloudOutputRepository`
 - `HistoryRepository.backend_name` - Property that returns the human-readable backend name (e.g. `"filesystem"`, `"postgres"`); used by CLI commands to label output
+- `SongRepository.update_tags(title, tags)` - Full-replacement update of a song's `{moment: weight}` map. Backs the `songbook weights` command. Filesystem rewrites `database.csv` preserving the optional `youtube` / `event_types` columns; postgres runs DELETE + INSERT against `song_tags` in a single transaction; supabase mirrors the same pattern keyed by the song's UUID and enforces the schema's `weight BETWEEN 1 AND 10` constraint locally for a friendlier error. All three invalidate the in-memory cache
 
 **Usage:**
 ```python
@@ -188,6 +189,9 @@ repos = get_repositories()
 # Access data through repositories
 songs = repos.songs.get_all()
 song = repos.songs.get_by_title("Oceanos")
+
+# Bump a song's weight for a moment (full-replacement on the tag dict)
+repos.songs.update_tags("Oceanos", {**song.tags, "louvor": 8})
 history = repos.history.get_all()
 latest = repos.history.get_latest()
 config = repos.config.get_moments_config()

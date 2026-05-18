@@ -65,6 +65,7 @@ def cli(ctx, verbose):
       pdf            Generate PDF from existing setlist
       markdown       Regenerate markdown from existing setlist
       youtube        Create YouTube playlist from existing setlist
+      weights        Interactively edit song-moment weights
       list-moments   List available service moments
 
     \b
@@ -217,6 +218,27 @@ def transpose(song_name, to_key, save):
     """
     from cli.commands.transpose import run
     run(song_name, to_key, save=save)
+
+
+@cli.command()
+@click.option("--moment", "-m", shell_complete=complete_moment_names, help="Pre-select a moment (skips the picker)")
+@click.option("--event-type", "-e", default="", help="Event type slug (filters song pool and moments config)")
+def weights(moment, event_type):
+    """Edit song-moment weights interactively.
+
+    \b
+    Pick a moment (via --moment or the interactive menu), then edit the
+    weights of songs tagged for that moment. Each change is saved to the
+    underlying storage backend immediately.
+
+    \b
+    Examples:
+      songbook weights                     # interactive moment picker, then song picker
+      songbook weights --moment louvor     # jump straight to the louvor weights table
+      songbook weights -m louvor -e youth  # weights for louvor, youth song pool
+    """
+    from cli.commands.weights import run
+    run(moment, event_type=event_type)
 
 
 @cli.command("list-moments")
