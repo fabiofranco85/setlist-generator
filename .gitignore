@@ -33,3 +33,6 @@ client_secrets.json
 # Supabase CLI local data
 supabase/.temp/
 supabase/.branches/
+
+# Output folder
+output
