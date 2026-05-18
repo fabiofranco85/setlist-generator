@@ -52,7 +52,6 @@ songbook list-moments                # List available moments
 songbook list-moments -e youth       # List moments for event type
 songbook event-type list             # List event types
 songbook event-type add youth --name "Youth Service"  # Add event type
-songbook cleanup                     # Data quality checks
 ```
 
 ## Commands
@@ -647,114 +646,7 @@ songbook event-type default --description "Main service" # Update default descri
 - New event types copy the default type's moments config unless `--set` is used with `moments`
 - Event types are stored in `event_types.json` (filesystem) or `event_types` table (PostgreSQL)
 
----
-
-### songbook cleanup
-
-Automated data quality checker and fixer for history files.
-
-**Usage:**
-```bash
-songbook cleanup
-```
-
-**What it does:**
-- Analyzes all history files for inconsistencies with database.csv
-- Automatically fixes capitalization mismatches (e.g., "deus grandão" → "Deus Grandão")
-- Identifies songs in history that don't exist in database.csv
-- Provides fuzzy matching suggestions for similar song names
-- Creates timestamped backups before making changes
-
-**When to use:**
-- After importing external data
-- When you suspect data quality issues
-- As a periodic health check (monthly/quarterly)
-- Before major changes to database.csv
-
-**Output:**
-- Shows capitalization fixes applied
-- Lists missing songs with suggestions
-- Creates backup directory (e.g., `history_backup_20260129_105330`)
-
-**Example output:**
-```
-Step 1: Analyzing history files...
-  ✓ Loaded 57 songs from database.csv
-  ✓ Found 11 issue(s)
-
-Step 2: Applying capitalization fixes...
-  📝 2025-08-31.json
-     • 'Reina em mim' → 'Reina em Mim'
-
-Step 3: Songs that need to be added to database.csv
-  ❌ 'New Song Title'
-      → Not found in database.csv
-      → Suggested action: Add to database.csv with energy and moment tags
-```
-
----
-
-### songbook fix-punctuation
-
-Normalize punctuation differences in history files to match canonical song names.
-
-**Usage:**
-```bash
-songbook fix-punctuation
-```
-
-**What it does:**
-- Fixes punctuation variants (commas, hyphens) to match database.csv
-- Handles common variations like "Em Espírito, Em Verdade" → "Em Espírito Em Verdade"
-- Updates history files in place
-
-**When to use:**
-- After running `songbook cleanup` and finding punctuation mismatches
-- When importing data with inconsistent punctuation
-- As a follow-up to manual history edits
-
-**Note:** This script has a predefined mapping of punctuation variants. Edit the `PUNCTUATION_FIXES` dictionary in `fix_punctuation.py` to add new mappings.
-
----
-
-### songbook import-history
-
-Import external setlist data and convert it to the internal history format.
-
-**Usage:**
-```bash
-songbook import-history
-```
-
-**What it does:**
-- Parses setlist data from external JSON format
-- Maps moment names (e.g., "Oferta" → "ofertório", "Comunhão" → "saudação")
-- Filters for supported formats (setlist_with_moments)
-- Deletes existing fake/example history files
-- Creates properly formatted history/*.json files
-
-**When to use:**
-- Initial project setup with existing service history
-- Migrating from another system
-- Importing bulk historical data
-
-**Data format expected:**
-```json
-{
-  "2025-12-28": {
-    "format": "setlist_with_moments",
-    "service_moments": {
-      "Prelúdio": [{"title": "Song Name", "key": "D"}],
-      "Louvor": [
-        {"title": "Song 1", "key": "G"},
-        {"title": "Song 2", "key": "C"}
-      ]
-    }
-  }
-}
-```
-
-**Note:** Only processes entries with `format: "setlist_with_moments"`. Other formats are ignored.
+> **Note on maintenance commands.** The legacy `cleanup`, `fix-punctuation`, and `import-history` subcommands are documented in `.claude/rules/data-maintenance.md` for developer context. They are currently broken at runtime (helper modules are missing from the repo) and are not surfaced to end users.
 
 ---
 
@@ -803,14 +695,6 @@ songbook generate -e youth --date 2026-03-20                  # Generate
 songbook view-setlist -e youth --date 2026-03-20 --keys       # Review
 songbook pdf -e youth --date 2026-03-20                       # Generate PDF
 songbook replace -e youth --moment louvor --position 2        # Replace song
-```
-
-**Data quality maintenance:**
-```bash
-songbook import-history      # Import external data
-songbook cleanup             # Check for issues
-songbook fix-punctuation     # Fix punctuation
-songbook cleanup             # Verify (should show 0 issues)
 ```
 
 **Check song statistics:**

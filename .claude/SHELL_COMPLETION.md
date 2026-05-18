@@ -6,9 +6,11 @@ This document provides comprehensive documentation for shell completion in the s
 
 The songbook CLI supports tab completion for:
 - **Commands** - All CLI commands (generate, view-song, replace, etc.)
-- **Song names** - All 55+ songs from database.csv
+- **Song names** - Every song in `database.csv`
 - **Moment names** - Service moments (prelúdio, louvor, ofertório, saudação, crianças, poslúdio)
-- **Dates** - Available dates from history directory (YYYY-MM-DD format)
+- **Musical keys** - For `--to` / `--transpose` (C, C#, Db, …, Bm, F#m)
+- **Dates** - Available dates from the history directory (YYYY-MM-DD)
+- **Labels** - Labels discovered from filenames in the history directory
 - **Options** - All CLI flags and parameters
 
 **Supported shells:** bash, zsh, fish
@@ -86,7 +88,9 @@ Once installed, you can use TAB completion throughout the CLI:
 
 ```bash
 songbook <TAB>
-# Shows: cleanup, generate, import-history, install-completion, list-moments, pdf, replace, view-setlist, view-song
+# Shows every registered command: event-type, generate, info, install-completion,
+# label, list-moments, markdown, pdf, replace, transpose, view-setlist, view-song,
+# youtube (and the developer-only maintenance subcommands).
 
 songbook gen<TAB>
 # Completes to: songbook generate
@@ -96,7 +100,7 @@ songbook gen<TAB>
 
 ```bash
 songbook view-song <TAB>
-# Shows all 55+ songs alphabetically
+# Shows every song in database.csv, alphabetically
 
 songbook view-song Oce<TAB>
 # Completes to: songbook view-song Oceanos
@@ -151,22 +155,32 @@ songbook replace --moment louvor --with "Oceanos" --date <TAB>  # Complete date
 
 ## What Gets Completed
 
-### 7 Completion Points
+### Completion Points
 
-| Command | Parameter | Completion Type | Count | Example |
-|---------|-----------|-----------------|-------|---------|
-| `view-song` | `SONG_NAME` | Song names | 55 | Oceanos, Hosana |
-| `replace` | `--moment` | Moment names | 6 | louvor, prelúdio |
-| `replace` | `--with` | Song names | 55 | Santo Pra Sempre |
-| `replace` | `--date` | Dates | 15+ | 2025-12-25 |
-| `generate` | `--date` | Dates | 15+ | 2025-11-16 |
-| `view-setlist` | `--date` | Dates | 15+ | 2025-10-05 |
-| `pdf` | `--date` | Dates | 15+ | 2025-09-21 |
+| Command | Parameter | Completion Type | Example |
+|---------|-----------|-----------------|---------|
+| `info` | `SONG_NAME` | Song names | Oceanos, Hosana |
+| `view-song` | `SONG_NAME` | Song names | Oceanos, Hosana |
+| `view-song` | `--transpose` / `-t` | Musical keys | G, Bb, F#m |
+| `transpose` | `SONG_NAME` | Song names | Oceanos |
+| `transpose` | `--to` | Musical keys | G, Bb, F#m |
+| `replace` | `--moment` | Moment names | louvor, prelúdio |
+| `replace` | `--with` | Song names | Santo Pra Sempre |
+| `replace` | `--date` | Dates | 2025-12-25 |
+| `replace` | `--label` | Labels | evening |
+| `generate` | `--date` | Dates | 2025-11-16 |
+| `generate` | `--label` | Labels | evening |
+| `view-setlist` | `--date` | Dates | 2025-10-05 |
+| `view-setlist` | `--label` | Labels | evening |
+| `pdf` | `--date` | Dates | 2025-09-21 |
+| `markdown` | `--date` | Dates | 2025-09-21 |
+| `youtube` | `--date` | Dates | 2025-09-21 |
+| `label` | `--date` | Dates | 2025-09-21 |
+| `label` | `--label` | Labels | evening |
 
 ### Song Name Completion
 
-- **Source:** database.csv
-- **Count:** 55+ songs
+- **Source:** `database.csv`
 - **Features:**
   - Case-insensitive matching
   - Partial substring matching
@@ -175,44 +189,35 @@ songbook replace --moment louvor --with "Oceanos" --date <TAB>  # Complete date
 
 ### Moment Name Completion
 
-- **Source:** setlist/config.py (MOMENTS_CONFIG)
-- **Count:** 6 moments
-- **Values:**
-  - `prelúdio` - Opening song
-  - `louvor` - Main worship block (4 songs)
-  - `ofertório` - Offering song
-  - `saudação` - Greeting song
-  - `crianças` - Children's song
-  - `poslúdio` - Closing song
+- **Source:** `library/config.py` (`MOMENTS_CONFIG`)
+- **Values:** `prelúdio`, `louvor`, `ofertório`, `saudação`, `crianças`, `poslúdio`
 - **Features:**
   - Case-insensitive matching
   - Exact substring matching
 
+### Musical Key Completion
+
+- **Source:** Static list maintained by `cli/completions.py:complete_key_names`
+- **Coverage:** All major and minor roots used in the chord sheets (C, C#, Db, …, Bm, F#m)
+
 ### Date Completion
 
-- **Source:** history/*.json files
-- **Count:** 15+ dates (grows over time)
+- **Source:** `history/*.json` files (default backend) — for the configured `--history-dir`
 - **Format:** YYYY-MM-DD
 - **Features:**
   - Sorted descending (most recent first)
   - Prefix filtering (e.g., "2025-12" shows December 2025)
-  - Respects --history-dir option
-- **Example:** Typing "2025-11" shows all November 2025 dates
+  - Respects `--history-dir` / `SETLIST_HISTORY_DIR`
+
+### Label Completion
+
+- **Source:** Suffixes parsed from `history/YYYY-MM-DD_<label>.json` filenames
+- **Use:** Wherever `--label` / `-l` is accepted (`view-setlist`, `generate`, `replace`, `pdf`, `markdown`, `youtube`, `label`)
 
 ### Command Completion
 
 - **Source:** Click CLI framework (built-in)
-- **Count:** 9 commands
-- **Values:**
-  - `cleanup` - Data quality checks
-  - `generate` - Generate new setlist
-  - `import-history` - Import external data
-  - `install-completion` - Install shell completion
-  - `list-moments` - List service moments
-  - `pdf` - Generate PDF output
-  - `replace` - Replace song in setlist
-  - `view-setlist` - View generated setlist
-  - `view-song` - View song details
+- **Coverage:** Every subcommand registered in `cli/main.py`
 
 ## Troubleshooting
 
@@ -284,18 +289,16 @@ songbook replace --moment louvor --with "Oceanos" --date <TAB>  # Complete date
 1. **Check database size:**
    ```bash
    wc -l database.csv
-   # Should be ~55 lines
    ```
 
 2. **Check history size:**
    ```bash
    ls -l history/ | wc -l
-   # Typical: 10-50 files
    ```
 
 3. **Performance should be acceptable up to:**
-   - 200 songs in database.csv
-   - 100 history files
+   - ~200 songs in `database.csv`
+   - ~100 history files
    - Beyond that, consider caching optimizations
 
 ### Completion Shows Wrong Path
@@ -375,10 +378,12 @@ exec fish
 
 1. **Click Framework:** Uses Click 8.3's built-in shell completion system
 2. **Environment Variables:** Shell sets `_SONGBOOK_COMPLETE=bash_complete` when TAB is pressed
-3. **Completion Functions:** Custom functions (songbook/completions.py) generate suggestions:
-   - `complete_song_names()` - Loads database.csv and filters by input
-   - `complete_moment_names()` - Returns MOMENTS_CONFIG keys
-   - `complete_history_dates()` - Globs history/*.json files
+3. **Completion Functions:** Custom functions in `cli/completions.py` generate suggestions:
+   - `complete_song_names()` - Loads `database.csv` and filters by input
+   - `complete_moment_names()` - Returns `MOMENTS_CONFIG` keys from `library/config.py`
+   - `complete_key_names()` - Returns the static list of supported musical keys
+   - `complete_history_dates()` - Globs `history/*.json` files in the configured history dir
+   - `complete_history_labels()` - Parses labels from `history/YYYY-MM-DD_<label>.json` filenames
 4. **Return Format:** Functions return `CompletionItem` objects
 5. **Shell Integration:** Shell-specific scripts parse output and display suggestions
 
@@ -401,9 +406,9 @@ except Exception:
 
 | Operation | Time | Notes |
 |-----------|------|-------|
-| Song name completion | ~20ms | Loads database.csv (55 songs) |
+| Song name completion | ~20ms | Loads `database.csv` (typical 50–100 rows) |
 | Moment name completion | <5ms | Static list from config |
-| Date completion | ~15ms | Globs history directory (15 files) |
+| Date completion | ~15ms | Globs the configured history directory |
 | Command completion | <5ms | Built-in Click feature |
 
 **Scalability:**
@@ -494,7 +499,7 @@ A: Yes. Just remove the completion script and source line from your shell's rc f
 A: No. Shell completion is tied to the command name "songbook". If you create an alias, completion won't work.
 
 **Q: Can I customize completion behavior?**
-A: Yes. Edit `songbook/completions.py` to modify completion logic. For example, you could filter songs by tag or sort dates differently.
+A: Yes. Edit `cli/completions.py` to modify completion logic. For example, you could filter songs by tag or sort dates differently.
 
 ## See Also
 

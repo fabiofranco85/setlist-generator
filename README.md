@@ -699,35 +699,16 @@ for i in range(4):
     print(f"\n{date_str}: {sum(len(songs) for songs in setlist.moments.values())} songs")
 ```
 
-### Integration Example: Web API
+### Integration: Web API
 
-```python
-from flask import Flask, jsonify
-from library import get_repositories, SetlistGenerator
+The project already ships a production-grade FastAPI multi-tenant API in the `api/` package — built on top of the same `library/` modules shown above, with Supabase auth/RLS and an S3-compatible output backend. For most integration use cases you should consume or extend that layer rather than rolling your own framework wrapper.
 
-app = Flask(__name__)
-
-# Initialize once at startup
-repos = get_repositories()
-generator = SetlistGenerator.from_repositories(repos.songs, repos.history)
-
-@app.route('/generate/<date>')
-def generate_setlist_api(date):
-    setlist = generator.generate(date)
-    return jsonify({
-        "date": setlist.date,
-        "moments": setlist.moments,
-        "total_songs": sum(len(s) for s in setlist.moments.values())
-    })
-
-@app.route('/songs')
-def list_songs():
-    songs = repos.songs.get_all()
-    return jsonify([{"title": s.title, "energy": s.energy} for s in songs.values()])
-
-if __name__ == '__main__':
-    app.run(debug=True)
+```bash
+uv sync --group saas
+SUPABASE_URL=... SUPABASE_KEY=... uvicorn api:create_app --factory --reload
 ```
+
+For endpoint reference, RBAC roles, schemas, and the dependency-injection chain, see [`.claude/rules/api.md`](./.claude/rules/api.md). If you genuinely need a different framework (Flask, Starlette, Litestar, etc.), follow the same pattern: call `get_repositories()` and `SetlistGenerator.from_repositories(...)` once at startup, then expose the methods you need.
 
 ## Output Files
 

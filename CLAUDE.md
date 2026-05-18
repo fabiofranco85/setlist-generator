@@ -14,9 +14,11 @@ This project uses **path-scoped documentation** to keep context focused. Differe
 
 ### Documentation Rules
 
-- Always update README.md and its references when implementing, changing, or removing features
-- Keep CLAUDE.md and .claude/* files in sync with code changes
-- Update documentation before committing
+Doc updates that match a feature change are *part of the surgical change* (see §3 below), not extra scope. Specifically:
+
+- README.md and its references must reflect features as you implement, change, or remove them.
+- CLAUDE.md and `.claude/*` files must stay in sync with the code they describe.
+- Documentation updates land in the same commit as the code change, not after.
 
 ## Quick Start
 
@@ -76,7 +78,6 @@ songbook list-moments -e youth       # List moments for event type
 songbook event-type list             # List event types
 songbook event-type add youth --name "Youth Service"  # Add event type
 songbook generate -e youth           # Generate for event type
-songbook cleanup                     # Data quality checks
 ```
 
 ## Project Overview
@@ -164,10 +165,13 @@ Where:
 1. Add to `database.csv`:
    ```csv
    New Song Title;2;louvor(4),prelúdio;https://youtu.be/VIDEO_ID
+   # With optional 5th column to bind the song to specific event types
+   Youth Anthem;1;louvor(5);https://youtu.be/VIDEO_ID;youth,christmas
    ```
    - Energy: 1=upbeat, 2=moderate-high, 3=moderate-low, 4=contemplative
    - Tags: moment names with optional weights in parentheses
    - YouTube: optional YouTube video URL
+   - `event_types` (optional 5th column): comma-separated slugs to restrict the song to those event types; empty (or column omitted) = available for all types
 
 2. Create `chords/New Song Title.md`:
    ```markdown
@@ -249,11 +253,6 @@ songbook view-song "Oceanos" --transpose G   # View transposed (always dry)
 ```bash
 songbook view-setlist --date 2026-02-15 --keys
 songbook view-setlist --date 2026-03-01 --label evening  # View labeled
-```
-
-**Data quality:**
-```bash
-songbook cleanup  # Check and fix data issues
 ```
 
 ## Programmatic Usage
@@ -399,3 +398,71 @@ For detailed documentation on specific areas, see the path-scoped documentation 
 - **SaaS API** → `.claude/rules/api.md`
 - **Storage backends** → `STORAGE_BACKENDS.md`
 - **YouTube integration** → `YOUTUBE.md`
+
+---
+
+## Behavioral Guidelines for Claude
+
+Guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+### 1. Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+### 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+### 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+### 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+---
+
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

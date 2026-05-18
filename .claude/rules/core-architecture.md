@@ -335,9 +335,12 @@ Edit `ENERGY_ORDERING_ENABLED` or `ENERGY_ORDERING_RULES` in `library/config.py`
 1. Add entry to `database.csv` with energy and tags:
    ```csv
    New Song Title;2;louvor(4),prelúdio
+   # With an optional YouTube URL (4th column) and event-type binding (5th column)
+   Youth Anthem;1;louvor(5);https://youtu.be/VIDEO_ID;youth,christmas
    ```
    - Choose energy 1-4 based on musical character (1=upbeat, 4=contemplative)
    - If unsure, use 2 or 3 (moderate energy)
+   - The 5th column (`event_types`) is comma-separated slugs — when present, the song is only available for those event types. Omit it (or leave it empty) to keep the song available for every type.
 
 2. Create `chords/New Song Title.md`:
    ```markdown
