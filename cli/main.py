@@ -58,6 +58,7 @@ def cli(ctx, verbose):
       view-setlist   View generated setlist (markdown format)
       view-song      View song lyrics, chords, and metadata
       info           Show detailed statistics for a song
+      edit           Open a song's chord file in your editor
       transpose      Transpose a song to a different key
       replace        Replace song in existing setlist
       label          Add, rename, or remove a setlist label
@@ -172,6 +173,28 @@ def info(song_name):
     """
     from cli.commands.info import run
     run(song_name)
+
+
+@cli.command()
+@click.argument("song_name", required=False, shell_complete=complete_song_names)
+@click.option("--editor", default=None, help="Editor command to use (overrides $VISUAL / $EDITOR; default: vim)")
+def edit(song_name, editor):
+    """Open a song's chord file in your editor.
+
+    \b
+    When called without a song name, opens an interactive picker.
+    Editor resolution: --editor > $VISUAL > $EDITOR > vim.
+    If the chord file does not exist yet, a stub heading is created.
+
+    \b
+    Examples:
+      songbook edit                          # interactive picker
+      songbook edit "Oceanos"
+      songbook edit "Oceanos" --editor nano
+      EDITOR=code songbook edit "Oceanos"    # uses VS Code (must support blocking)
+    """
+    from cli.commands.edit import run
+    run(song_name, editor=editor)
 
 
 @cli.command()

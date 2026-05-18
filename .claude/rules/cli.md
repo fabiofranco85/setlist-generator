@@ -35,6 +35,8 @@ songbook view-song "Oceanos"         # View song details
 songbook view-song                   # Interactive song picker
 songbook info "Oceanos"              # Song statistics and history
 songbook info                        # Interactive picker → statistics
+songbook edit "Oceanos"              # Open chord file in $EDITOR (default: vim)
+songbook edit                        # Interactive picker → editor
 songbook replace --moment louvor --position 2  # Replace song (re-applies energy order)
 songbook replace --moment louvor --position 2 --pick  # Interactive picker
 songbook replace --moment louvor --position 2 --keep-position  # Pin to position, no reorder
@@ -279,6 +281,57 @@ USAGE HISTORY (2 time(s))
 - **No chord file**: Title shown without key
 - **Never used**: Score = 1.00, "Last used: never", "(no usage history)"
 - **No history directory**: Treated as "never used"
+
+---
+
+### songbook edit
+
+Open a song's chord file in the editor of your choice — saving the time of
+finding `chords/<Song>.md` and opening it manually.
+
+**Usage:**
+```bash
+# Interactive picker (when no song name given)
+songbook edit
+
+# Edit a specific song
+songbook edit "Oceanos"
+
+# Override the editor for this invocation
+songbook edit "Oceanos" --editor nano
+songbook edit "Oceanos" --editor "code --wait"
+
+# Use environment variables (standard Unix convention)
+EDITOR=nano songbook edit "Oceanos"
+VISUAL=vim songbook edit "Oceanos"
+```
+
+**Arguments:**
+- `SONG_NAME` - Optional. Title of the song to edit (supports tab completion). Opens the interactive picker if omitted.
+
+**Options:**
+- `--editor TEXT` - Editor command (may include flags, e.g. `"code --wait"`). Overrides `$VISUAL` and `$EDITOR`. Default: `vim`.
+
+**Editor resolution priority:**
+1. `--editor` CLI option
+2. `$VISUAL` environment variable
+3. `$EDITOR` environment variable
+4. `vim`
+
+**Behavior:**
+- **Filesystem backend (default):** Opens `chords/<title>.md` *in place*. After the editor exits, the song cache is invalidated so subsequent commands (`view-song`, `transpose`, `pdf`, ...) immediately see the changes.
+- **Other backends (postgres, supabase):** Round-trips the current content through a temporary file, then writes it back via `repos.songs.update_content()`.
+- **Missing chord file:** If the song exists in `database.csv` but has no chord file yet, a stub `### Title ()\n\n` heading is created so the editor opens on a real file. The CLI prints a "Created" notice in that case.
+- **No changes:** If the file is saved unchanged, the CLI prints `No changes made.` and exits cleanly.
+- **Unknown editor:** If the editor command is not on `PATH`, the CLI prints a helpful error and exits with status 1.
+
+**Tips for GUI editors:**
+GUI editors that detach from the terminal will return immediately, which `edit` interprets as "no changes." Use the editor's blocking-wait flag:
+
+```bash
+songbook edit "Oceanos" --editor "code --wait"
+songbook edit "Oceanos" --editor "subl --wait"
+```
 
 ---
 
@@ -703,6 +756,13 @@ songbook info                        # Interactive picker → statistics
 songbook info "Oceanos"              # Recency, history, metadata
 ```
 
+**Edit chords/lyrics and refresh outputs:**
+```bash
+songbook edit "Oceanos"                      # Open chords/Oceanos.md in $EDITOR
+songbook markdown --date 2026-02-15          # Regenerate markdown with new chords
+songbook pdf --date 2026-02-15               # Regenerate PDF with new chords
+```
+
 **Transpose and regenerate outputs:**
 ```bash
 songbook transpose "Oceanos" --to G --save   # Persist to file
@@ -793,6 +853,7 @@ Then restart your shell or run `source ~/.bashrc` (bash) / `source ~/.zshrc` (zs
 **Completion points:**
 - `info SONG_NAME` - autocomplete song names
 - `view-song SONG_NAME` - autocomplete song names
+- `edit SONG_NAME` - autocomplete song names
 - `view-song --transpose` - autocomplete key names
 - `transpose SONG_NAME` - autocomplete song names
 - `transpose --to` - autocomplete key names

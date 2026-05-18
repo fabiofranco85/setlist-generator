@@ -56,6 +56,9 @@ songbook view-setlist --keys         # View setlist with keys
 songbook view-setlist --label evening  # View labeled setlist
 songbook view-song "Oceanos"         # View song details
 songbook view-song                   # Interactive song picker
+songbook edit "Oceanos"              # Open chord file in $EDITOR (default: vim)
+songbook edit                        # Interactive picker → editor
+songbook edit "Oceanos" --editor nano  # Override editor for this invocation
 songbook info "Oceanos"              # Song statistics and history
 songbook info                        # Interactive picker → statistics
 songbook replace --moment louvor --position 2  # Replace song (re-applies energy ordering)
@@ -248,6 +251,20 @@ songbook transpose "Oceanos" --to G          # Preview only
 songbook transpose "Oceanos" --to G --save   # Overwrite chord file
 songbook view-song "Oceanos" --transpose G   # View transposed (always dry)
 ```
+
+**Edit a song's chords/lyrics in an editor:**
+```bash
+songbook edit "Oceanos"                      # Opens chords/Oceanos.md in $EDITOR
+songbook edit                                # Interactive picker, then editor
+songbook edit "Oceanos" --editor nano        # Pick a specific editor
+EDITOR=code songbook edit "Oceanos"          # via $EDITOR (must block on exit)
+```
+
+Editor priority: `--editor` > `$VISUAL` > `$EDITOR` > `vim`. If the chord file
+doesn't exist yet, a stub `### Title ()` heading is created so the editor opens
+on a real file. On the filesystem backend the chord file is edited in place;
+on other backends (postgres / supabase) the content is round-tripped through a
+temp file and persisted via `repos.songs.update_content()`.
 
 **View setlist:**
 ```bash
