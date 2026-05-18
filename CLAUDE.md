@@ -266,6 +266,13 @@ on a real file. On the filesystem backend the chord file is edited in place;
 on other backends (postgres / supabase) the content is round-tripped through a
 temp file and persisted via `repos.songs.update_content()`.
 
+**GUI editors auto-block**: For `cursor`, `code`, `code-insiders`, `windsurf`,
+`zed`, `subl`, `mate`, and `atom`, the appropriate wait flag (`--wait` / `-w`)
+is auto-injected if not already present. Without it, GUI editor binaries
+return immediately (they just signal an open window) and the CLI would print
+"No changes made." before you can type. A "Close the editor tab/window to
+continue..." notice is printed so it's clear the CLI is waiting on you.
+
 **View setlist:**
 ```bash
 songbook view-setlist --date 2026-02-15 --keys

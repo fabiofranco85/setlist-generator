@@ -26,6 +26,64 @@ from library import get_repositories
 
 DEFAULT_EDITOR = "vim"
 
+# Editors that detach from the terminal by default and need an explicit
+# wait flag to block until the file is closed. Without it, the CLI exits
+# immediately and reports "No changes made" before the user can type anything.
+# Mapping: command basename -> wait flag (matched against argv[1:] verbatim).
+GUI_EDITOR_WAIT_FLAGS: dict[str, str] = {
+    "code": "--wait",
+    "code-insiders": "--wait",
+    "cursor": "--wait",
+    "windsurf": "--wait",
+    "zed": "--wait",
+    "subl": "--wait",
+    "mate": "-w",
+    "atom": "--wait",
+}
+
+# Argv tokens that already imply "block until the editor closes" — used to
+# avoid double-injecting a wait flag the user (or env var) already supplied.
+_WAIT_FLAG_ALIASES = {"--wait", "-w", "-W"}
+
+
+def _inject_wait_flag(editor: str) -> str:
+    """Append a wait flag to ``editor`` if the binary is a known GUI editor.
+
+    GUI editors (Cursor, VS Code, Sublime, Zed, TextMate, ...) hand the file
+    off to a running window and return immediately. Without the wait flag the
+    CLI would exit before the user can edit anything. We inject the flag iff
+    the binary's basename is in ``GUI_EDITOR_WAIT_FLAGS`` and no wait flag is
+    already present in the command. Vim, nano, emacs, etc. are left untouched.
+
+    Args:
+        editor: Editor command string (may contain arguments).
+
+    Returns:
+        Possibly augmented editor command. ``shlex.join`` ensures the result
+        round-trips correctly through ``shlex.split`` in ``_launch_editor``.
+    """
+    parts = shlex.split(editor)
+    if not parts:
+        return editor
+
+    binary = Path(parts[0]).name  # handle /usr/local/bin/cursor → "cursor"
+    flag = GUI_EDITOR_WAIT_FLAGS.get(binary)
+    if not flag:
+        return editor
+
+    if any(token in _WAIT_FLAG_ALIASES for token in parts[1:]):
+        return editor  # user already supplied a wait flag
+
+    return shlex.join(parts + [flag])
+
+
+def _is_gui_editor(editor: str) -> bool:
+    """True if the editor command's binary is a known GUI editor."""
+    parts = shlex.split(editor)
+    if not parts:
+        return False
+    return Path(parts[0]).name in GUI_EDITOR_WAIT_FLAGS
+
 
 def resolve_editor(editor_flag: str | None = None) -> str:
     """Return the editor command to run.
@@ -43,8 +101,22 @@ def resolve_editor(editor_flag: str | None = None) -> str:
 
 
 def _launch_editor(editor: str, file_path: Path) -> None:
-    """Run the editor on ``file_path``, exiting with a friendly message on failure."""
-    argv = shlex.split(editor) + [str(file_path)]
+    """Run the editor on ``file_path``, exiting with a friendly message on failure.
+
+    For known GUI editors a wait flag is auto-injected so the CLI blocks until
+    the editor window is closed. A "waiting" notice is printed so the user
+    knows where to look — otherwise it appears as though the CLI is hung.
+    """
+    effective_editor = _inject_wait_flag(editor)
+    argv = shlex.split(effective_editor) + [str(file_path)]
+
+    if _is_gui_editor(editor):
+        binary = Path(shlex.split(editor)[0]).name
+        print(
+            f"Opening {file_path.name} in {binary}. "
+            f"Close the editor tab/window to continue..."
+        )
+
     try:
         subprocess.run(argv, check=True)
     except FileNotFoundError:

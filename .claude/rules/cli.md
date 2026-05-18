@@ -325,13 +325,37 @@ VISUAL=vim songbook edit "Oceanos"
 - **No changes:** If the file is saved unchanged, the CLI prints `No changes made.` and exits cleanly.
 - **Unknown editor:** If the editor command is not on `PATH`, the CLI prints a helpful error and exits with status 1.
 
-**Tips for GUI editors:**
-GUI editors that detach from the terminal will return immediately, which `edit` interprets as "no changes." Use the editor's blocking-wait flag:
+**GUI editors auto-block:**
+GUI editors detach from the terminal by default — their CLI binary tells an
+existing window to open the file and exits immediately. Without a wait flag
+the CLI would interpret that immediate exit as "no changes" before the user
+could type a single character. To fix this, `edit` auto-injects the
+appropriate wait flag (`--wait` for VS Code-family editors, `-w` for
+TextMate) for the following known editors:
+
+| Editor command           | Injected flag |
+|--------------------------|---------------|
+| `cursor`                 | `--wait`      |
+| `code`, `code-insiders`  | `--wait`      |
+| `windsurf`, `zed`        | `--wait`      |
+| `subl` (Sublime Text)    | `--wait`      |
+| `atom`                   | `--wait`      |
+| `mate` (TextMate)        | `-w`          |
+
+When a GUI editor is launched, the CLI prints "Opening `<file>` in `<editor>`.
+Close the editor tab/window to continue..." so it's obvious the CLI is
+blocked on the editor.
+
+If you already pass a wait flag (or a synonym like `-w` / `-W`) the CLI
+won't double-inject it:
 
 ```bash
-songbook edit "Oceanos" --editor "code --wait"
-songbook edit "Oceanos" --editor "subl --wait"
+songbook edit "Oceanos" --editor "code --wait --new-window"  # respected as-is
+songbook edit "Oceanos" --editor "cursor"                    # → "cursor --wait" automatically
 ```
+
+Editors not in the list (vim, nano, emacs, …) are left untouched, since
+they already block on the terminal.
 
 ---
 

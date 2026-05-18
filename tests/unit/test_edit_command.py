@@ -9,6 +9,8 @@ import pytest
 from cli.commands import edit as edit_cmd
 from cli.commands.edit import (
     DEFAULT_EDITOR,
+    _inject_wait_flag,
+    _is_gui_editor,
     _launch_editor,
     _suggest_similar,
     resolve_editor,
@@ -56,6 +58,74 @@ class TestResolveEditor:
 
 
 # ---------------------------------------------------------------------------
+# _inject_wait_flag / _is_gui_editor
+# ---------------------------------------------------------------------------
+
+
+class TestInjectWaitFlag:
+    @pytest.mark.parametrize(
+        "editor, expected",
+        [
+            ("cursor", "cursor --wait"),
+            ("code", "code --wait"),
+            ("code-insiders", "code-insiders --wait"),
+            ("subl", "subl --wait"),
+            ("windsurf", "windsurf --wait"),
+            ("zed", "zed --wait"),
+            ("mate", "mate -w"),  # TextMate uses -w, not --wait
+            ("atom", "atom --wait"),
+        ],
+    )
+    def test_injects_wait_flag_for_known_gui_editors(self, editor, expected):
+        assert _inject_wait_flag(editor) == expected
+
+    @pytest.mark.parametrize("editor", ["vim", "nano", "emacs", "nvim", "vi", "ed"])
+    def test_leaves_terminal_editors_untouched(self, editor):
+        assert _inject_wait_flag(editor) == editor
+
+    @pytest.mark.parametrize(
+        "editor",
+        [
+            "cursor --wait",
+            "code --wait",
+            "code -w",
+            "code --wait --new-window",
+            "code --new-window --wait",
+        ],
+    )
+    def test_does_not_double_inject_when_flag_already_present(self, editor):
+        assert _inject_wait_flag(editor) == editor
+
+    def test_matches_basename_for_absolute_paths(self):
+        # Full path to the binary should still trigger injection.
+        result = _inject_wait_flag("/usr/local/bin/cursor")
+        assert result.endswith("--wait")
+        assert "/usr/local/bin/cursor" in result
+
+    def test_preserves_existing_args(self):
+        # An extra flag like --new-window should be kept.
+        result = _inject_wait_flag("code --new-window")
+        # shlex.join order: original args first, then injected wait flag
+        assert "--new-window" in result
+        assert "--wait" in result
+
+    def test_empty_editor_returns_unchanged(self):
+        assert _inject_wait_flag("") == ""
+
+
+class TestIsGuiEditor:
+    @pytest.mark.parametrize(
+        "editor", ["cursor", "code", "code --wait", "subl", "/usr/local/bin/cursor"]
+    )
+    def test_recognizes_gui_editors(self, editor):
+        assert _is_gui_editor(editor) is True
+
+    @pytest.mark.parametrize("editor", ["vim", "nano", "emacs", "vi", ""])
+    def test_terminal_and_empty_are_not_gui(self, editor):
+        assert _is_gui_editor(editor) is False
+
+
+# ---------------------------------------------------------------------------
 # _launch_editor
 # ---------------------------------------------------------------------------
 
@@ -96,6 +166,35 @@ class TestLaunchEditor:
             _launch_editor("vim", file)
         assert exc.value.code == 1
         assert "status 2" in capsys.readouterr().err
+
+    def test_gui_editor_gets_wait_flag_and_notice(self, mocker, tmp_path, capsys):
+        """When $EDITOR is a GUI editor without --wait, inject it and tell the user."""
+        run_mock = mocker.patch("cli.commands.edit.subprocess.run")
+        file = tmp_path / "Song.md"
+        file.write_text("body")
+
+        _launch_editor("cursor", file)
+
+        argv = run_mock.call_args[0][0]
+        assert argv[0] == "cursor"
+        assert "--wait" in argv  # injected
+        assert argv[-1] == str(file)
+
+        out = capsys.readouterr().out
+        assert "Song.md" in out
+        assert "cursor" in out
+        assert "Close the editor" in out
+
+    def test_terminal_editor_skips_notice_and_injection(self, mocker, tmp_path, capsys):
+        run_mock = mocker.patch("cli.commands.edit.subprocess.run")
+        file = tmp_path / "Song.md"
+        file.write_text("body")
+
+        _launch_editor("vim", file)
+
+        argv = run_mock.call_args[0][0]
+        assert argv == ["vim", str(file)]  # no flag injected
+        assert capsys.readouterr().out == ""  # no notice for terminal editors
 
 
 # ---------------------------------------------------------------------------
