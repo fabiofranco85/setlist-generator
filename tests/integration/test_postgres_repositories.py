@@ -1,79 +1,36 @@
 """Integration tests for PostgreSQL repositories.
 
-These tests require a real PostgreSQL database. They are automatically
-skipped when DATABASE_URL is not set.
+These tests run against a throwaway PostgreSQL container provisioned by
+the session-scoped ``docker_postgres`` fixture in
+``tests/integration/conftest.py``. They are auto-skipped when Docker (or
+``psycopg``) is unavailable.
+
+Historically this file read ``DATABASE_URL`` directly and ran ``TRUNCATE``
+on whatever database it pointed at — which is dangerous in development
+environments where ``DATABASE_URL`` typically points at a real, populated
+database. Migrating onto the shared ``docker_postgres`` / ``pg_pool`` /
+``pg_clean_tables`` fixtures eliminates that risk entirely: the tests
+provision their own isolated container and never read ``DATABASE_URL``.
 
 Run with:
-    DATABASE_URL=postgresql://... uv run pytest tests/integration/test_postgres_repositories.py -v
+    uv run pytest tests/integration/test_postgres_repositories.py -v -m postgres
 """
-
-import os
 
 import pytest
 
 from library.models import Setlist
 
-# Skip entire module if no DATABASE_URL
-DATABASE_URL = os.getenv("DATABASE_URL")
-pytestmark = [
-    pytest.mark.postgres,
-    pytest.mark.skipif(
-        not DATABASE_URL,
-        reason="DATABASE_URL not set — skipping PostgreSQL integration tests",
-    ),
-]
-
-
-@pytest.fixture(scope="session")
-def _ensure_schema():
-    """Apply schema once per test session."""
-    import psycopg
-    from pathlib import Path
-
-    schema_path = Path(__file__).resolve().parent.parent.parent / "scripts" / "schema.sql"
-    conn = psycopg.connect(DATABASE_URL)
-    try:
-        with conn.cursor() as cur:
-            cur.execute(schema_path.read_text(encoding="utf-8"))
-        conn.commit()
-    finally:
-        conn.close()
+pytestmark = pytest.mark.postgres
 
 
 @pytest.fixture()
-def pool(_ensure_schema):
-    """Create a connection pool for tests."""
-    from library.repositories.postgres.connection import create_pool
+def seed_songs(pg_pool, pg_clean_tables):
+    """Insert a few test songs into the isolated test database.
 
-    p = create_pool(conninfo=DATABASE_URL, min_size=1, max_size=2)
-    yield p
-    p.close()
-
-
-@pytest.fixture(autouse=True)
-def clean_tables(pool):
-    """Truncate all tables between tests."""
-    with pool.connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("TRUNCATE song_tags, songs, setlists, config CASCADE")
-            # Re-seed config defaults
-            cur.execute("""
-                INSERT INTO config (key, value) VALUES
-                    ('moments_config', '{"prelúdio": 1, "ofertório": 1, "saudação": 1, "crianças": 1, "louvor": 4, "poslúdio": 1}'),
-                    ('recency_decay_days', '45'),
-                    ('default_weight', '3'),
-                    ('energy_ordering_enabled', 'true'),
-                    ('energy_ordering_rules', '{"louvor": "ascending"}'),
-                    ('default_energy', '2.5')
-                ON CONFLICT (key) DO NOTHING
-            """)
-        conn.commit()
-
-
-@pytest.fixture()
-def seed_songs(pool):
-    """Insert a few test songs."""
-    with pool.connection() as conn:
+    Depends on ``pg_clean_tables`` so the table state is reset before each
+    test. The shared fixture lives in ``tests/integration/conftest.py``.
+    """
+    with pg_pool.connection() as conn:
         with conn.cursor() as cur:
             for title, energy, content, youtube in [
                 ("Upbeat Song", 1.0, "### Upbeat Song (C)\nC G\nLyrics", ""),
@@ -109,9 +66,9 @@ def seed_songs(pool):
 
 class TestPostgresSongRepository:
     @pytest.fixture()
-    def repo(self, pool, seed_songs):
+    def repo(self, pg_pool, seed_songs):
         from library.repositories.postgres.songs import PostgresSongRepository
-        return PostgresSongRepository(pool)
+        return PostgresSongRepository(pg_pool)
 
     def test_get_all_count(self, repo):
         songs = repo.get_all()
@@ -174,9 +131,9 @@ class TestPostgresSongRepository:
 
 class TestPostgresHistoryRepository:
     @pytest.fixture()
-    def repo(self, pool):
+    def repo(self, pg_pool, pg_clean_tables):
         from library.repositories.postgres.history import PostgresHistoryRepository
-        return PostgresHistoryRepository(pool)
+        return PostgresHistoryRepository(pg_pool)
 
     def test_get_all_empty(self, repo):
         assert repo.get_all() == []
@@ -269,9 +226,9 @@ class TestPostgresHistoryRepository:
 
 class TestPostgresConfigRepository:
     @pytest.fixture()
-    def repo(self, pool):
+    def repo(self, pg_pool, pg_clean_tables):
         from library.repositories.postgres.config import PostgresConfigRepository
-        return PostgresConfigRepository(pool)
+        return PostgresConfigRepository(pg_pool)
 
     def test_moments(self, repo):
         moments = repo.get_moments_config()
@@ -299,9 +256,13 @@ class TestPostgresConfigRepository:
 
 
 class TestGetRepositoriesPostgres:
-    def test_postgres_backend(self, pool, tmp_path, monkeypatch):
-        """get_repositories(backend='postgres') returns working container."""
-        monkeypatch.setenv("DATABASE_URL", DATABASE_URL)
+    def test_postgres_backend(self, docker_postgres, pg_clean_tables, tmp_path, monkeypatch):
+        """get_repositories(backend='postgres') returns a working container.
+
+        Points DATABASE_URL at the throwaway test container rather than
+        whatever the developer's shell has set.
+        """
+        monkeypatch.setenv("DATABASE_URL", docker_postgres)
 
         from library.repositories import get_repositories
 

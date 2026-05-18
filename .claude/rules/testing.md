@@ -44,8 +44,25 @@ Apply the others explicitly:
 | Marker | Apply to | Auto-skipped when |
 |--------|----------|-------------------|
 | `slow` | Tests that take more than a few seconds | — |
-| `postgres` | Integration tests that need a real PostgreSQL database (`DATABASE_URL` env var) | DB unavailable |
+| `postgres` | Integration tests that hit a real PostgreSQL database | Docker / `psycopg` unavailable |
 | `supabase` | API integration tests that need a local Supabase instance (`npx supabase start`) | Supabase not running |
+
+### Postgres tests use a throwaway container, not `DATABASE_URL`
+
+`postgres`-marked tests run against a throwaway Docker container
+provisioned by the session-scoped `docker_postgres` fixture in
+`tests/integration/conftest.py` (separate port, separate `songbook_test`
+DB, removed at end of session). They **do not** read the developer's
+`DATABASE_URL` env var.
+
+This is deliberate — earlier versions of these tests read `DATABASE_URL`
+and ran `TRUNCATE` on whatever DB it pointed at, which is dangerous in
+development. The shared fixtures (`docker_postgres`, `pg_pool`,
+`pg_clean_tables`) make that failure mode impossible: there is no env
+var to misconfigure.
+
+When adding a new postgres test, use those fixtures rather than reading
+`DATABASE_URL` yourself.
 
 All five markers are registered in `pyproject.toml` under `[tool.pytest.ini_options].markers`.
 
