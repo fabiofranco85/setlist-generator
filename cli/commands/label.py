@@ -78,9 +78,15 @@ def run(date, label, to_label, remove, output_dir, history_dir, event_type=""):
     # 1. Save new history
     repos.history.save(new_setlist)
 
-    # 2. Regenerate and save markdown
+    # 2. Regenerate and save markdown (thread moments_order so non-default
+    # event types render in the user-defined moment sequence).
     songs = repos.songs.get_all()
-    markdown = format_setlist_markdown(new_setlist, songs, event_type_name=et_name)
+    et_moments_order = et.moments_order if et else None
+    markdown = format_setlist_markdown(
+        new_setlist, songs,
+        event_type_name=et_name,
+        moments_order=et_moments_order,
+    )
     md_path = repos.output.save_markdown(date, markdown, label=new_label, event_type=et_slug)
 
     # 3. Delete old history
@@ -98,7 +104,15 @@ def run(date, label, to_label, remove, output_dir, history_dir, event_type=""):
         action = f"Added label '{new_label}' to"
 
     print(f"\n{action} setlist {date}")
-    print(f"  History: {paths.history_dir / f'{new_setlist.setlist_id}.json'}")
+    # Mirror the repo's event-type subdirectory routing in the printed path
+    # so the message matches where the file actually landed.
+    if repos.history.backend_name == "filesystem":
+        hist_dir = paths.history_dir
+        if et_slug and et_slug != "main":
+            hist_dir = hist_dir / et_slug
+        print(f"  History: {hist_dir / f'{new_setlist.setlist_id}.json'}")
+    else:
+        print(f"  History: {repos.history.backend_name} database")
     print(f"  Markdown: {md_path}")
 
     had_pdf = any(p.suffix == ".pdf" for p in deleted_outputs)

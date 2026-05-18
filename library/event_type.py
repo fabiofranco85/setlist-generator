@@ -127,8 +127,28 @@ def load_event_types(path: Path) -> dict[str, EventType]:
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
+    # Validate top-level shape — give a clear error pointing at the file
+    # instead of letting a deep attribute error bubble up.
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"Malformed event types file {path}: expected a JSON object at the "
+            f"top level, got {type(data).__name__}."
+        )
+    raw_event_types = data.get("event_types", {})
+    if not isinstance(raw_event_types, dict):
+        raise ValueError(
+            f"Malformed event types file {path}: 'event_types' must be a "
+            f"JSON object mapping slug → definition, got "
+            f"{type(raw_event_types).__name__}."
+        )
+
     result = {}
-    for slug, info in data.get("event_types", {}).items():
+    for slug, info in raw_event_types.items():
+        if not isinstance(info, dict):
+            raise ValueError(
+                f"Malformed event types file {path}: event type '{slug}' must "
+                f"be a JSON object, got {type(info).__name__}."
+            )
         result[slug] = EventType(
             slug=slug,
             name=info.get("name", slug),

@@ -189,13 +189,22 @@ class SetlistGenerator:
         )
 
         if not ordered_songs and count > 0 and strict:
-            # Check if any songs are tagged for this moment at all
+            # In strict mode (custom moments config supplied by an event type),
+            # an empty result is always an error. Disambiguate the two causes
+            # — "no song tagged for this moment globally" vs. "all candidates
+            # were consumed by earlier moments" — so users know which lever to
+            # pull (tag more songs vs. broaden the pool / reduce other counts).
             has_tagged_songs = any(s.has_moment(moment) for s in available.values())
             if not has_tagged_songs:
                 raise ValueError(
                     f"No songs available for moment '{moment}'. "
                     f"Tag songs with '{moment}' in database.csv."
                 )
+            raise ValueError(
+                f"All songs tagged for moment '{moment}' were already consumed "
+                f"by earlier moments. Add more songs tagged for '{moment}' "
+                f"or reduce song counts in other moments."
+            )
 
         self._moments[moment] = ordered_songs
         self.obs.logger.debug(

@@ -30,12 +30,19 @@ def project_dirs(tmp_path):
 
 @pytest.fixture()
 def songs_for_custom_type():
-    """Songs with tags for both 'louvor' and 'final' moments."""
+    """Songs with tags for both 'louvor' and 'final' moments.
+
+    Song E is tagged for ``final`` only — so the greedy selector can't
+    starve the ``final`` moment by consuming all dual-tagged songs in
+    ``louvor`` first. This keeps the strict-mode happy-path test
+    deterministic regardless of pytest ordering / random state.
+    """
     return {
         "Song A": Song(title="Song A", tags={"louvor": 4, "final": 2}, energy=1, content="### Song A (C)"),
         "Song B": Song(title="Song B", tags={"louvor": 3}, energy=2, content="### Song B (D)"),
         "Song C": Song(title="Song C", tags={"louvor": 5, "final": 3}, energy=3, content="### Song C (Em)"),
         "Song D": Song(title="Song D", tags={"louvor": 4}, energy=4, content="### Song D (A)"),
+        "Song E": Song(title="Song E", tags={"final": 4}, energy=3, content="### Song E (G)"),
     }
 
 

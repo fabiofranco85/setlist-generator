@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from .config import ENERGY_ORDERING_ENABLED, ENERGY_ORDERING_RULES, MOMENTS_CONFIG, canonical_moment_order
+from .config import ENERGY_ORDERING_ENABLED, ENERGY_ORDERING_RULES, MOMENTS_CONFIG
 from .event_type import filter_songs_for_event_type
 from .models import Song
 from .ordering import apply_energy_ordering
@@ -238,9 +238,12 @@ def replace_song_in_setlist(
     if setlist_dict.get("event_type"):
         new_setlist["event_type"] = setlist_dict["event_type"]
 
-    # Copy all moments in canonical order
-    for m in canonical_moment_order(setlist_dict["moments"]):
-        new_setlist["moments"][m] = setlist_dict["moments"][m].copy()
+    # Copy all moments preserving the input dict's order. The caller is the
+    # source of truth for moment ordering (an event type's moments_order,
+    # generate's MOMENTS_CONFIG iteration, etc.) — re-canonicalizing here
+    # silently overwrites that contract.
+    for m, songs_in_moment in setlist_dict["moments"].items():
+        new_setlist["moments"][m] = songs_in_moment.copy()
 
     # Replace the song at the specified position
     moment_songs = new_setlist["moments"][moment]
@@ -367,8 +370,10 @@ def replace_songs_batch(
     if setlist_dict.get("event_type"):
         new_setlist["event_type"] = setlist_dict["event_type"]
 
-    for m in canonical_moment_order(setlist_dict["moments"]):
-        new_setlist["moments"][m] = setlist_dict["moments"][m].copy()
+    # Preserve input dict's moment order — same reasoning as
+    # replace_song_in_setlist: do not silently re-canonicalize.
+    for m, songs_in_moment in setlist_dict["moments"].items():
+        new_setlist["moments"][m] = songs_in_moment.copy()
 
     for moment, position, replacement in final_replacements:
         new_setlist["moments"][moment][position] = replacement
@@ -449,13 +454,13 @@ def derive_setlist(
         replace_count = max(0, min(replace_count, total_songs))
 
     if replace_count == 0:
-        # Copy exactly (no changes)
+        # Copy exactly (no changes), preserving the input dict's moment order.
         new_setlist = {
             "date": base_setlist_dict["date"],
             "moments": {},
         }
-        for m in canonical_moment_order(base_setlist_dict["moments"]):
-            new_setlist["moments"][m] = base_setlist_dict["moments"][m].copy()
+        for m, songs_in_moment in base_setlist_dict["moments"].items():
+            new_setlist["moments"][m] = songs_in_moment.copy()
         return new_setlist
 
     # Randomly sample positions to replace

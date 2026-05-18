@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 from library import get_repositories
-from library.config import MOMENTS_CONFIG
+from library.event_type import is_default_event_type
 
 
 def format_date_display(date_str: str) -> str:
@@ -22,7 +22,14 @@ def format_date_display(date_str: str) -> str:
     return dt.strftime("%A, %B %d, %Y")
 
 
-def display_setlist(setlist_dict: dict, songs: dict, show_keys: bool = False, output_dir: Path = None, history_dir: Path = None):
+def display_setlist(
+    setlist_dict: dict,
+    songs: dict,
+    show_keys: bool = False,
+    output_dir: Path | None = None,
+    history_dir: Path | None = None,
+    event_type: str = "",
+):
     """Display a setlist in formatted output.
 
     Args:
@@ -31,6 +38,7 @@ def display_setlist(setlist_dict: dict, songs: dict, show_keys: bool = False, ou
         show_keys: Whether to show song keys
         output_dir: Custom output directory (for file paths)
         history_dir: Custom history directory (for file paths)
+        event_type: Event type slug for subdirectory routing (empty = default)
     """
     date = setlist_dict["date"]
     label = setlist_dict.get("label", "")
@@ -41,6 +49,13 @@ def display_setlist(setlist_dict: dict, songs: dict, show_keys: bool = False, ou
 
     setlist_id = f"{date}_{label}" if label else date
 
+    # Non-default event types are routed to subdirectories on the
+    # filesystem backend. Mirror that here so the FILES section reports
+    # the real on-disk location (and shows ✓ when the files exist).
+    if not is_default_event_type(event_type):
+        output_dir = output_dir / event_type
+        history_dir = history_dir / event_type
+
     print("\n" + "=" * 60)
     header = f"SETLIST FOR {date}"
     if label:
@@ -50,12 +65,11 @@ def display_setlist(setlist_dict: dict, songs: dict, show_keys: bool = False, ou
     print("=" * 60)
     print()
 
-    # Display each moment in order
-    for moment in MOMENTS_CONFIG.keys():
-        if moment not in moments:
-            continue
-
-        song_list = moments[moment]
+    # Display each moment in the order recorded on the setlist. This
+    # preserves the event type's `moments_order` for non-default types
+    # (iterating MOMENTS_CONFIG.keys() previously dropped any custom
+    # moment like 'final').
+    for moment, song_list in moments.items():
         if not song_list:
             continue
 
@@ -131,4 +145,8 @@ def run(date, keys, output_dir, history_dir, label="", event_type=""):
             print("Continuing without keys...\n")
 
     # Display the setlist
-    display_setlist(target_setlist, songs, show_keys=keys, output_dir=output_dir_path, history_dir=history_dir_path)
+    display_setlist(
+        target_setlist, songs, show_keys=keys,
+        output_dir=output_dir_path, history_dir=history_dir_path,
+        event_type=event_type,
+    )

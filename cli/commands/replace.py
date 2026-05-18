@@ -330,17 +330,30 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir,
         event_type=new_setlist_dict.get("event_type", ""),
     )
 
-    # Save markdown
-    markdown = format_setlist_markdown(setlist_obj, songs, event_type_name=et_name)
-    output_path = paths.output_dir / f"{setlist_obj.setlist_id}.md"
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(markdown)
+    # Save markdown via the repository so non-default event types route to
+    # `output/<event-type>/` instead of clobbering the default type's file at
+    # the root.
+    et_moments_order = et.moments_order if et else None
+    markdown = format_setlist_markdown(
+        setlist_obj, songs,
+        event_type_name=et_name,
+        moments_order=et_moments_order,
+    )
+    output_path = repos.output.save_markdown(
+        setlist_obj.date, markdown,
+        label=setlist_obj.label, event_type=et_slug,
+    )
     print(f"\nMarkdown saved to: {output_path}")
 
-    # Save history
+    # Save history (the repo handles event-type subdirectory routing)
     repos.history.save(setlist_obj)
-    history_path = paths.history_dir / f"{setlist_obj.setlist_id}.json"
-    print(f"History saved to: {history_path}")
+    if repos.history.backend_name == "filesystem":
+        hist_dir = paths.history_dir
+        if et_slug and et_slug != "main":
+            hist_dir = hist_dir / et_slug
+        print(f"History saved to: {hist_dir / f'{setlist_obj.setlist_id}.json'}")
+    else:
+        print(f"History saved to {repos.history.backend_name} database")
 
     print("\n✅ Replacement complete!")
 

@@ -36,3 +36,6 @@ supabase/.branches/
 
 # Output folder
 output
+
+# Local database backups
+.backups/

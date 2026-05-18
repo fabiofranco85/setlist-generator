@@ -64,8 +64,14 @@ def run(date, output_dir, history_dir, label="", event_type=""):
         display_moment = moment.capitalize()
         print(f"  {display_moment}: {', '.join(song_list)}")
 
-    # Generate markdown
-    markdown = format_setlist_markdown(setlist, songs, event_type_name=et_name)
+    # Generate markdown (thread the event type's moments_order so the
+    # rendered moments respect the user-defined order, not MOMENTS_CONFIG).
+    et_moments_order = et.moments_order if et else None
+    markdown = format_setlist_markdown(
+        setlist, songs,
+        event_type_name=et_name,
+        moments_order=et_moments_order,
+    )
 
     # Write output via repository (handles subdirectory routing)
     md_path = repos.output.save_markdown(setlist.date, markdown, label=setlist.label, event_type=et_slug)

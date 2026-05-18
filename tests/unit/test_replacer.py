@@ -378,24 +378,31 @@ class TestReplaceSongsBatch:
 
 # ---------------------------------------------------------------------------
 # Moment ordering preservation
+#
+# The replacer used to canonicalize the moments dict to MOMENTS_CONFIG order;
+# that silently overwrote an event type's user-defined moments_order. The new
+# contract: replacers preserve the caller's input dict order.
 # ---------------------------------------------------------------------------
-
-CANONICAL_ORDER = [
-    "prelúdio", "ofertório", "saudação", "crianças", "louvor", "poslúdio"
-]
 
 
 class TestMomentOrdering:
-    def test_replace_song_preserves_canonical_order(self, setlist_dict, songs_dict):
+    def test_replace_song_keeps_existing_moment_order(self, setlist_dict, songs_dict):
         """Replacing a song should not change moment ordering."""
+        input_order = list(setlist_dict["moments"].keys())
         result = replace_song_in_setlist(
             setlist_dict, "louvor", 0, "Extra Song", songs_dict,
             reorder_energy=False,
         )
-        assert list(result["moments"].keys()) == CANONICAL_ORDER
+        assert list(result["moments"].keys()) == input_order
 
-    def test_replace_song_reorders_scrambled_moments(self, songs_dict):
-        """Scrambled input moments should be normalized to canonical order."""
+    def test_replace_song_preserves_input_moment_order(self, songs_dict):
+        """The caller's moment order is the source of truth.
+
+        The replacer used to canonicalize the output to MOMENTS_CONFIG order,
+        which silently overwrote an event type's user-defined ``moments_order``
+        when its moment sequence diverged from the default. We now preserve
+        the input dict's order — see ``library/replacer.py``.
+        """
         scrambled = {
             "date": "2026-02-15",
             "moments": {
@@ -407,24 +414,31 @@ class TestMomentOrdering:
                 "poslúdio": ["Worship Song"],
             },
         }
+        scrambled_order = list(scrambled["moments"].keys())
         result = replace_song_in_setlist(
             scrambled, "louvor", 0, "Extra Song", songs_dict,
             reorder_energy=False,
         )
-        assert list(result["moments"].keys()) == CANONICAL_ORDER
+        assert list(result["moments"].keys()) == scrambled_order
 
-    def test_batch_replace_preserves_canonical_order(self, setlist_dict, songs_dict):
-        """Batch replacement should maintain canonical moment ordering."""
+    def test_batch_replace_keeps_existing_moment_order(self, setlist_dict, songs_dict):
+        """Batch replacement should maintain the input's moment ordering."""
+        input_order = list(setlist_dict["moments"].keys())
         result = replace_songs_batch(
             setlist_dict,
             [("louvor", 0, "Extra Song")],
             songs_dict,
             [],
         )
-        assert list(result["moments"].keys()) == CANONICAL_ORDER
+        assert list(result["moments"].keys()) == input_order
 
-    def test_batch_replace_reorders_scrambled_moments(self, songs_dict):
-        """Scrambled input should be normalized after batch replace."""
+    def test_batch_replace_preserves_input_moment_order(self, songs_dict):
+        """Batch replacement preserves the caller's moment order.
+
+        Mirrors ``test_replace_song_preserves_input_moment_order`` for the
+        batch path; same rationale (do not silently overwrite an event
+        type's ``moments_order``).
+        """
         scrambled = {
             "date": "2026-02-15",
             "moments": {
@@ -436,10 +450,11 @@ class TestMomentOrdering:
                 "poslúdio": ["Worship Song"],
             },
         }
+        scrambled_order = list(scrambled["moments"].keys())
         result = replace_songs_batch(
             scrambled,
             [("louvor", 0, "Extra Song")],
             songs_dict,
             [],
         )
-        assert list(result["moments"].keys()) == CANONICAL_ORDER
+        assert list(result["moments"].keys()) == scrambled_order

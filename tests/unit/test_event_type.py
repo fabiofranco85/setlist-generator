@@ -181,3 +181,29 @@ class TestLoadSave:
         loaded = load_event_types(path)
         assert "youth" in loaded
         assert loaded["youth"].name == "Youth Service"
+
+    def test_load_rejects_top_level_list_with_clear_error(self, tmp_path):
+        """Malformed file (top-level JSON array) must raise ValueError, not
+        AttributeError on a missing ``.items``."""
+        path = tmp_path / "event_types.json"
+        path.write_text('[{"main": "broken"}]', encoding="utf-8")
+
+        with pytest.raises(ValueError, match="expected a JSON object"):
+            load_event_types(path)
+
+    def test_load_rejects_non_dict_event_types_section(self, tmp_path):
+        """``event_types`` field must be an object — a list (or other type)
+        is caught and surfaced as a clear ValueError pointing at the file."""
+        path = tmp_path / "event_types.json"
+        path.write_text('{"event_types": ["main"]}', encoding="utf-8")
+
+        with pytest.raises(ValueError, match="must be a JSON object"):
+            load_event_types(path)
+
+    def test_load_rejects_non_dict_event_type_definition(self, tmp_path):
+        """Each entry inside ``event_types`` must be an object."""
+        path = tmp_path / "event_types.json"
+        path.write_text('{"event_types": {"main": "not-an-object"}}', encoding="utf-8")
+
+        with pytest.raises(ValueError, match="event type 'main'"):
+            load_event_types(path)

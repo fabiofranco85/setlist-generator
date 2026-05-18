@@ -78,18 +78,23 @@ class TestStrictModeSucceedsWhenSongsExist:
         )
         assert len(setlist.moments["final"]) == 1
 
-    def test_no_error_when_all_tagged_songs_already_selected(self):
-        """If songs ARE tagged but all were already selected for other moments,
-        strict mode does NOT raise — it only raises when zero songs have the tag."""
+    def test_raises_when_all_tagged_songs_already_consumed_by_earlier_moments(self):
+        """If songs ARE tagged for a moment but every candidate was already
+        consumed by an earlier moment, strict mode raises with a message
+        distinguishing this case from "no songs tagged at all".
+
+        This used to be silent — the moment would just end up empty, leaving
+        the caller with a partial setlist and no signal. See ``library/generator.py``.
+        """
         songs = {
             "Song A": make_song(title="Song A", tags={"louvor": 3, "final": 2}),
         }
         generator = SetlistGenerator(songs, [])
-        # louvor selects Song A first, then final has no candidates left,
-        # but Song A IS tagged for 'final', so strict doesn't fire
-        setlist = generator.generate(
-            "2026-03-01",
-            moments_config={"louvor": 1, "final": 1},
-        )
-        # final is empty (Song A already used), but no error
-        assert setlist.moments["final"] == []
+        with pytest.raises(
+            ValueError,
+            match=r"already consumed by earlier moments",
+        ):
+            generator.generate(
+                "2026-03-01",
+                moments_config={"louvor": 1, "final": 1},
+            )
