@@ -56,7 +56,10 @@ def list_types():
     click.echo("-" * 60)
 
     for slug, et in event_types.items():
-        moments_str = ", ".join(f"{m}={c}" for m, c in et.moments.items())
+        # Use ordered_moments so the displayed order honors moments_order
+        # (postgres JSONB does not preserve dict insertion order, so iterating
+        # et.moments would surface keys in an unpredictable order).
+        moments_str = ", ".join(f"{m}={c}" for m, c in et.ordered_moments.items())
         default_marker = " (default)" if slug == DEFAULT_EVENT_TYPE_SLUG else ""
         click.echo(f"{slug:<15} {et.name:<25} {moments_str}{default_marker}")
 
@@ -234,7 +237,7 @@ def manage_moments(slug, moments_str):
         click.echo()
         click.echo(f"{'Moment':<15} {'Songs'}")
         click.echo("-" * 30)
-        for moment, count in et.moments.items():
+        for moment, count in et.ordered_moments.items():
             click.echo(f"{moment:<15} {count}")
         click.echo()
     else:
@@ -286,7 +289,7 @@ def edit_default(name, description):
         click.echo(f"  Name: {et.name}")
         click.echo(f"  Description: {et.description or '(none)'}")
         click.echo(f"  Moments:")
-        for moment, count in et.moments.items():
+        for moment, count in et.ordered_moments.items():
             click.echo(f"    {moment}: {count}")
         click.echo()
     else:

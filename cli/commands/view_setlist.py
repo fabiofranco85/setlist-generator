@@ -5,7 +5,7 @@ View setlist command - display generated setlists.
 from datetime import datetime
 from pathlib import Path
 
-from library import get_repositories
+from library import canonical_moment_order, get_repositories
 from library.event_type import is_default_event_type
 
 
@@ -29,6 +29,7 @@ def display_setlist(
     output_dir: Path | None = None,
     history_dir: Path | None = None,
     event_type: str = "",
+    moments_order: list[str] | None = None,
 ):
     """Display a setlist in formatted output.
 
@@ -39,6 +40,11 @@ def display_setlist(
         output_dir: Custom output directory (for file paths)
         history_dir: Custom history directory (for file paths)
         event_type: Event type slug for subdirectory routing (empty = default)
+        moments_order: Explicit moment ordering from the event type — when
+            the setlist was loaded from postgres, ``setlist_dict["moments"]``
+            comes back in JSONB key order, not the user-defined service
+            order. Pass the event type's ``moments_order`` to recover the
+            intended order. When None, falls back to ``MOMENTS_CONFIG``.
     """
     date = setlist_dict["date"]
     label = setlist_dict.get("label", "")
@@ -65,11 +71,12 @@ def display_setlist(
     print("=" * 60)
     print()
 
-    # Display each moment in the order recorded on the setlist. This
-    # preserves the event type's `moments_order` for non-default types
-    # (iterating MOMENTS_CONFIG.keys() previously dropped any custom
-    # moment like 'final').
-    for moment, song_list in moments.items():
+    # Display each moment using the event type's moments_order so that
+    # custom moments are preserved AND the user-defined service order is
+    # honored (postgres JSONB doesn't preserve dict insertion order).
+    moments_ref = {m: 0 for m in moments_order} if moments_order else None
+    for moment in canonical_moment_order(moments, reference_config=moments_ref):
+        song_list = moments[moment]
         if not song_list:
             continue
 
@@ -149,4 +156,5 @@ def run(date, keys, output_dir, history_dir, label="", event_type=""):
         target_setlist, songs, show_keys=keys,
         output_dir=output_dir_path, history_dir=history_dir_path,
         event_type=event_type,
+        moments_order=et.moments_order if et else None,
     )

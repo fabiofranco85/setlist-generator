@@ -162,15 +162,20 @@ class SupabaseHistoryRepository:
             raise KeyError(f"Setlist for {date}{label_s}{type_s} not found")
 
     def get_by_date_all(self, date: str, event_type: str = "") -> list[dict]:
-        """Get all setlists for a date (all labels)."""
+        """Get all setlists for a date and event type (all labels).
+
+        ``event_type=""`` means the default event type (main) — it is a real
+        filter value, not "any event type". This matches the filesystem and
+        postgres backends; the CLI relies on it to avoid cross-event-type
+        contamination when deriving labeled variants.
+        """
         query = (
             self._client.table("setlists")
             .select("date, label, event_type, moments")
             .eq("org_id", self._org_id)
             .eq("date", date)
+            .eq("event_type", event_type)
         )
-        if event_type:
-            query = query.eq("event_type", event_type)
 
         response = query.order("label").execute()
 

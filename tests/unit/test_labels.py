@@ -204,6 +204,191 @@ class TestDeriveSetlist:
 
 
 # ---------------------------------------------------------------------------
+# derive_setlist with target_moments — projection / shape correction
+# ---------------------------------------------------------------------------
+
+
+class TestDeriveSetlistWithTargetMoments:
+    """Coverage for the target_moments parameter that prevents cross-event-type
+    contamination when the wrong base is picked up (e.g., a ``ceia`` base for a
+    ``main`` label-only generation)."""
+
+    @pytest.fixture()
+    def songs_dict(self):
+        return {
+            "Upbeat Song": make_song(
+                title="Upbeat Song",
+                tags={"louvor": 4, "prelúdio": 3, "saudação": 3, "ceia": 3, "comunhão": 3},
+                energy=1,
+            ),
+            "Moderate Song": make_song(
+                title="Moderate Song",
+                tags={"louvor": 3, "saudação": 3, "ceia": 3, "comunhão": 3},
+                energy=2,
+            ),
+            "Reflective Song": make_song(
+                title="Reflective Song",
+                tags={"louvor": 5, "prelúdio": 3, "ceia": 3},
+                energy=3,
+            ),
+            "Worship Song": make_song(
+                title="Worship Song",
+                tags={"louvor": 4, "saudação": 3},
+                energy=4,
+            ),
+            "Extra Song": make_song(
+                title="Extra Song",
+                tags={"louvor": 3, "prelúdio": 3, "saudação": 3},
+                energy=2,
+            ),
+        }
+
+    def test_drops_alien_moments_from_base(self, songs_dict):
+        """A base from a different event type contributes its overlapping
+        moments to the result, but moments not in the target are dropped."""
+        # Base looks like a ``ceia`` setlist — has comunhão and ceia.
+        base = {
+            "date": "2026-01-01",
+            "moments": {
+                "comunhão": ["Upbeat Song"],
+                "ceia": ["Reflective Song"],
+                "louvor": ["Worship Song"],
+            },
+        }
+        # Target is the ``main`` event type shape — no comunhão, no ceia.
+        target = {"prelúdio": 1, "saudação": 1, "louvor": 1}
+
+        random.seed(42)
+        result = derive_setlist(
+            base, songs_dict, [],
+            replace_count=0,
+            target_moments=target,
+        )
+
+        assert set(result["moments"].keys()) == set(target.keys())
+        assert "comunhão" not in result["moments"]
+        assert "ceia" not in result["moments"]
+
+    def test_preserves_target_moments_order(self, songs_dict):
+        """The derived setlist iterates ``target_moments`` in its given
+        order — important because postgres JSONB doesn't preserve dict
+        insertion order on round-trip."""
+        base = {
+            "date": "2026-01-01",
+            "moments": {
+                "louvor": ["Worship Song", "Upbeat Song"],
+                "prelúdio": ["Reflective Song"],
+            },
+        }
+        # Pass moments in a specific non-alphabetical, non-base order
+        target = {
+            "prelúdio": 1,
+            "louvor": 2,
+            "saudação": 1,
+        }
+
+        random.seed(42)
+        result = derive_setlist(
+            base, songs_dict, [],
+            replace_count=0,
+            target_moments=target,
+        )
+
+        assert list(result["moments"].keys()) == ["prelúdio", "louvor", "saudação"]
+
+    def test_fills_new_target_moments_freshly(self, songs_dict):
+        """Moments present in target but not in base are populated by
+        fresh selection (using the recency / weight algorithm)."""
+        base = {
+            "date": "2026-01-01",
+            "moments": {
+                "louvor": ["Worship Song"],
+                # No saudação in base
+            },
+        }
+        target = {"louvor": 1, "saudação": 1}
+
+        random.seed(42)
+        result = derive_setlist(
+            base, songs_dict, [],
+            replace_count=0,
+            target_moments=target,
+        )
+
+        assert "saudação" in result["moments"]
+        assert len(result["moments"]["saudação"]) == 1
+        # Carried from base (replace_count=0 → no random swap)
+        assert result["moments"]["louvor"] == ["Worship Song"]
+
+    def test_truncates_when_target_count_smaller(self, songs_dict):
+        """If base has more songs in a moment than target asks for, the
+        extras are dropped (truncate to target count)."""
+        base = {
+            "date": "2026-01-01",
+            "moments": {
+                "louvor": ["Worship Song", "Reflective Song", "Moderate Song", "Upbeat Song"],
+            },
+        }
+        target = {"louvor": 2}
+
+        random.seed(42)
+        result = derive_setlist(
+            base, songs_dict, [],
+            replace_count=0,
+            target_moments=target,
+        )
+
+        assert len(result["moments"]["louvor"]) == 2
+        # Truncation keeps the FIRST N from base
+        assert result["moments"]["louvor"] == ["Worship Song", "Reflective Song"]
+
+    def test_pads_when_target_count_larger(self, songs_dict):
+        """If base has fewer songs in a moment than target asks for, the
+        gaps are filled by fresh selection."""
+        base = {
+            "date": "2026-01-01",
+            "moments": {
+                "louvor": ["Worship Song"],
+            },
+        }
+        target = {"louvor": 3}
+
+        random.seed(42)
+        result = derive_setlist(
+            base, songs_dict, [],
+            replace_count=0,
+            target_moments=target,
+        )
+
+        assert len(result["moments"]["louvor"]) == 3
+        # Worship Song is carried; the other two are fresh-filled
+        assert "Worship Song" in result["moments"]["louvor"]
+
+    def test_legacy_behavior_when_target_moments_is_none(self, songs_dict):
+        """When ``target_moments`` is None, the function preserves its
+        legacy behavior — derives from the base's shape directly."""
+        base = {
+            "date": "2026-01-01",
+            "moments": {
+                "louvor": ["Worship Song", "Reflective Song"],
+                "prelúdio": ["Upbeat Song"],
+            },
+        }
+
+        random.seed(42)
+        result = derive_setlist(
+            base, songs_dict, [],
+            replace_count=0,
+            target_moments=None,
+        )
+
+        # Legacy: result has exactly the base's moments shape
+        assert set(result["moments"].keys()) == {"louvor", "prelúdio"}
+        assert result["moments"]["louvor"] == ["Worship Song", "Reflective Song"]
+        assert result["moments"]["prelúdio"] == ["Upbeat Song"]
+
+
+# ---------------------------------------------------------------------------
 # Filesystem History Repository with labels
 # ---------------------------------------------------------------------------
 

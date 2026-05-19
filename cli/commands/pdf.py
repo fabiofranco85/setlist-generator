@@ -4,6 +4,7 @@ PDF command - generate PDF from existing setlist.
 
 from library import (
     Setlist,
+    canonical_moment_order,
     generate_setlist_pdf,
     get_repositories,
 )
@@ -39,6 +40,7 @@ def run(date, output_dir, history_dir, label="", event_type="", no_chords=False)
     et = resolve_event_type(repos, event_type)
     et_slug = event_type
     et_name = et.name if et and not (et_slug == "" or et_slug == "main") else ""
+    et_moments_order = et.moments_order if et else None
 
     print("Loading songs...")
     songs = repos.songs.get_all()
@@ -63,7 +65,12 @@ def run(date, output_dir, history_dir, label="", event_type="", no_chords=False)
         header += f" ({setlist.label})"
     print(header + "...")
     print("Moments:")
-    for moment, song_list in setlist.moments.items():
+    # Iterate via canonical_moment_order — setlists loaded from postgres come
+    # back with JSONB-internal key order, not the event type's user-defined
+    # service order.
+    moments_ref = {m: 0 for m in et_moments_order} if et_moments_order else None
+    for moment in canonical_moment_order(setlist.moments, reference_config=moments_ref):
+        song_list = setlist.moments[moment]
         display_moment = moment.capitalize()
         print(f"  {display_moment}: {', '.join(song_list)}")
 
@@ -78,6 +85,7 @@ def run(date, output_dir, history_dir, label="", event_type="", no_chords=False)
         generate_setlist_pdf(
             setlist, songs, pdf_path,
             event_type_name=et_name,
+            moments_order=et_moments_order,
             include_chords=not no_chords,
         )
         label_suffix = " (lyrics-only)" if no_chords else ""

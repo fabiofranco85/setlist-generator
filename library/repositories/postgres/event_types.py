@@ -5,6 +5,7 @@ Event types are cached in memory after first load, invalidated on writes.
 
 import json
 
+from ...config import canonical_moment_order
 from ...event_type import EventType, DEFAULT_EVENT_TYPE_SLUG
 
 
@@ -40,8 +41,16 @@ class PostgresEventTypeRepository:
         for row in rows:
             slug, name, description, moments, moments_order = row
             raw_moments = moments if isinstance(moments, dict) else {}
-            # Reconstruct ordered dict from moments_order
-            order = moments_order if isinstance(moments_order, list) else []
+            # Reconstruct ordered dict from moments_order. When the column is
+            # NULL (e.g., for the seed-inserted ``main`` row that predates
+            # the moments_order column), fall back to canonical service
+            # order — postgres JSONB does not preserve dict insertion
+            # order, so ``list(raw_moments.keys())`` would otherwise surface
+            # keys in a non-canonical (binary) order.
+            if isinstance(moments_order, list) and moments_order:
+                order = moments_order
+            else:
+                order = canonical_moment_order(raw_moments)
             result[slug] = EventType(
                 slug=slug,
                 name=name,

@@ -414,6 +414,7 @@ def derive_setlist(
     replace_count: int | None = None,
     event_type: str = "",
     config: GenerationConfig | None = None,
+    target_moments: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """
     Derive a new setlist by replacing songs from a base setlist.
@@ -428,6 +429,14 @@ def derive_setlist(
         replace_count: Number of songs to replace.
             None = random (1 to total_songs).
         event_type: Optional event type slug for song filtering
+        config: Generation config
+        target_moments: Optional target moments config ({moment: count}). When
+            provided, the derived setlist's moments are projected onto this
+            shape — overlapping moments carry songs from the base, missing
+            moments are freshly selected, and base moments not in target are
+            dropped. Output moment order follows ``target_moments.keys()``.
+            This is the recommended path for the CLI/API to avoid
+            cross-event-type contamination if the wrong base is picked up.
 
     Returns:
         New setlist dict with replaced songs (caller sets label)
@@ -437,15 +446,79 @@ def derive_setlist(
     # Filter songs by event type if specified
     available = filter_songs_for_event_type(songs, event_type) if event_type else songs
 
-    # Enumerate all (moment, position) pairs
-    all_positions = []
-    for moment_name, song_list in base_setlist_dict["moments"].items():
+    base_moments = base_setlist_dict.get("moments", {})
+
+    # Build the scaffold (moment -> list of songs) in the target's order. If
+    # no target shape was supplied, fall back to the base's shape — preserves
+    # backward compatibility for callers that don't yet pass target_moments.
+    scaffold: dict[str, list[str]] = {}
+    already_selected: set[str] = set()
+    needs_fresh_fill = False
+
+    if target_moments is not None:
+        for moment, count in target_moments.items():
+            from_base = base_moments.get(moment, [])
+            carried = [s for s in from_base[:count] if s in available]
+            already_selected.update(carried)
+            scaffold[moment] = list(carried)
+            if len(carried) < count:
+                needs_fresh_fill = True
+    else:
+        for moment, song_list in base_moments.items():
+            scaffold[moment] = list(song_list)
+
+    # Fresh-fill any gaps where the scaffold has fewer songs than target wants
+    # (e.g., target adds a moment the base doesn't have, or asks for more
+    # songs than base supplies). Recency is calculated lazily — only if we
+    # actually need to select fresh songs.
+    if needs_fresh_fill:
+        # needs_fresh_fill is only ever set to True inside the
+        # `if target_moments is not None` branch above, so this is safe —
+        # the assert exists only to satisfy static analyzers (Pyright).
+        assert target_moments is not None
+        decay = config.recency_decay_days if config else None
+        kw = {"recency_decay_days": decay} if decay is not None else {}
+        recency_scores = calculate_recency_scores(
+            songs=available, history=history,
+            current_date=base_setlist_dict["date"], **kw,
+        )
+        eo_enabled = config.energy_ordering_enabled if config else ENERGY_ORDERING_ENABLED
+        eo_rules = config.energy_ordering_rules if config else ENERGY_ORDERING_RULES
+        for moment, count in target_moments.items():
+            needed = count - len(scaffold[moment])
+            if needed <= 0:
+                continue
+            selected = select_songs_for_moment(
+                moment, needed, available, recency_scores,
+                already_selected, overrides=None,
+            )
+            for title, _energy in selected:
+                scaffold[moment].append(title)
+                already_selected.add(title)
+            # Re-apply energy ordering to this moment after fresh-fill
+            if eo_enabled and moment in eo_rules and scaffold[moment]:
+                with_energy = [
+                    (t, available[t].energy)
+                    for t in scaffold[moment]
+                    if t in available
+                ]
+                scaffold[moment] = apply_energy_ordering(
+                    moment=moment,
+                    selected_songs=with_energy,
+                    override_count=0,
+                    energy_ordering_enabled=eo_enabled,
+                    energy_ordering_rules=eo_rules,
+                )
+
+    # Enumerate all (moment, position) pairs in the scaffold
+    all_positions: list[tuple[str, int]] = []
+    for moment_name, song_list in scaffold.items():
         for idx in range(len(song_list)):
             all_positions.append((moment_name, idx))
 
     total_songs = len(all_positions)
     if total_songs == 0:
-        return dict(base_setlist_dict)
+        return {"date": base_setlist_dict["date"], "moments": scaffold}
 
     # Determine how many to replace
     if replace_count is None:
@@ -454,27 +527,19 @@ def derive_setlist(
         replace_count = max(0, min(replace_count, total_songs))
 
     if replace_count == 0:
-        # Copy exactly (no changes), preserving the input dict's moment order.
-        new_setlist = {
-            "date": base_setlist_dict["date"],
-            "moments": {},
-        }
-        for m, songs_in_moment in base_setlist_dict["moments"].items():
-            new_setlist["moments"][m] = songs_in_moment.copy()
-        return new_setlist
+        return {"date": base_setlist_dict["date"], "moments": scaffold}
 
     # Randomly sample positions to replace
     positions_to_replace = random.sample(all_positions, replace_count)
-
-    # Build replacements list (all auto-selection)
     replacements: list[tuple[str, int, str | None]] = [
-        (moment, pos, None)
-        for moment, pos in positions_to_replace
+        (moment, pos, None) for moment, pos in positions_to_replace
     ]
 
-    # Use replace_songs_batch for the actual replacement
+    # Hand off to replace_songs_batch for the actual replacement + energy
+    # reorder. Pass the scaffold (not the raw base) so alien moments are
+    # already gone and the target order is preserved.
     return replace_songs_batch(
-        setlist_dict=base_setlist_dict,
+        setlist_dict={"date": base_setlist_dict["date"], "moments": scaffold},
         replacements=replacements,
         songs=available,
         history=history,

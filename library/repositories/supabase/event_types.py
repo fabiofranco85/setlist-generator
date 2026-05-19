@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...config import canonical_moment_order
 from ...event_type import EventType, DEFAULT_EVENT_TYPE_SLUG
 
 
@@ -34,12 +35,19 @@ class SupabaseEventTypeRepository:
 
         result: dict[str, EventType] = {}
         for row in response.data:
+            # When moments_order is NULL (e.g., for legacy rows that
+            # predate the column), fall back to canonical service order —
+            # postgres JSONB does not preserve dict insertion order, so
+            # ``list(moments.keys())`` would surface keys in binary order.
+            raw_moments = row["moments"] or {}
+            stored_order = row.get("moments_order") or []
+            order = stored_order if stored_order else canonical_moment_order(raw_moments)
             et = EventType(
                 slug=row["slug"],
                 name=row["name"],
                 description=row.get("description") or "",
-                moments=row["moments"],
-                moments_order=row.get("moments_order") or [],
+                moments=raw_moments,
+                moments_order=order,
             )
             result[row["slug"]] = et
 

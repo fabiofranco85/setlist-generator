@@ -350,6 +350,39 @@ class TestPostgresHistoryRepository:
         results = repo.get_by_date_all("2026-03-01")
         assert len(results) == 2
 
+    def test_get_by_date_all_empty_event_type_filters_to_default(self, _import):
+        """Regression for cross-event-type contamination — when called with
+        ``event_type=""``, the SQL must filter ``event_type = ''`` (default/
+        main), not omit the filter. Previously the empty-string was treated
+        as "any event type" which caused a ceia base to be picked up when
+        deriving a labeled main setlist.
+        """
+        Repo = _import
+        pool, cursor = make_pool(results=[[]])
+        repo = Repo(pool)
+
+        repo.get_by_date_all("2026-03-01")  # event_type defaults to ""
+
+        # The executed SQL must include an event_type filter, not omit it.
+        executed_query = cursor.queries[0]
+        executed_params = cursor.params[0]
+        assert "event_type = %s" in executed_query
+        assert executed_params == ("2026-03-01", "")
+
+    def test_get_by_date_all_filters_by_explicit_event_type(self, _import):
+        """Sanity check: the SQL also filters correctly for a non-empty
+        event_type (mirrors the test above for the original code path)."""
+        Repo = _import
+        pool, cursor = make_pool(results=[[]])
+        repo = Repo(pool)
+
+        repo.get_by_date_all("2026-03-01", event_type="ceia")
+
+        executed_query = cursor.queries[0]
+        executed_params = cursor.params[0]
+        assert "event_type = %s" in executed_query
+        assert executed_params == ("2026-03-01", "ceia")
+
     def test_get_latest(self, _import):
         Repo = _import
         pool, _ = make_pool(results=[

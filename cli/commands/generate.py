@@ -7,6 +7,7 @@ from pathlib import Path
 
 from library import (
     MOMENTS_CONFIG,
+    canonical_moment_order,
     format_setlist_markdown,
     generate_setlist,
     generate_setlist_pdf,
@@ -101,6 +102,8 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
     et_slug = event_type
     et_name = et.name if et and not (et_slug == "" or et_slug == "main") else ""
     moments_config = et.ordered_moments if et else None
+    et_moments_order = et.moments_order if et else None
+    moments_ref = {m: 0 for m in et_moments_order} if et_moments_order else None
 
     print("Loading songs...")
     songs = repos.songs.get_all()
@@ -137,7 +140,16 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
                     except ValueError:
                         handle_error(f"Invalid --replace value: '{replace_count}'. Use a number or 'all'.")
 
-            new_dict = derive_setlist(base, songs, history, replace_count=parsed_count, event_type=et_slug)
+            # Pass target_moments so the derived setlist's shape matches the
+            # *target* event type, not the base's. Without this, a base
+            # picked from a different event type would leak its moments into
+            # the derived setlist (cross-event-type contamination).
+            new_dict = derive_setlist(
+                base, songs, history,
+                replace_count=parsed_count,
+                event_type=et_slug,
+                target_moments=moments_config,
+            )
 
             # Set label and event_type on the derived setlist
             new_dict["label"] = label
@@ -181,13 +193,17 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
         header += f" ({label})"
     print(header)
     print(f"{'=' * 50}")
-    for moment, song_list in setlist.moments.items():
+    # Iterate via canonical_moment_order so the printed order honors the
+    # event type's moments_order — `setlist.moments.items()` would otherwise
+    # surface keys in the order postgres JSONB stored them in, which is not
+    # the user-defined service order.
+    for moment in canonical_moment_order(setlist.moments, reference_config=moments_ref):
+        song_list = setlist.moments[moment]
         print(f"\n{moment.upper()}:")
         for song in song_list:
             print(f"  - {song}")
 
     # Generate markdown
-    et_moments_order = et.moments_order if et else None
     markdown = format_setlist_markdown(setlist, songs, event_type_name=et_name, moments_order=et_moments_order)
 
     # Save files

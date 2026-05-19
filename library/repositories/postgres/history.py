@@ -84,21 +84,20 @@ class PostgresHistoryRepository:
         return self._row_to_dict(*row)
 
     def get_by_date_all(self, date: str, event_type: str = "") -> list[dict]:
-        """Get all setlists for a date (all labels), optionally filtered by event type."""
+        """Get all setlists for a date and event type (all labels).
+
+        ``event_type=""`` means the default event type (main) — it is a real
+        filter value, not "any event type". This matches the filesystem
+        backend's semantics; the CLI relies on it to avoid cross-event-type
+        contamination when deriving labeled variants.
+        """
         with self._pool.connection() as conn:
             with conn.cursor() as cur:
-                if event_type:
-                    cur.execute(
-                        "SELECT date, label, moments, event_type FROM setlists "
-                        "WHERE date = %s AND event_type = %s ORDER BY label ASC",
-                        (date, event_type),
-                    )
-                else:
-                    cur.execute(
-                        "SELECT date, label, moments, event_type FROM setlists "
-                        "WHERE date = %s ORDER BY event_type ASC, label ASC",
-                        (date,),
-                    )
+                cur.execute(
+                    "SELECT date, label, moments, event_type FROM setlists "
+                    "WHERE date = %s AND event_type = %s ORDER BY label ASC",
+                    (date, event_type),
+                )
                 rows = cur.fetchall()
 
         return [self._row_to_dict(date, label, moments, et)

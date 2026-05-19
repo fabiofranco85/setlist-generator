@@ -4,6 +4,7 @@ Markdown command - regenerate markdown from existing setlist.
 
 from library import (
     Setlist,
+    canonical_moment_order,
     format_setlist_markdown,
     get_repositories,
 )
@@ -58,15 +59,20 @@ def run(date, output_dir, history_dir, label="", event_type=""):
         header += f" | {et_name}"
     if setlist.label:
         header += f" ({setlist.label})"
-    print(header + "...")
-    print("Moments:")
-    for moment, song_list in setlist.moments.items():
-        display_moment = moment.capitalize()
-        print(f"  {display_moment}: {', '.join(song_list)}")
-
     # Generate markdown (thread the event type's moments_order so the
     # rendered moments respect the user-defined order, not MOMENTS_CONFIG).
     et_moments_order = et.moments_order if et else None
+
+    print(header + "...")
+    print("Moments:")
+    # Iterate via canonical_moment_order — setlists loaded from postgres come
+    # back with JSONB-internal key order, not the event type's user-defined
+    # service order.
+    moments_ref = {m: 0 for m in et_moments_order} if et_moments_order else None
+    for moment in canonical_moment_order(setlist.moments, reference_config=moments_ref):
+        song_list = setlist.moments[moment]
+        display_moment = moment.capitalize()
+        print(f"  {display_moment}: {', '.join(song_list)}")
     markdown = format_setlist_markdown(
         setlist, songs,
         event_type_name=et_name,

@@ -41,8 +41,48 @@ class TestPostgresEventTypeLoadMomentsOrder:
         repo = Repo(pool)
 
         et = repo.get("old")
-        # __post_init__ defaults from moments dict
+        # When neither moment is in MOMENTS_CONFIG, the canonical fallback
+        # sorts extras alphabetically — matches list(moments.keys()) here.
         assert et.moments_order == ["alpha", "beta"]
+
+    def test_null_moments_order_canonicalizes_standard_moments(self):
+        """When moments_order is NULL AND the moments overlap with the
+        canonical MOMENTS_CONFIG, the loader uses canonical service order
+        instead of trusting postgres' JSONB key order (which is binary, not
+        user-defined). Regression for the user-visible "main shows alphabetical
+        moments" bug — the seed SQL inserted main without moments_order,
+        leaving it NULL, and the fallback used to surface JSONB internal order.
+        """
+        Repo = self._import()
+        # Simulate postgres JSONB returning keys in non-canonical order
+        rows = [(
+            "main", "Main Event", "",
+            {"louvor": 4, "crianças": 1, "poslúdio": 1, "prelúdio": 1,
+             "ofertório": 1, "saudação": 1},
+            None,  # moments_order NULL (seed-inserted main)
+        )]
+        pool, _ = make_pool(results=[rows])
+        repo = Repo(pool)
+
+        et = repo.get("main")
+        # Canonical service order — matches MOMENTS_CONFIG.
+        assert et.moments_order == [
+            "prelúdio", "ofertório", "saudação", "crianças", "louvor", "poslúdio",
+        ]
+
+    def test_empty_moments_order_canonicalizes_standard_moments(self):
+        """Same as above but with an empty-list moments_order (vs NULL)."""
+        Repo = self._import()
+        rows = [(
+            "main", "Main Event", "",
+            {"louvor": 4, "prelúdio": 1, "poslúdio": 1},
+            [],  # empty list — also triggers canonical fallback
+        )]
+        pool, _ = make_pool(results=[rows])
+        repo = Repo(pool)
+
+        et = repo.get("main")
+        assert et.moments_order == ["prelúdio", "louvor", "poslúdio"]
 
 
 class TestPostgresEventTypeAddMomentsOrder:

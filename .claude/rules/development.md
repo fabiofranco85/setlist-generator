@@ -229,6 +229,12 @@ The `supabase` backend powers the SaaS API layer in `api/`. Output repositories 
 - Connection pool: `create_pool()` in `postgres/connection.py`, shared across all repos
 - Optional dep guard: `try/except ImportError` in `repositories/__init__.py`
 
+**JSONB key-order pitfall (postgres + supabase):** Postgres' `JSONB` type does *not* preserve dict insertion order — keys are stored in an internal binary order and come back in that order on `SELECT`. Anywhere we round-trip a Python dict through a `JSONB` column (e.g. `event_types.moments`, `setlists.moments`), the iteration order on read is **not** the order on write. Two consequences:
+1. `setlists.moments` is intentionally **not** the source of moment order for display — formatters (`format_setlist_markdown`, `generate_setlist_pdf`) and the CLI display loops route through `canonical_moment_order(setlist.moments, reference_config={m: 0 for m in et.moments_order})` to recover the user-defined service order from the event type.
+2. `event_types.moments_order` is a sibling column that explicitly stores the user-defined key order as a JSON *array* (arrays preserve order). When the column is `NULL` (e.g., the seed-inserted `main` row before the migration), `PostgresEventTypeRepository._load_all` and `SupabaseEventTypeRepository.get_all` fall back to `canonical_moment_order(moments)` so the default event type displays in canonical order instead of JSONB-internal order.
+
+**Cross-event-type lookup invariants:** `HistoryRepository.get_by_date(date, label, event_type)` and `get_by_date_all(date, event_type)` treat `event_type=""` as the default event type (main) — it is a **real filter value**, not a "no filter" wildcard. The filesystem and postgres backends now agree on this; supabase matches. CLI code (`generate --label evening` etc.) relies on this contract to avoid picking up a base setlist from a different event type when deriving labeled variants.
+
 ### selector.py
 **Purpose:** Song selection algorithms and usage queries
 
@@ -666,10 +672,12 @@ def calculate_recency_scores(songs, history, target_date):
    - Locates setlist by date and optional label
    - Raises ValueError if not found
 
-2. **`derive_setlist(base_setlist_dict, songs, history, replace_count=None)`**
+2. **`derive_setlist(base_setlist_dict, songs, history, replace_count=None, event_type="", config=None, target_moments=None)`**
    - Creates a variant by replacing songs from a base setlist
-   - `replace_count=None` → random number; `replace_count=0` → exact copy; integer → that many
-   - Uses `replace_songs_batch()` internally with auto-selection
+   - `replace_count=None` → random number; `replace_count=0` → no random swap; integer → that many
+   - When `target_moments` is **None** (legacy): derived setlist preserves the base's moments shape verbatim. `replace_count=0` returns an exact copy.
+   - When `target_moments` is provided: derived setlist's moments are **projected onto the target shape** — overlapping moments carry songs from the base (up to the target count), moments missing from the base are freshly selected, and base moments not in the target are dropped. Output moment order follows `target_moments.keys()`. This is the CLI path's contract (the call from `cli/commands/generate.py` passes the resolved event type's `ordered_moments` as `target_moments`) and prevents cross-event-type contamination if `repos.history.get_by_date_all` ever returns a base from the wrong event type.
+   - Uses `replace_songs_batch()` internally for the random-swap step (energy reorder is applied to affected moments).
    - Returns new setlist dict (caller sets `label`)
 
 3. **`validate_replacement_request(setlist, moment, position, replacement_song, songs)`**
