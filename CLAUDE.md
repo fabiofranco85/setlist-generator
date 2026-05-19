@@ -68,6 +68,9 @@ songbook replace --moment louvor --position 2 --label evening  # Replace in labe
 songbook label --date 2026-03-01 --to evening  # Add label to setlist
 songbook label --date 2026-03-01 --label evening --to night  # Rename label
 songbook label --date 2026-03-01 --label evening --remove  # Remove label
+songbook delete --date 2026-02-15                    # Delete a setlist (prompts)
+songbook delete --date 2026-02-15 --yes              # Delete without confirmation
+songbook delete --date 2026-03-01 --label evening --yes  # Delete a labeled variant
 songbook weights                     # Interactively edit song weights (pick moment → table)
 songbook weights --moment louvor     # Jump straight to the louvor weights table
 songbook weights -m louvor -e youth  # Same, scoped to the youth song pool
@@ -232,6 +235,21 @@ songbook label --date 2026-03-01 --label evening --to night    # Rename label
 songbook label --date 2026-03-01 --label evening --remove      # Remove label
 ```
 
+**Delete a setlist:**
+```bash
+songbook delete --date 2026-02-15                              # Prompts to confirm
+songbook delete --date 2026-02-15 --yes                        # Skip confirmation
+songbook delete --date 2026-03-01 --label evening --yes        # Delete a labeled variant
+songbook delete --date 2026-03-20 -e youth --yes               # Delete an event-type setlist
+```
+
+Removes the history record and every output file (markdown, regular PDF,
+and the lyrics-only `_lyrics.pdf` variant). `--date` is required —
+deletion never defaults to the latest setlist to avoid wiping a recent
+service by accident. Labels and event types are independent: deleting an
+unlabeled primary leaves its labeled siblings (e.g. `evening`) intact,
+and vice versa.
+
 **Manage event types:**
 ```bash
 songbook event-type list                                       # List all event types
@@ -353,7 +371,7 @@ for moment, song_list in setlist.moments.items():
 - `repos.output.save_pdf(setlist, songs, variant="")` - Save PDF; pass `variant="lyrics"` for the lyrics-only variant (filename gets `_lyrics` suffix)
 - `repos.output.get_markdown_path(date, label="", event_type="")` - Get output path
 - `repos.output.get_pdf_path(date, label="", event_type="", variant="")` - Get PDF path (with optional variant suffix)
-- `repos.output.delete_outputs(date, label="", event_type="")` - Delete md + pdf files
+- `repos.output.delete_outputs(date, label="", event_type="")` - Delete md + pdf + `_lyrics.pdf` variant files for the given setlist_id (returns the list of paths actually deleted)
 - `repos.event_types.get_all()` - Get all event types
 - `repos.event_types.get(slug)` - Get event type by slug
 - `repos.event_types.add(event_type)` - Add new event type

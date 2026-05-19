@@ -123,9 +123,17 @@ class FilesystemOutputRepository:
         """
         setlist_id = self._make_setlist_id(date, label)
         target_dir = self._resolve_dir(event_type)
+        # Enumerate known PDF variants explicitly. A glob like
+        # ``{setlist_id}_*.pdf`` would falsely match labeled siblings —
+        # e.g. deleting unlabeled ``2026-02-15`` would also sweep up
+        # ``2026-02-15_evening.pdf`` which belongs to a different setlist.
+        candidates = [
+            target_dir / f"{setlist_id}.md",
+            target_dir / f"{setlist_id}.pdf",
+            target_dir / f"{setlist_id}_lyrics.pdf",
+        ]
         deleted = []
-        for ext in (".md", ".pdf"):
-            path = target_dir / f"{setlist_id}{ext}"
+        for path in candidates:
             if path.exists():
                 path.unlink()
                 deleted.append(path)

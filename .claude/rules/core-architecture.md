@@ -434,7 +434,7 @@ songs = repos.songs.get_all()
 - `repos.output.save_markdown(date, content, label="", event_type="")` - Save markdown file
 - `repos.output.get_markdown_path(date, label="", event_type="")` - Get markdown file path
 - `repos.output.get_pdf_path(date, label="", event_type="")` - Get PDF file path
-- `repos.output.delete_outputs(date, label="", event_type="")` - Delete md + pdf files
+- `repos.output.delete_outputs(date, label="", event_type="")` - Delete md + pdf + `_lyrics.pdf` variant files for the given setlist_id (returns the list of paths actually deleted)
 - `repos.event_types.get_all()` - Get all event types
 - `repos.event_types.get(slug)` - Get event type by slug
 - `repos.event_types.add(event_type)` - Add new event type

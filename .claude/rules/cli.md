@@ -43,6 +43,8 @@ songbook replace --moment louvor --position 2 --keep-position  # Pin to position
 songbook replace --moment louvor --position 2 --label evening  # Replace in labeled
 songbook label --date 2026-03-01 --to evening  # Add label to setlist
 songbook label --date 2026-03-01 --label evening --to night  # Rename label
+songbook delete --date 2026-02-15 --yes  # Delete a setlist (skip confirmation)
+songbook delete --date 2026-03-01 -l evening --yes  # Delete a labeled variant
 songbook weights                     # Interactive weights editor (pick moment, then song)
 songbook weights --moment louvor     # Jump straight to the louvor weights table
 songbook transpose "Oceanos" --to G  # Transpose chords (preview)
@@ -560,6 +562,54 @@ songbook label --date 2026-03-20 -e youth --to evening
 
 ---
 
+### songbook delete
+
+Delete a setlist's history record and all output files.
+
+**Usage:**
+```bash
+# Prompt to confirm, then delete
+songbook delete --date 2026-02-15
+
+# Skip the confirmation prompt
+songbook delete --date 2026-02-15 --yes
+songbook delete --date 2026-02-15 -y
+
+# Delete a labeled variant (leaves the unlabeled primary untouched)
+songbook delete --date 2026-03-01 --label evening --yes
+
+# Delete an event-type setlist
+songbook delete --date 2026-03-20 -e youth --yes
+```
+
+**Options:**
+- `--date YYYY-MM-DD` — **Required.** Target date. There is no "latest"
+  default for delete — that would make accidentally nuking the most recent
+  service one tab-complete away.
+- `--label TEXT` or `-l` — Setlist label (omit for the unlabeled primary).
+- `--event-type TEXT` or `-e` — Event type slug.
+- `--yes` or `-y` — Skip the confirmation prompt.
+- `--output-dir PATH` — Custom output directory.
+- `--history-dir PATH` — Custom history directory.
+
+**Behavior:**
+- Removes the history JSON record.
+- Removes every output variant tied to the setlist: `<setlist_id>.md`,
+  `<setlist_id>.pdf`, and `<setlist_id>_lyrics.pdf` (the lyrics-only
+  variant produced by `--no-chords`).
+- Routes through the event-type subdirectory the same way every other
+  setlist command does — `history/youth/2026-03-20.json` for non-default
+  event types.
+- **Labels and event types are independent** — deleting the unlabeled
+  primary leaves `2026-02-15_evening.md` and friends alone, and vice
+  versa. The deletion key is the full setlist_id, not the date prefix.
+- **Confirmation prompt** is the default for safety: deletion is
+  destructive and unreviewable. Pass `--yes` to scripts/automation.
+- Errors with a clear message if no matching setlist exists; the
+  filesystem is not touched in that case.
+
+---
+
 ### songbook pdf
 
 Generate PDF from an existing setlist.
@@ -824,6 +874,13 @@ songbook generate --date 2026-03-01 --label evening --replace 3  # Replace exact
 songbook view-setlist --date 2026-03-01 --label evening      # Review variant
 songbook label --date 2026-03-01 --label evening --to night  # Rename label
 songbook pdf --date 2026-03-01 --label night                 # Generate PDF
+songbook delete --date 2026-03-01 --label night --yes        # Discard the variant
+```
+
+**Discard a stale setlist:**
+```bash
+songbook delete --date 2026-02-15                            # Prompts to confirm
+songbook delete --date 2026-02-15 --yes                      # Skip prompt
 ```
 
 **Replace and regenerate PDF:**

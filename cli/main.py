@@ -62,6 +62,7 @@ def cli(ctx, verbose):
       transpose      Transpose a song to a different key
       replace        Replace song in existing setlist
       label          Add, rename, or remove a setlist label
+      delete         Delete a setlist (history record + output files)
       pdf            Generate PDF from existing setlist
       markdown       Regenerate markdown from existing setlist
       youtube        Create YouTube playlist from existing setlist
@@ -304,6 +305,31 @@ def label(date, label, event_type, to_label, remove, output_dir, history_dir):
     """
     from cli.commands.label import run
     run(date, label, to_label, remove, output_dir, history_dir, event_type=event_type)
+
+
+@cli.command()
+@click.option("--date", required=True, shell_complete=complete_history_dates, help="Target date (YYYY-MM-DD)")
+@click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label (omit for unlabeled)")
+@click.option("--event-type", "-e", default="", help="Event type slug")
+@click.option("--yes", "-y", is_flag=True, help="Skip the confirmation prompt")
+@click.option("--output-dir", help="Custom output directory")
+@click.option("--history-dir", help="Custom history directory")
+def delete(date, label, event_type, yes, output_dir, history_dir):
+    """Delete a setlist (history record + markdown + PDF files).
+
+    \b
+    --date is required: deletion never defaults to the latest setlist.
+    Without --yes you'll get a confirmation prompt.
+
+    \b
+    Examples:
+      songbook delete --date 2026-02-15
+      songbook delete --date 2026-02-15 --yes
+      songbook delete --date 2026-03-01 --label evening --yes
+      songbook delete --date 2026-03-20 -e youth --yes
+    """
+    from cli.commands.delete import run
+    run(date, label, event_type, yes, output_dir, history_dir)
 
 
 @cli.command()
