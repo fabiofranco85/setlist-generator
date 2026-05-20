@@ -49,7 +49,8 @@ uv add --dev package-name
 ### Basic Usage
 ```bash
 songbook --help                      # Main help
-songbook generate --date 2026-02-15  # Generate setlist
+songbook generate --date 2026-02-15  # Generate setlist (prompts if one already exists)
+songbook generate --date 2026-02-15 --yes  # Overwrite existing without prompting
 songbook generate --label evening    # Derive labeled variant from primary
 songbook generate --label evening --replace 3  # Derive replacing 3 songs
 songbook view-setlist --keys         # View setlist with keys
@@ -202,7 +203,12 @@ songbook generate --date 2026-02-15
 songbook generate --pdf                       # Include PDF output (with chords)
 songbook generate --pdf --no-chords           # Also produce a lyrics-only PDF
 songbook generate -e youth --date 2026-03-20  # Generate for event type
+songbook generate --date 2026-02-15 --yes     # Overwrite existing without prompting
 ```
+
+**Overwrite-confirmation guard:**
+
+When a setlist already exists at the target `(date, label, event_type)` triple, `songbook generate` prompts before overwriting it. Pass `--yes` / `-y` to skip the prompt (required for CI/scripts and non-interactive shells). `--no-save` disables the check entirely (dry-run mode writes nothing, so no collision is possible). The check is *exact-key*: generating a labeled variant when only the primary exists does not prompt; generating with `-e youth` does not collide with an existing `main` setlist for the same date.
 
 **Lyrics-only PDF (for singers / non-musicians):**
 

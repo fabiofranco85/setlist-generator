@@ -25,7 +25,8 @@ pip install -e .
 ```bash
 songbook --help                      # Main help
 songbook --verbose <command>         # Enable debug logging (also -v)
-songbook generate --date 2026-02-15  # Generate setlist
+songbook generate --date 2026-02-15  # Generate setlist (prompts if one exists)
+songbook generate --date 2026-02-15 --yes  # Overwrite existing without prompt
 songbook generate --label evening    # Derive labeled variant from primary
 songbook generate --label evening --replace 3  # Derive replacing 3 songs
 songbook generate -e youth           # Generate for event type
@@ -102,6 +103,9 @@ songbook generate --override "prelúdio:Estamos de Pé" --override "louvor:Ocean
 # Dry run (don't save to history)
 songbook generate --no-save
 
+# Overwrite an existing setlist without the confirmation prompt
+songbook generate --date 2026-02-15 --yes
+
 # Custom output directories
 songbook generate --output-dir custom/output --history-dir custom/history
 ```
@@ -115,9 +119,17 @@ songbook generate --output-dir custom/output --history-dir custom/history
 - `--pdf` - Generate PDF output in addition to markdown
 - `--no-chords` - When combined with `--pdf`, generate a lyrics-only PDF (no chord lines, no key suffixes) for non-musicians. Filename gets a `_lyrics` suffix
 - `--no-save` - Dry run mode, don't save to history
+- `--yes` or `-y` - Skip the overwrite-confirmation prompt that fires when a setlist already exists at the target `(date, label, event_type)` triple. Required for non-interactive usage (CI, scripts)
 - `--output PATH` - Custom output filename for the markdown file
 - `--output-dir PATH` - Custom output directory for markdown files
 - `--history-dir PATH` - Custom history directory for JSON tracking
+
+**Overwrite-confirmation guard:**
+- `repos.history.save()` silently overwrites any setlist with the same `(date, label, event_type)` key. To prevent silent data loss, `generate` checks whether the target identity already exists before doing any work, and prompts to confirm overwrite (default behavior is to abort).
+- **Skip the prompt** with `--yes` / `-y` — required for CI / scripts where no TTY is available.
+- **Dry-run mode** (`--no-save`) disables the check entirely: nothing is written, so there's no collision to guard against.
+- The check uses the **exact `(date, label, event_type)` triple** as its key — generating a labeled variant when only the primary exists does NOT prompt, and `-e youth` on a date that has a `main` setlist does NOT prompt. Each `(date, label, event_type)` is its own slot.
+- **Backwards compatibility:** scripts that previously relied on `generate` silently overwriting need to add `--yes`. Without it, the command will block waiting for input and (in non-interactive contexts) abort with a non-zero exit code.
 
 **Label behavior:**
 - When `--label` is provided and a base setlist exists for the date: **derives** from the base by replacing songs

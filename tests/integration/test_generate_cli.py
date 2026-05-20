@@ -15,6 +15,18 @@ specifically the contract around ``--replace``:
 * ``--label`` without ``--replace`` still falls through to fresh
   generation when no base exists. This is the documented behavior and
   must not regress.
+
+The file also covers the overwrite-confirmation flow that prevents
+``generate`` from silently clobbering an existing setlist:
+
+* When a setlist already exists at the target ``(date, label,
+  event_type)`` triple, ``generate`` must prompt before overwriting.
+* ``--yes`` / ``-y`` skips the prompt for scripts / CI.
+* ``--no-save`` disables the check entirely (dry-run path writes
+  nothing, so no collision is possible).
+* Collision detection is exact-key: a labeled variant doesn't trigger
+  the prompt when generating the primary, and a different event type
+  doesn't trigger the prompt either.
 """
 
 from __future__ import annotations
@@ -229,3 +241,225 @@ class TestLabelWithoutReplaceStillFallsThrough:
         assert (
             project / "history" / "simple" / "2026-02-15_evening.json"
         ).exists()
+
+
+# ---------------------------------------------------------------------------
+# Overwrite-confirmation flow
+# ---------------------------------------------------------------------------
+#
+# These tests pin down the prompt that fires when ``generate`` would
+# overwrite an existing setlist. The bug class being prevented is the
+# one that wiped out the original ceia setlist for 2026-05-24 earlier
+# in this branch's history: ``repos.history.save()`` silently replaces
+# any setlist with the same (date, label, event_type) key, and a user
+# (or agent) re-running ``generate`` could clobber real work without
+# realizing it existed.
+#
+# Pattern note: ``CliRunner.invoke(input="y\n")`` feeds keystrokes to
+# click.confirm; ``input="n\n"`` rejects, which click.confirm with
+# ``abort=True`` converts into a non-zero exit via click.Abort.
+
+
+def _seed_simple_event_types(project: Path) -> None:
+    """Write event_types.json with ``main`` and ``youth`` configured as
+    simple 1-moment (louvor only) types.
+
+    Using a simple moments shape is a deliberate fixture choice: the
+    base ``tmp_project`` only has 5 songs, and the default 6-moment
+    MOMENTS_CONFIG can't be re-generated cleanly once one of those
+    songs is already pinned by a pre-seeded setlist (the recency-aware
+    selector starves on small pools). Restricting to a single louvor
+    moment sidesteps that mechanical limitation entirely; the
+    confirmation-flow tests don't care about generation richness.
+    """
+    (project / "event_types.json").write_text(
+        json.dumps(
+            {
+                "event_types": {
+                    "main": {
+                        "name": "Main", "description": "",
+                        "moments": {"louvor": 1},
+                        "moments_order": ["louvor"],
+                    },
+                    "youth": {
+                        "name": "Youth", "description": "",
+                        "moments": {"louvor": 1},
+                        "moments_order": ["louvor"],
+                    },
+                },
+                "default_slug": "main",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+
+@pytest.fixture()
+def project_with_existing(project) -> tuple[Path, dict]:
+    """``project`` plus a simple ``main`` event type + a pre-seeded
+    setlist at 2026-02-15. Returns (project_path, setlist_dict) so
+    tests can read the file back and compare against the original."""
+    _seed_simple_event_types(project)
+    setlist = {
+        "date": "2026-02-15",
+        "moments": {"louvor": ["Upbeat Song"]},
+    }
+    (project / "history" / "2026-02-15.json").write_text(
+        json.dumps(setlist, ensure_ascii=False), encoding="utf-8"
+    )
+    return project, setlist
+
+
+class TestConfirmationPromptOnCollision:
+    """When a setlist already exists at the target identity,
+    ``generate`` must prompt before overwriting."""
+
+    def test_existing_setlist_prompts_and_confirm_overwrites(
+        self, project_with_existing
+    ):
+        project, _ = project_with_existing
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["generate", "--date", "2026-02-15"],
+            input="y\n",
+        )
+        assert result.exit_code == 0, result.output
+        assert "already exists" in result.output
+        assert (project / "history" / "2026-02-15.json").exists()
+
+    def test_existing_setlist_prompts_and_abort_keeps_original(
+        self, project_with_existing
+    ):
+        project, original = project_with_existing
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["generate", "--date", "2026-02-15"],
+            input="n\n",
+        )
+        # click.confirm with abort=True raises click.Abort on rejection.
+        assert result.exit_code != 0
+        # The original on-disk file is untouched — the contract.
+        on_disk = json.loads(
+            (project / "history" / "2026-02-15.json").read_text(encoding="utf-8")
+        )
+        assert on_disk == original
+
+    def test_yes_flag_skips_prompt_and_overwrites(self, project_with_existing):
+        """``--yes`` must skip the prompt entirely (CI / scripts)."""
+        project, _ = project_with_existing
+        runner = CliRunner()
+        # Deliberately no input — the test fails if the prompt fires
+        # at all (CliRunner with no input EOFs and aborts).
+        result = runner.invoke(
+            cli,
+            ["generate", "--date", "2026-02-15", "--yes"],
+        )
+        assert result.exit_code == 0, result.output
+        assert "overwriting existing setlist" in result.output
+        assert "(--yes)" in result.output
+
+    def test_short_y_flag_skips_prompt(self, project_with_existing):
+        """``-y`` is the documented short form; must work identically."""
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["generate", "--date", "2026-02-15", "-y"],
+        )
+        assert result.exit_code == 0, result.output
+
+    def test_no_save_skips_check_entirely(self, project_with_existing):
+        """--no-save doesn't write history → no collision possible →
+        no prompt should fire even though the target exists on disk.
+
+        Without this short-circuit, a dry-run against an existing
+        setlist would still prompt the user even though nothing would
+        be written, which is gratuitous."""
+        project, original = project_with_existing
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["generate", "--date", "2026-02-15", "--no-save"],
+            # No input — if the prompt fires the test fails on EOF.
+        )
+        assert result.exit_code == 0, result.output
+        assert "Dry run" in result.output
+        # The on-disk file is untouched (no write happened).
+        on_disk = json.loads(
+            (project / "history" / "2026-02-15.json").read_text(encoding="utf-8")
+        )
+        assert on_disk == original
+
+
+class TestConfirmationKeyScopedToFullIdentity:
+    """The collision key is the full ``(date, label, event_type)``
+    triple — not just date. Generating a labeled variant when only the
+    primary exists must NOT prompt; targeting an existing labeled
+    variant must."""
+
+    def test_existing_primary_does_not_block_labeled_generation(
+        self, project_with_existing
+    ):
+        """Generating with --label evening when only the primary exists
+        for that date is a *derivation*, targeting a different identity
+        (label='evening' ≠ label=''). No prompt should fire."""
+        project, _ = project_with_existing
+        runner = CliRunner()
+        # No input — prompt firing would EOF and fail.
+        result = runner.invoke(
+            cli,
+            ["generate", "--date", "2026-02-15", "--label", "evening", "--replace", "0"],
+        )
+        assert result.exit_code == 0, result.output
+        assert "already exists" not in result.output
+        assert (project / "history" / "2026-02-15.json").exists()
+        assert (project / "history" / "2026-02-15_evening.json").exists()
+
+    def test_existing_labeled_blocks_relabel_attempt(self, project):
+        """When the target labeled variant already exists, the prompt
+        fires — and aborting leaves the labeled file untouched."""
+        _seed_simple_event_types(project)
+        primary = {
+            "date": "2026-02-15",
+            "moments": {"louvor": ["Upbeat Song"]},
+        }
+        labeled = {**primary, "label": "evening"}
+        (project / "history" / "2026-02-15.json").write_text(
+            json.dumps(primary, ensure_ascii=False), encoding="utf-8"
+        )
+        (project / "history" / "2026-02-15_evening.json").write_text(
+            json.dumps(labeled, ensure_ascii=False), encoding="utf-8"
+        )
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["generate", "--date", "2026-02-15", "--label", "evening", "--replace", "0"],
+            input="n\n",
+        )
+        assert result.exit_code != 0
+        assert "already exists" in result.output
+        on_disk = json.loads(
+            (project / "history" / "2026-02-15_evening.json").read_text(encoding="utf-8")
+        )
+        assert on_disk == labeled
+
+    def test_existing_main_does_not_block_event_type_generation(
+        self, project_with_existing
+    ):
+        """Generating with -e youth must not prompt when only a main
+        setlist exists for the date — different event_type, different
+        target identity."""
+        project, _ = project_with_existing
+        runner = CliRunner()
+        # No input — prompt firing would EOF and fail.
+        result = runner.invoke(
+            cli,
+            ["generate", "--date", "2026-02-15", "-e", "youth"],
+        )
+        assert result.exit_code == 0, result.output
+        assert "already exists" not in result.output
+        assert (project / "history" / "2026-02-15.json").exists()
+        assert (project / "history" / "youth" / "2026-02-15.json").exists()

@@ -48,7 +48,7 @@ def parse_overrides(override_args: tuple[str, ...] | None) -> dict[str, list[str
 
 
 def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=False,
-        label="", replace_count=None, event_type="", no_chords=False):
+        label="", replace_count=None, event_type="", no_chords=False, yes=False):
     """
     Generate a setlist for a service date.
 
@@ -66,7 +66,13 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
         event_type: Optional event type slug
         no_chords: When True (and ``pdf`` is also True), generate a
             lyrics-only PDF variant instead of the regular chord PDF.
+        yes: If True, skip the overwrite-confirmation prompt that fires
+            when a setlist already exists at the target (date, label,
+            event_type) triple. Required for non-interactive usage
+            (CI, scripts).
     """
+    import click
+
     from cli.cli_utils import resolve_paths, print_metrics_summary, validate_label, handle_error, resolve_event_type
     from library.observability import Observability
     from library.replacer import derive_setlist
@@ -104,6 +110,28 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
     moments_config = et.ordered_moments if et else None
     et_moments_order = et.moments_order if et else None
     moments_ref = {m: 0 for m in et_moments_order} if et_moments_order else None
+
+    # Overwrite-confirmation guard. `repos.history.save()` silently
+    # overwrites any setlist with the same (date, label, event_type)
+    # key, which has caused real data loss (see the recovery flow
+    # documented in this branch's history). Prompt before clobbering an
+    # existing target, unless --yes is passed for scripts/CI. When
+    # --no-save is set, no history write happens, so no check is needed.
+    if not no_save and repos.history.exists(date, label=label, event_type=et_slug):
+        target_desc = date
+        if label:
+            target_desc += f" (label: {label})"
+        if et_slug and et_slug != "main":
+            target_desc += f" (event type: {et_slug})"
+        if yes:
+            print(f"\nNote: overwriting existing setlist for {target_desc} (--yes).")
+        else:
+            click.confirm(
+                f"\nA setlist already exists for {target_desc}. "
+                f"Overwrite it? This will replace the history record and "
+                f"regenerate the markdown output.",
+                abort=True,
+            )
 
     print("Loading songs...")
     songs = repos.songs.get_all()

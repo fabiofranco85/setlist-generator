@@ -91,11 +91,12 @@ def cli(ctx, verbose):
 @click.option("--pdf", is_flag=True, help="Generate PDF output")
 @click.option("--no-chords", is_flag=True, default=False, help="When combined with --pdf, generate a lyrics-only PDF for non-musicians")
 @click.option("--no-save", is_flag=True, help="Dry run (don't save to history)")
+@click.option("--yes", "-y", is_flag=True, help="Skip the overwrite-confirmation prompt when a setlist already exists at the target")
 @click.option("--output-dir", help="Custom markdown output directory")
 @click.option("--history-dir", help="Custom history directory")
 @click.option("--output", help="Custom output filename")
 @click.pass_context
-def generate(ctx, date, label, event_type, replace_count, override, pdf, no_chords, no_save, output_dir, history_dir, output):
+def generate(ctx, date, label, event_type, replace_count, override, pdf, no_chords, no_save, yes, output_dir, history_dir, output):
     """Generate new setlist for a service date.
 
     \b
@@ -107,11 +108,12 @@ def generate(ctx, date, label, event_type, replace_count, override, pdf, no_chor
       songbook generate --label evening                  # derive from primary
       songbook generate --label evening --replace 3      # derive replacing 3 songs
       songbook generate -e youth --date 2026-03-20       # generate for youth service
+      songbook generate --date 2026-02-15 --yes          # overwrite without prompt
     """
     from cli.commands.generate import run
     run(date, override, pdf, no_save, output_dir, history_dir, output,
         verbose=ctx.obj.get("verbose", False), label=label, replace_count=replace_count,
-        event_type=event_type, no_chords=no_chords)
+        event_type=event_type, no_chords=no_chords, yes=yes)
 
 
 @cli.command("view-setlist")
