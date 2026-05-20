@@ -163,7 +163,14 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
                 event_type=et_slug,
             )
         else:
-            # No base exists — generate fresh with label
+            # No base exists — generate fresh with label, unless the user
+            # asked for --replace (which has no meaning without a base).
+            if replace_count is not None:
+                et_label = et_slug or "main"
+                handle_error(
+                    f"--replace requires an existing base setlist for "
+                    f"{date} (event type: {et_label}); none found."
+                )
             print(f"\nNo existing setlist for {date} — generating fresh with label '{label}'.")
             try:
                 setlist = generate_setlist(

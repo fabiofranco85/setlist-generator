@@ -9,6 +9,7 @@ import re
 import click
 from functools import wraps
 from pathlib import Path
+from typing import NoReturn
 
 
 def path_options(f):
@@ -51,7 +52,7 @@ def resolve_paths(output_dir, history_dir):
     )
 
 
-def handle_error(error, exit_code=1):
+def handle_error(error, exit_code: int = 1) -> NoReturn:
     """
     Standard error handling for CLI commands.
 
