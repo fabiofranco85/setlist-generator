@@ -41,6 +41,8 @@ songbook replace --moment louvor --position 2  # Replace song (re-applies energy
 songbook replace --moment louvor --position 2 --pick  # Interactive picker
 songbook replace --moment louvor --position 2 --keep-position  # Pin to position, no reorder
 songbook replace --moment louvor --position 2 --label evening  # Replace in labeled
+songbook remove --moment louvor --position 2  # Remove a single song from a setlist
+songbook remove --moment crianças --all       # Remove an entire moment (all songs)
 songbook label --date 2026-03-01 --to evening  # Add label to setlist
 songbook label --date 2026-03-01 --label evening --to night  # Rename label
 songbook delete --date 2026-02-15 --yes  # Delete a setlist (skip confirmation)
@@ -523,6 +525,54 @@ songbook replace --moment louvor --position 3 --keep-position
 
 ---
 
+### songbook remove
+
+Remove a song or an entire moment from an existing setlist.
+
+**Usage:**
+```bash
+# Remove a single song at position 2 of louvor
+songbook remove --moment louvor --position 2
+
+# Remove the entire moment (all songs in it)
+songbook remove --moment crianças --all
+
+# Operate on a labeled setlist
+songbook remove --moment louvor --position 1 --label evening
+
+# Operate on an event-type setlist
+songbook remove --moment ofertório --all -e youth --date 2026-03-20
+
+# Operate on a specific date (default: latest)
+songbook remove --moment louvor --position 3 --date 2026-02-15
+```
+
+**Options:**
+- `--moment MOMENT` — Required: moment slug to operate on (must exist in the target setlist; not constrained to the moments_config because old setlists may carry moments no longer configured).
+- `--position N` — 1-indexed position of the song to remove. Mutually exclusive with `--all`. Exactly one of the two is required.
+- `--all` — Remove the entire moment (all its songs) and drop the moment key from the setlist.
+- `--date YYYY-MM-DD` — Target date (default: latest).
+- `--label TEXT` or `-l` — Setlist label.
+- `--event-type TEXT` or `-e` — Event type slug.
+- `--output-dir PATH` — Custom output directory.
+- `--history-dir PATH` — Custom history directory.
+
+**Behavior:**
+- **Single-song removal** (`--position N`): drops the song at position N (1-indexed).
+- **Cascade rule**: if `--position` removes the *last* song in its moment, the moment itself is dropped from the setlist — empty moments are not a valid stored state, and the CLI prints a heads-up so this doesn't surprise you.
+- **Whole-moment removal** (`--all`): drops every song in the moment plus the moment key.
+- **No reordering / no algorithm**: removal is purely structural. Energy ordering is not re-applied (there's nothing to balance), and the recency system is unaffected because the change applies to a stored setlist, not to the song database.
+- **History is the source of truth**: history JSON is overwritten first, then markdown is regenerated. If markdown regeneration fails for any reason, the history JSON is still correct.
+- **PDF staleness**: if a PDF exists for the setlist, it is **not** auto-deleted — the CLI prints a notice that it's stale so you can regenerate via `songbook pdf`. The hint always names the resolved date explicitly (never the user's original `--date` flag), because by the time the user runs the suggested command, "latest" may resolve to a different setlist than the one that was just modified. The PDF is intentionally left in place because the user may have already printed or shared it; overwriting an opened file is worse than leaving a stale one. (Note: `songbook replace` mutates setlists too but does **not** currently emit this notice — `remove` is more communicative on purpose.)
+- **Empty setlists are allowed**: if every moment is removed, the setlist is saved with `"moments": {}`. Use `songbook delete` to discard it.
+- **Validation errors** (missing setlist, unknown moment, position out of range, conflicting `--position`/`--all`) exit non-zero before any file is touched.
+
+**Routing:**
+- Labeled setlists round-trip through `<setlist_id>_<label>.json`.
+- Event-type setlists route through `history/<event-type>/` and `output/<event-type>/` subdirectories — the same routing every other setlist command uses.
+
+---
+
 ### songbook label
 
 Add, rename, or remove a setlist label.
@@ -887,6 +937,13 @@ songbook delete --date 2026-02-15 --yes                      # Skip prompt
 ```bash
 songbook replace --moment louvor --position 2 --with "Oceanos"
 songbook pdf --date 2026-02-15
+```
+
+**Remove a song or moment from a setlist:**
+```bash
+songbook remove --moment louvor --position 2                    # Drop one louvor song
+songbook remove --moment crianças --all                         # Drop the entire moment
+songbook pdf --date 2026-02-15                                   # Refresh the (now stale) PDF
 ```
 
 **Event type workflows:**

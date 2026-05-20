@@ -65,6 +65,8 @@ songbook replace --moment louvor --position 2  # Replace song (re-applies energy
 songbook replace --moment louvor --position 2 --pick  # Interactive picker
 songbook replace --moment louvor --position 2 --keep-position  # Don't reorder by energy
 songbook replace --moment louvor --position 2 --label evening  # Replace in labeled
+songbook remove --moment louvor --position 2  # Remove a single song
+songbook remove --moment crianças --all       # Remove an entire moment from the setlist
 songbook label --date 2026-03-01 --to evening  # Add label to setlist
 songbook label --date 2026-03-01 --label evening --to night  # Rename label
 songbook label --date 2026-03-01 --label evening --remove  # Remove label
@@ -227,6 +229,21 @@ songbook replace --moment louvor --position 2 --label evening    # In labeled se
 
 - **Manual choice (`--with "Song"` or `--pick`)** always wins. The new song is pinned at the exact requested position, energy reordering is skipped, no surprises. This is what you want when you're sure both *which* song and *where*.
 - **Auto mode** (no `--with`, no `--pick`) keeps the moment's energy arc by reapplying energy ordering after the swap. A new song with very different energy can land at a different position than the one you asked for; the CLI prints a clear note when this happens and shows the actual new position. Pass `--keep-position` to opt out and pin the auto-picked song to the exact requested position.
+
+**Remove a song or moment:**
+```bash
+songbook remove --moment louvor --position 2                   # Remove a single song
+songbook remove --moment crianças --all                        # Remove the entire moment
+songbook remove --moment louvor --position 1 --label evening   # In labeled setlist
+songbook remove --moment louvor --all -e youth                 # In event-type setlist
+```
+
+**Removal semantics:**
+
+- Exactly one of `--position N` (1-indexed, single song) or `--all` (whole moment) is required.
+- **Cascade**: if `--position` removes the last song in its moment, the moment is dropped from the setlist. The CLI prints a heads-up when this happens.
+- Markdown is regenerated immediately. An existing PDF is **not** auto-deleted but is flagged as stale — run `songbook pdf` to refresh it. No recency recalculation, no energy reordering — removal is structural-only.
+- If a removal leaves the setlist with zero moments, the empty setlist is saved (not auto-deleted); use `songbook delete` to discard it.
 
 **Manage labels:**
 ```bash

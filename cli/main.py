@@ -61,6 +61,7 @@ def cli(ctx, verbose):
       edit           Open a song's chord file in your editor
       transpose      Transpose a song to a different key
       replace        Replace song in existing setlist
+      remove         Remove a song or moment from an existing setlist
       label          Add, rename, or remove a setlist label
       delete         Delete a setlist (history record + output files)
       pdf            Generate PDF from existing setlist
@@ -284,6 +285,39 @@ def replace(ctx, moment, position, positions, replacement, pick, keep_position, 
     run(moment, position, positions, replacement, date, output_dir, history_dir,
         verbose=ctx.obj.get("verbose", False), label=label, event_type=event_type,
         pick=pick, keep_position=keep_position)
+
+
+@cli.command()
+@click.option("--moment", required=True, shell_complete=complete_moment_names, help="Service moment (prelúdio, louvor, etc.)")
+@click.option("--position", type=int, help="Position to remove (1-indexed). Mutually exclusive with --all")
+@click.option("--all", "all_songs", is_flag=True, help="Remove the entire moment (all songs in it)")
+@click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
+@click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
+@click.option("--event-type", "-e", default="", help="Event type slug")
+@click.option("--output-dir", help="Custom output directory")
+@click.option("--history-dir", help="Custom history directory")
+@click.pass_context
+def remove(ctx, moment, position, all_songs, date, label, event_type, output_dir, history_dir):
+    """Remove a song or an entire moment from an existing setlist.
+
+    \b
+    Exactly one of --position or --all is required. When the moment has
+    only one song and it is removed via --position, the moment itself is
+    dropped from the setlist (cascade behavior).
+
+    \b
+    Examples:
+      songbook remove --moment louvor --position 2
+      songbook remove --moment crianças --all
+      songbook remove --moment louvor --position 1 --label evening
+      songbook remove --moment ofertório --all -e youth --date 2026-03-20
+    """
+    from cli.commands.remove import run
+    run(
+        moment, position, all_songs, date, label, event_type,
+        output_dir, history_dir,
+        verbose=ctx.obj.get("verbose", False),
+    )
 
 
 @cli.command()

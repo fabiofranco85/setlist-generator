@@ -73,6 +73,7 @@ Where:
     ├── transposer.py        # Chord transposition (chromatic)
     ├── generator.py         # Core setlist generation (label + event-type aware)
     ├── replacer.py          # Song replacement + derive_setlist()
+    ├── remover.py           # Song / moment removal with single-song cascade
     ├── repositories/        # Data access abstraction layer
     │   ├── protocols.py     # Repository interfaces (core + SaaS protocols)
     │   ├── factory.py       # Backend factory + RepositoryContainer + SaaSRepositoryContainer
@@ -112,6 +113,7 @@ The codebase is organized into focused modules for better maintainability and re
 - `transposer.py` - Deterministic chromatic chord transposition (pure functions, `re` only)
 - `generator.py` - Orchestrates setlist generation (`SetlistGenerator`, label + event-type aware, strict mode for custom moments configs)
 - `replacer.py` - Song replacement, batch replacement, and `derive_setlist()` for creating labeled variants
+- `remover.py` - Song and moment removal. `remove_song_from_setlist()` drops a song and cascades to remove the moment when its last song goes; `remove_moment_from_setlist()` drops the whole moment in one call. Pure functions, immutable input pattern.
 - `formatter.py` - Output formatting (markdown, JSON; label + event type name in header)
 - `sharing.py` - Multi-tenant library merging + share-request validation (used by SaaS API)
 - `observability/` - LoggerPort / MetricsPort / TracerPort ports plus noop + CLI adapters

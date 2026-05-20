@@ -145,6 +145,40 @@ new_setlist = relabel_setlist(source_dict, "")         # Remove label
 - Returns a `Setlist` object (not a dict)
 - Validation (source exists, target doesn't conflict) lives in the CLI layer
 
+### remover.py
+**Purpose:** Song and moment removal on existing setlists (no algorithm — purely structural)
+
+**Contents:**
+- `remove_song_from_setlist(setlist_dict, moment, position, obs=None)` - Drop one song. **Cascade:** if it was the only song in its moment, the moment is dropped too.
+- `remove_moment_from_setlist(setlist_dict, moment, obs=None)` - Drop the whole moment (all songs + the moment key).
+
+**Design notes:**
+- Pure functions, immutable input pattern (matches `replacer.replace_song_in_setlist` — copy date / label / event_type, copy moments one level deep, never mutate input).
+- Validation is against the setlist's **actual** moments dict, not `MOMENTS_CONFIG`. The user is operating on what's there, and historical setlists may carry moments that have since been removed from the config.
+- No recency, no energy ordering, no selection — removal is structural-only, so it doesn't touch `selector.py` or `ordering.py`.
+- Position uses zero-indexed semantics (1-indexed → 0-indexed conversion is the CLI's job, same as `replace`).
+- The "empty moment" state is **invalid** in stored setlists — the cascade guarantees that. The "empty setlist" state (`{"moments": {}}`) is **valid** (allowed when every moment has been removed); `songbook delete` is the way to discard such a setlist.
+- Observability instrumented at orchestration boundaries: each removal emits a counter (`songs_removed`, `moments_removed`, `moments_dropped_after_last_song_removed`). Pure logic paths stay uninstrumented, matching the convention in `.claude/rules/observability.md`.
+
+**Usage:**
+```python
+from library import remove_song_from_setlist, remove_moment_from_setlist
+
+# Drop one song
+new_dict = remove_song_from_setlist(setlist_dict, "louvor", position=1)
+
+# Drop the whole moment
+new_dict = remove_moment_from_setlist(setlist_dict, "crianças")
+
+# Cascade in action: the only song in 'prelúdio' goes; the moment goes too.
+new_dict = remove_song_from_setlist(setlist_dict, "prelúdio", position=0)
+assert "prelúdio" not in new_dict["moments"]
+```
+
+**When to modify:**
+- Changing the cascade rule (e.g., allow empty moments).
+- Adding batch removal (multiple positions at once — there's no batch entry point today; matches the "do less, be predictable" CLI design of `songbook remove`).
+
 ### repositories/
 **Purpose:** Data access abstraction layer
 

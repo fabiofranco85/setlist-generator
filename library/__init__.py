@@ -33,6 +33,10 @@ from .models import Setlist, Song
 from .paths import PathConfig, get_output_paths
 from .pdf_formatter import generate_setlist_pdf, generate_setlist_pdf_bytes
 from .sharing import merge_effective_library, validate_share_request
+from .remover import (
+    remove_moment_from_setlist,
+    remove_song_from_setlist,
+)
 from .replacer import (
     derive_setlist,
     find_target_setlist,
@@ -142,6 +146,9 @@ __all__ = [
     "replace_song_in_setlist",
     "replace_songs_batch",
     "validate_replacement_request",
+    # Removal functions
+    "remove_song_from_setlist",
+    "remove_moment_from_setlist",
     # Transposition
     "transpose_content",
     "calculate_semitones",
