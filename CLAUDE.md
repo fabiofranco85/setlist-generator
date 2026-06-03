@@ -84,7 +84,8 @@ songbook pdf --date 2026-02-15       # Generate PDF (with chords)
 songbook pdf --date 2026-02-15 --no-chords  # Lyrics-only PDF for non-musicians
 songbook pdf --label evening         # Generate PDF for labeled setlist
 songbook markdown --date 2026-02-15  # Regenerate markdown from history
-songbook youtube --date 2026-02-15   # Create YouTube playlist from setlist
+songbook youtube create --date 2026-02-15  # Create YouTube playlist from setlist
+songbook youtube links --date 2026-02-15   # Review/add/edit YouTube links of a setlist's songs
 songbook list-moments                # List available moments
 songbook list-moments -e youth       # List moments for event type
 songbook event-type list             # List event types
@@ -384,6 +385,7 @@ for moment, song_list in setlist.moments.items():
 
 **Key repository methods (label-aware and event-type-aware):**
 - `repos.songs.update_tags(title, tags)` - Replace a song's full ``{moment: weight}`` mapping (used by `songbook weights`). Raises `KeyError` if the song is missing, `ValueError` for invalid weights.
+- `repos.songs.update_youtube(title, youtube_url)` - Set a song's YouTube URL (used by `songbook youtube links`); stores the value verbatim, pass `""` to clear. Raises `KeyError` if the song is missing.
 - `repos.history.backend_name` - Property returning the backend name (e.g. `"filesystem"`, `"postgres"`)
 - `repos.history.get_by_date(date, label="", event_type="")` - Get specific setlist
 - `repos.history.get_by_date_all(date)` - Get all setlists for a date (all labels/types)

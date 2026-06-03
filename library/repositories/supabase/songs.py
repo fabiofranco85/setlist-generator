@@ -157,6 +157,28 @@ class SupabaseSongRepository:
 
         self._invalidate_cache()
 
+    def update_youtube(self, title: str, youtube_url: str) -> None:
+        """Update a song's ``youtube_url`` column.
+
+        Args:
+            title: Song title to update.
+            youtube_url: YouTube URL, or "" to clear the link.
+
+        Raises:
+            KeyError: If song with ``title`` doesn't exist.
+        """
+        uuid = self._uuid_map.get(title)
+        if not uuid:
+            self.get_all()
+            uuid = self._uuid_map.get(title)
+        if not uuid:
+            raise KeyError(f"Song '{title}' not found")
+
+        self._client.table("songs").update(
+            {"youtube_url": youtube_url}
+        ).eq("id", uuid).execute()
+        self._invalidate_cache()
+
     def exists(self, title: str) -> bool:
         """Check if a song exists."""
         library = self.get_all()

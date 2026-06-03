@@ -956,7 +956,7 @@ songbook generate -e youth --date 2026-03-20
 songbook view-setlist -e youth --date 2026-03-20 --keys
 songbook replace -e youth --moment louvor --position 2
 songbook pdf -e youth --date 2026-03-20
-songbook youtube -e youth --date 2026-03-20
+songbook youtube create -e youth --date 2026-03-20
 ```
 
 **Storage:**
@@ -1054,7 +1054,17 @@ The `markdown` command reads the song list from history and uses current chord d
 
 ---
 
-### `youtube` - Create YouTube Playlist
+### `youtube` - YouTube Integration (group)
+
+`youtube` is a command group with two subcommands:
+
+- `youtube create` — create an unlisted YouTube playlist from an existing setlist.
+- `youtube links` — review/add/edit the YouTube links of a setlist's songs.
+
+> **Breaking change:** playlist creation moved from the flat `songbook youtube`
+> to `songbook youtube create`.
+
+#### `youtube create`
 
 Create an unlisted YouTube playlist from an existing setlist.
 
@@ -1062,10 +1072,25 @@ Create an unlisted YouTube playlist from an existing setlist.
 
 ```bash
 # Create playlist from the latest setlist
-songbook youtube
+songbook youtube create
 
 # Create playlist for a specific date
-songbook youtube --date 2026-02-15
+songbook youtube create --date 2026-02-15
+```
+
+#### `youtube links`
+
+Review and edit the YouTube links of a setlist's songs before building the
+playlist. Lists each song with its link status (✓ valid, ✗ missing,
+⚠ unrecognized), then lets you pick a song and enter a validated YouTube URL.
+Edits are saved to the song record immediately (and apply wherever the song is
+used), so a follow-up `songbook youtube create` picks them up.
+
+**Usage:**
+
+```bash
+# Edit links for the latest setlist (or pass --date / --label / -e)
+songbook youtube links --date 2026-02-15
 ```
 
 **Prerequisites:**

@@ -212,6 +212,7 @@ repositories/
 - SaaS protocols (in the same `protocols.py`): `MultiTenantSongRepository`, `ShareRequestRepository`, `UserRepository`, `CloudOutputRepository`
 - `HistoryRepository.backend_name` - Property that returns the human-readable backend name (e.g. `"filesystem"`, `"postgres"`); used by CLI commands to label output
 - `SongRepository.update_tags(title, tags)` - Full-replacement update of a song's `{moment: weight}` map. Backs the `songbook weights` command. Filesystem rewrites `database.csv` preserving the optional `youtube` / `event_types` columns; postgres runs DELETE + INSERT against `song_tags` in a single transaction; supabase mirrors the same pattern keyed by the song's UUID and enforces the schema's `weight BETWEEN 1 AND 10` constraint locally for a friendlier error. All three invalidate the in-memory cache
+- `SongRepository.update_youtube(title, youtube_url)` - Set a song's YouTube URL (backs the `songbook youtube links` command). Stores the value verbatim (`""` clears it) — URL validation is the CLI's job (`library/youtube.extract_video_id`), keeping the repo format-agnostic. Filesystem rewrites the `youtube` column in `database.csv` (adding the column if absent); postgres/supabase `UPDATE` the `youtube_url` column on the `songs` table. Raises `KeyError` for an unknown title; all three invalidate the cache
 
 **Usage:**
 ```python
@@ -490,7 +491,7 @@ observability/
 **Purpose:** YouTube playlist creation from a setlist
 
 **Contents:**
-- `extract_video_id(url)` - Parse a YouTube watch / short URL into a video ID
+- `extract_video_id(url)` - Parse a YouTube watch / short URL into a video ID (also reused by the `songbook youtube links` CLI command to classify link status and validate typed URLs)
 - `format_playlist_name(date, label="", event_type_name="")` - Build the playlist title (Portuguese date with event type / label suffixes)
 - `resolve_setlist_videos(setlist, songs)` - Map a setlist's songs to `(title, video_id)` pairs in service order; songs without YouTube URLs are skipped with a warning
 - `create_setlist_playlist(setlist, songs)` - End-to-end: build name, OAuth-authenticate, create unlisted playlist, add videos. Re-authenticates automatically when the cached token is expired.

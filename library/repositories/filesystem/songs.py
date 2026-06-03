@@ -230,6 +230,52 @@ class FilesystemSongRepository:
         # Invalidate cache so subsequent reads pick up the new tags
         self._songs_cache = None
 
+    def update_youtube(self, title: str, youtube_url: str) -> None:
+        """Rewrite a song's ``youtube`` column in ``database.csv``.
+
+        Reads the CSV row-by-row, replaces the ``youtube`` column for the
+        target song, and writes the file back preserving the original column
+        order. The value is stored verbatim (pass ``""`` to clear the link).
+
+        Args:
+            title: Song title to update.
+            youtube_url: YouTube URL, or "" to clear the link.
+
+        Raises:
+            KeyError: If song with ``title`` doesn't exist.
+        """
+        if not self._database_file.exists():
+            raise FileNotFoundError(
+                f"Song database not found: {self._database_file}"
+            )
+
+        with open(self._database_file, "r", encoding="utf-8", newline="") as f:
+            reader = csv.DictReader(f, delimiter=";")
+            fieldnames = list(reader.fieldnames or [])
+            rows = list(reader)
+
+        # Ensure the optional 'youtube' column exists so DictWriter accepts it.
+        if "youtube" not in fieldnames:
+            fieldnames.append("youtube")
+
+        found = False
+        for row in rows:
+            if row.get("song") == title:
+                row["youtube"] = youtube_url
+                found = True
+                break
+
+        if not found:
+            raise KeyError(f"Song '{title}' not found in database")
+
+        with open(self._database_file, "w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=";")
+            writer.writeheader()
+            writer.writerows(rows)
+
+        # Invalidate cache so subsequent reads pick up the new URL
+        self._songs_cache = None
+
     def exists(self, title: str) -> bool:
         """Check if a song exists.
 

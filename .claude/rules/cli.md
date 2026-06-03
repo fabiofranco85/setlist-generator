@@ -56,7 +56,8 @@ songbook pdf --date 2026-02-15       # Generate PDF (with chords)
 songbook pdf --date 2026-02-15 --no-chords  # Lyrics-only PDF (singers/non-musicians)
 songbook pdf --label evening         # Generate PDF for labeled setlist
 songbook markdown --date 2026-02-15  # Regenerate markdown from history
-songbook youtube --date 2026-02-15   # Create YouTube playlist from setlist
+songbook youtube create --date 2026-02-15  # Create YouTube playlist from setlist
+songbook youtube links --date 2026-02-15   # Review/add/edit YouTube links of a setlist's songs
 songbook list-moments                # List available moments
 songbook list-moments -e youth       # List moments for event type
 songbook event-type list             # List event types
@@ -769,21 +770,31 @@ songbook markdown --date 2026-03-20 -e youth
 
 ### songbook youtube
 
+Command group for YouTube integration. Two subcommands:
+
+- `youtube create` — build a YouTube playlist from a setlist.
+- `youtube links` — review/add/edit the YouTube links of a setlist's songs.
+
+> **Breaking change:** this used to be a flat command (`songbook youtube --date …`).
+> Playlist creation now lives under `songbook youtube create`.
+
+#### songbook youtube create
+
 Create a YouTube playlist from an existing setlist.
 
 **Usage:**
 ```bash
 # Create playlist from the latest setlist
-songbook youtube
+songbook youtube create
 
 # Create playlist for a specific date
-songbook youtube --date 2026-02-15
+songbook youtube create --date 2026-02-15
 
 # Create playlist for a labeled setlist
-songbook youtube --date 2026-03-01 --label evening
+songbook youtube create --date 2026-03-01 --label evening
 
 # Create playlist for an event-type-specific setlist
-songbook youtube --date 2026-03-20 -e youth
+songbook youtube create --date 2026-03-20 -e youth
 ```
 
 **Options:**
@@ -812,6 +823,53 @@ Requires `google-api-python-client`, `google-auth-oauthlib`, `google-auth-httpli
 # Install all dependencies with uv
 uv sync
 ```
+
+#### songbook youtube links
+
+Review and edit the YouTube links of the songs in a setlist — the natural step
+*before* `youtube create`, so you can fill in missing links or fix wrong ones and
+have them picked up by the playlist builder.
+
+**Usage:**
+```bash
+# Edit links for the latest setlist
+songbook youtube links
+
+# Target a specific date / label / event type
+songbook youtube links --date 2026-02-15
+songbook youtube links --date 2026-03-01 --label evening
+songbook youtube links --date 2026-03-20 -e youth
+```
+
+**Options:**
+- `--date YYYY-MM-DD` - Target date (default: latest)
+- `--event-type TEXT` or `-e` - Event type slug
+- `--label TEXT` or `-l` - Setlist label
+- `--output-dir PATH` - Custom output directory
+- `--history-dir PATH` - Custom history directory
+
+**Flow:**
+1. Resolves the target setlist and prints every song with its link status:
+   ✓ valid, ✗ missing, ⚠ unrecognized (a non-empty URL that isn't a YouTube link).
+2. Opens an interactive picker; select a song to edit its link.
+3. Prompts for a YouTube URL. The URL is validated with `extract_video_id` — only
+   recognized YouTube forms (`youtube.com/watch?v=…`, `youtu.be/…`, `/embed/…`) are
+   accepted; anything else re-prompts. A blank entry clears an existing link (after
+   confirmation) or is a no-op when there's no link.
+4. The edit is saved immediately via `repos.songs.update_youtube` and the loop
+   continues until you quit (Esc/q).
+
+**Important — links are a property of the song, not the setlist:**
+- A song's link lives on the song record (the `youtube` column / `youtube_url`),
+  so editing it here updates that song **everywhere it is used**, not just in this
+  setlist. There is no per-setlist link override.
+- No setlist output is regenerated — markdown/PDF/history don't embed links, so
+  there's nothing to rewrite. Run `songbook youtube create` afterward to build the
+  playlist with the updated links.
+
+**Non-interactive mode:**
+When stdin/stdout aren't a TTY, the command falls back to a numbered list and
+edits a single song, then exits (one-shot semantics), matching `songbook weights`.
 
 ---
 

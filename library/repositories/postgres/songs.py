@@ -157,6 +157,29 @@ class PostgresSongRepository:
 
         self._songs_cache = None
 
+    def update_youtube(self, title: str, youtube_url: str) -> None:
+        """Update a song's ``youtube_url`` column.
+
+        Args:
+            title: Song title to update.
+            youtube_url: YouTube URL, or "" to clear the link.
+
+        Raises:
+            KeyError: If song with ``title`` doesn't exist.
+        """
+        with self._pool.connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE songs SET youtube_url = %s WHERE title = %s",
+                    (youtube_url, title),
+                )
+                if cur.rowcount == 0:
+                    raise KeyError(f"Song '{title}' not found in database")
+                conn.commit()
+
+        # Invalidate cache so next read picks up the change
+        self._songs_cache = None
+
     def exists(self, title: str) -> bool:
         """Check if a song exists."""
         return title in self._ensure_loaded()

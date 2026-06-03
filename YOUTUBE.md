@@ -93,23 +93,41 @@ Lugar Secreto;4;louvor;
 - `https://youtu.be/VIDEO_ID`
 - `https://www.youtube.com/embed/VIDEO_ID`
 
-Songs without YouTube links are still valid for setlist generation. The `youtube` command simply skips them when building the playlist.
+Songs without YouTube links are still valid for setlist generation. The `youtube create` command simply skips them when building the playlist. To fill in or fix links for a setlist's songs before building the playlist, use `songbook youtube links` (see below).
 
 ## Usage
 
 ```bash
 # Create playlist from the latest setlist
-songbook youtube
+songbook youtube create
 
 # Create playlist for a specific date
-songbook youtube --date 2026-02-15
+songbook youtube create --date 2026-02-15
 
 # Create playlist for a labeled setlist
-songbook youtube --date 2026-03-01 --label evening
+songbook youtube create --date 2026-03-01 --label evening
 
 # Create playlist for an event-type-specific setlist
-songbook youtube --date 2026-03-20 -e youth
+songbook youtube create --date 2026-03-20 -e youth
 ```
+
+> **Note:** `youtube` is a command group — playlist creation lives under
+> `youtube create` (previously the flat `songbook youtube`).
+
+### Reviewing and editing links (`youtube links`)
+
+Before building a playlist, review which of a setlist's songs have links and fix
+any that are missing or wrong:
+
+```bash
+# Edit links for the latest setlist (or pass --date / --label / -e)
+songbook youtube links --date 2026-02-15
+```
+
+It lists each song with its link status (✓ valid, ✗ missing, ⚠ unrecognized),
+lets you pick a song and enter a YouTube URL (validated), and saves immediately.
+Because a link belongs to the song, an edit applies wherever that song is used.
+Then run `songbook youtube create` to build the playlist.
 
 ### First Run Authentication
 
@@ -236,7 +254,7 @@ If automatic re-authentication fails, delete the token file manually and retry:
 
 ```bash
 rm .youtube_token.json
-songbook youtube
+songbook youtube create
 ```
 
 ### "Access blocked: This app's request is invalid" (Error 400)

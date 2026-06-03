@@ -88,6 +88,22 @@ class SongRepository(Protocol):
         """
         ...
 
+    def update_youtube(self, title: str, youtube_url: str) -> None:
+        """Update a song's YouTube URL.
+
+        The value is stored verbatim — pass an empty string to clear the link.
+        URL-format validation is intentionally left to the caller so the
+        repository layer stays format-agnostic.
+
+        Args:
+            title: Song title to update
+            youtube_url: YouTube URL, or "" to clear the link
+
+        Raises:
+            KeyError: If song with title doesn't exist
+        """
+        ...
+
     def exists(self, title: str) -> bool:
         """Check if a song exists.
 

@@ -66,7 +66,7 @@ def cli(ctx, verbose):
       delete         Delete a setlist (history record + output files)
       pdf            Generate PDF from existing setlist
       markdown       Regenerate markdown from existing setlist
-      youtube        Create YouTube playlist from existing setlist
+      youtube        Manage YouTube playlists/links (create, links)
       weights        Interactively edit song-moment weights
       list-moments   List available service moments
 
@@ -413,13 +413,25 @@ def markdown(date, label, event_type, output_dir, history_dir):
     run(date, output_dir, history_dir, label=label, event_type=event_type)
 
 
-@cli.command()
+@cli.group()
+def youtube():
+    """Manage YouTube playlists and links for a setlist.
+
+    \b
+    Subcommands:
+      create  Create a YouTube playlist from a setlist
+      links   Review/add/edit the YouTube links of a setlist's songs
+    """
+    pass
+
+
+@youtube.command("create")
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
 @click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
 @click.option("--event-type", "-e", default="", help="Event type slug")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
-def youtube(date, label, event_type, output_dir, history_dir):
+def youtube_create(date, label, event_type, output_dir, history_dir):
     """Create YouTube playlist from existing setlist.
 
     \b
@@ -433,11 +445,36 @@ def youtube(date, label, event_type, output_dir, history_dir):
 
     \b
     Examples:
-      songbook youtube
-      songbook youtube --date 2026-02-15
-      songbook youtube -e youth --date 2026-03-20
+      songbook youtube create
+      songbook youtube create --date 2026-02-15
+      songbook youtube create -e youth --date 2026-03-20
     """
     from cli.commands.youtube import run
+    run(date, output_dir, history_dir, label=label, event_type=event_type)
+
+
+@youtube.command("links")
+@click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
+@click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
+@click.option("--event-type", "-e", default="", help="Event type slug")
+@click.option("--output-dir", help="Custom output directory")
+@click.option("--history-dir", help="Custom history directory")
+def youtube_links(date, label, event_type, output_dir, history_dir):
+    """Review, add, or edit the YouTube links of a setlist's songs.
+
+    \b
+    Lists each song in the setlist with its link status (valid / missing /
+    unrecognized), then lets you pick a song and set its YouTube URL. Edits are
+    saved immediately to the song record and apply wherever the song is used.
+    Run 'songbook youtube create' afterward to build the playlist.
+
+    \b
+    Examples:
+      songbook youtube links
+      songbook youtube links --date 2026-02-15
+      songbook youtube links -e youth --date 2026-03-20
+    """
+    from cli.commands.youtube_links import run
     run(date, output_dir, history_dir, label=label, event_type=event_type)
 
 
