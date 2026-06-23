@@ -36,6 +36,8 @@ songbook view-song "Oceanos"         # View song details
 songbook view-song                   # Interactive song picker
 songbook info "Oceanos"              # Song statistics and history
 songbook info                        # Interactive picker → statistics
+songbook add                         # Add a new song (interactive), then open editor
+songbook add "Novo Louvor" --energy 2 --tags "louvor(5),prelúdio" --no-edit  # Add via flags
 songbook edit "Oceanos"              # Open chord file in $EDITOR (default: vim)
 songbook edit                        # Interactive picker → editor
 songbook replace --moment louvor --position 2  # Replace song (re-applies energy order)
@@ -300,6 +302,67 @@ USAGE HISTORY (2 time(s))
 - **No chord file**: Title shown without key
 - **Never used**: Score = 1.00, "Last used: never", "(no usage history)"
 - **No history directory**: Treated as "never used"
+
+---
+
+### songbook add
+
+Add a new song to your repertoire — the mirror of `songbook edit`. Collects the
+song's metadata (interactively, or via flags), persists it through the active
+storage backend, then opens the chord sheet in your editor.
+
+**Usage:**
+```bash
+# Fully interactive (prompts for title, energy, moments, YouTube)
+songbook add
+
+# Provide the title, prompt for the rest
+songbook add "Novo Louvor"
+
+# Provide everything via flags (no prompts)
+songbook add "Novo Louvor" --energy 2 --tags "louvor(5),prelúdio"
+
+# Bind to event type(s) and skip the editor
+songbook add "Youth Anthem" --tags "louvor(5)" -e youth --no-edit
+
+# Add a YouTube link up front
+songbook add "Oceanos" --energy 3 --tags "louvor(2)" --youtube "https://youtu.be/VIDEO_ID"
+```
+
+**Arguments:**
+- `TITLE` - Optional. Song title. Prompted if omitted. Errors if a song with
+  that title already exists (suggests `songbook edit`).
+
+**Options:**
+- `--energy INT` - Energy level (1-4). Prompted if omitted.
+- `--tags TEXT` - Moments with optional weights, e.g. `"louvor(5),prelúdio"`.
+  Prompted if omitted. **At least one moment is required** so the song can be
+  selected by the generator; weights must be 1-10.
+- `--youtube TEXT` - Optional YouTube URL. Validated with
+  `library/youtube.extract_video_id`. On an interactive terminal it is
+  prompted for (blank to skip); in non-interactive runs it is left empty
+  unless the flag is given.
+- `--event-type TEXT` / `-e` - Bind the song to an event type. Repeatable;
+  empty (the default) makes the song available for all event types.
+- `--editor TEXT` - Editor command (same resolution as `edit`:
+  `--editor` > `$VISUAL` > `$EDITOR` > `vim`).
+- `--no-edit` - Create the record without opening the editor. Required for
+  scripts / CI (otherwise the editor launches on the new chord sheet).
+
+**Behavior:**
+- **Validation**: a value supplied via a flag is validated once and aborts on
+  error; a missing required field is prompted for and re-asks until valid.
+- **Persistence**: the song is created via `repos.songs.add()` (filesystem
+  appends to `database.csv` + writes `chords/<title>.md`; postgres inserts into
+  `songs` + `song_tags`). A stub `### Title ()` chord heading is created so the
+  editor opens on a real file.
+- **Editor step**: unless `--no-edit`, the chord sheet opens using the same
+  machinery as `songbook edit` (GUI-editor auto-wait, filesystem in-place vs.
+  temp-file round-trip for other backends). The song already exists at this
+  point, so quitting the editor without typing still leaves a valid (stub)
+  song.
+- **Scope**: adds a brand-new song. To change an existing song's chords use
+  `edit`, its weights use `weights`, its YouTube link use `youtube links`.
 
 ---
 

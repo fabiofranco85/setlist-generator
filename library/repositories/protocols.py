@@ -104,6 +104,21 @@ class SongRepository(Protocol):
         """
         ...
 
+    def add(self, song: Song) -> None:
+        """Add a new song to the repertoire.
+
+        Persists the full song: metadata (title, energy, youtube_url,
+        event_types), tags, and chord content. The in-memory cache is
+        invalidated.
+
+        Args:
+            song: Song to add
+
+        Raises:
+            ValueError: If a song with the same title already exists
+        """
+        ...
+
     def exists(self, title: str) -> bool:
         """Check if a song exists.
 

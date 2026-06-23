@@ -276,6 +276,70 @@ class FilesystemSongRepository:
         # Invalidate cache so subsequent reads pick up the new URL
         self._songs_cache = None
 
+    def add(self, song: Song) -> None:
+        """Add a new song to ``database.csv`` and write its chord file.
+
+        Appends a row preserving the existing column order, adding the optional
+        ``youtube`` / ``event_types`` columns only when the new song needs them.
+        The chord content is written to ``chords/<title>.md``.
+
+        Args:
+            song: Song to add. ``song.tags`` weights must be positive integers.
+
+        Raises:
+            ValueError: If a song with the same title already exists.
+        """
+        if self.exists(song.title):
+            raise ValueError(f"Song '{song.title}' already exists")
+
+        for moment, weight in song.tags.items():
+            if not isinstance(weight, int) or weight < 1:
+                raise ValueError(
+                    f"Invalid weight for '{moment}': {weight!r}. "
+                    "Weights must be positive integers."
+                )
+
+        if not self._database_file.exists():
+            raise FileNotFoundError(
+                f"Song database not found: {self._database_file}"
+            )
+
+        with open(self._database_file, "r", encoding="utf-8", newline="") as f:
+            reader = csv.DictReader(f, delimiter=";")
+            fieldnames = list(reader.fieldnames or ["song", "energy", "tags"])
+            rows = list(reader)
+
+        # Add optional columns only when the new song actually uses them.
+        if song.youtube_url and "youtube" not in fieldnames:
+            fieldnames.append("youtube")
+        if song.event_types and "event_types" not in fieldnames:
+            fieldnames.append("event_types")
+
+        new_row = {
+            "song": song.title,
+            "energy": str(song.energy),
+            "tags": serialize_tags(song.tags),
+        }
+        if "youtube" in fieldnames:
+            new_row["youtube"] = song.youtube_url
+        if "event_types" in fieldnames:
+            new_row["event_types"] = ",".join(song.event_types)
+        rows.append(new_row)
+
+        with open(self._database_file, "w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=";")
+            writer.writeheader()
+            writer.writerows(rows)
+
+        # Write the chord file (content may be a stub heading).
+        self._chords_path.mkdir(parents=True, exist_ok=True)
+        (self._chords_path / f"{song.title}.md").write_text(
+            song.content, encoding="utf-8"
+        )
+
+        # Invalidate cache so subsequent reads pick up the new song
+        self._songs_cache = None
+
     def exists(self, title: str) -> bool:
         """Check if a song exists.
 

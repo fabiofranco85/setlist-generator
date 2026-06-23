@@ -123,6 +123,55 @@ class TestPostgresSongRepository:
         assert repo.exists("Upbeat Song") is True
         assert repo.exists("Ghost") is False
 
+    def test_add_song(self, repo, pg_pool):
+        from library.models import Song
+
+        repo.add(Song(
+            title="Novo Louvor",
+            tags={"louvor": 5, "prelúdio": 3},
+            energy=2.0,
+            content="### Novo Louvor (G)\n\nG C\nLyrics",
+            youtube_url="https://youtu.be/abc123",
+        ))
+        # Fresh repo proves the rows hit the database, not just the cache.
+        from library.repositories.postgres.songs import PostgresSongRepository
+
+        fresh = PostgresSongRepository(pg_pool)
+        song = fresh.get_by_title("Novo Louvor")
+        assert song is not None
+        assert song.tags == {"louvor": 5, "prelúdio": 3}
+        assert song.energy == 2.0
+        assert song.content == "### Novo Louvor (G)\n\nG C\nLyrics"
+        assert song.youtube_url == "https://youtu.be/abc123"
+
+    def test_add_song_with_event_types(self, repo, pg_pool):
+        from library.models import Song
+        from library.repositories.postgres.songs import PostgresSongRepository
+
+        repo.add(Song(
+            title="Youth Anthem",
+            tags={"louvor": 5},
+            energy=1.0,
+            content="",
+            event_types=["youth"],
+        ))
+        fresh = PostgresSongRepository(pg_pool)
+        song = fresh.get_by_title("Youth Anthem")
+        assert song is not None and song.event_types == ["youth"]
+
+    def test_add_duplicate_title_raises(self, repo):
+        from library.models import Song
+
+        with pytest.raises(ValueError, match="already exists"):
+            repo.add(Song(title="Upbeat Song", tags={"louvor": 3}, energy=1.0, content=""))
+
+    def test_add_invalidates_cache(self, repo):
+        from library.models import Song
+
+        assert repo.get_by_title("Novo Louvor") is None  # primes the cache
+        repo.add(Song(title="Novo Louvor", tags={"louvor": 3}, energy=2.0, content=""))
+        assert repo.get_by_title("Novo Louvor") is not None
+
 
 # ---------------------------------------------------------------------------
 # HistoryRepository

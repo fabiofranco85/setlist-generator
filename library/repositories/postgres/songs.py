@@ -180,6 +180,52 @@ class PostgresSongRepository:
         # Invalidate cache so next read picks up the change
         self._songs_cache = None
 
+    def add(self, song) -> None:
+        """Insert a new song and its tags in a single transaction.
+
+        Args:
+            song: Song to add (title, energy, content, youtube_url,
+                event_types, tags).
+
+        Raises:
+            ValueError: If a song with the same title already exists, or if
+                any tag weight is not a positive integer.
+        """
+        for moment, weight in song.tags.items():
+            if not isinstance(weight, int) or weight < 1:
+                raise ValueError(
+                    f"Invalid weight for '{moment}': {weight!r}. "
+                    "Weights must be positive integers."
+                )
+
+        with self._pool.connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1 FROM songs WHERE title = %s", (song.title,))
+                if cur.fetchone() is not None:
+                    raise ValueError(f"Song '{song.title}' already exists")
+
+                cur.execute(
+                    "INSERT INTO songs (title, energy, content, youtube_url, event_types) "
+                    "VALUES (%s, %s, %s, %s, %s)",
+                    (
+                        song.title,
+                        song.energy,
+                        song.content,
+                        song.youtube_url,
+                        list(song.event_types),
+                    ),
+                )
+                for moment, weight in song.tags.items():
+                    cur.execute(
+                        "INSERT INTO song_tags (song_title, moment, weight) "
+                        "VALUES (%s, %s, %s)",
+                        (song.title, moment, weight),
+                    )
+                conn.commit()
+
+        # Invalidate cache so next read picks up the new song
+        self._songs_cache = None
+
     def exists(self, title: str) -> bool:
         """Check if a song exists."""
         return title in self._ensure_loaded()

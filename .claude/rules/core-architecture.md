@@ -425,6 +425,7 @@ songs = repos.songs.get_all()
 - `repos.songs.get_all()` - Get all songs
 - `repos.songs.get_by_title(title)` - Get single song
 - `repos.songs.search(query)` - Search by title
+- `repos.songs.add(song)` - Add a new song (metadata + tags + content); raises `ValueError` if the title exists. Backs `songbook add`
 - `repos.history.get_all()` - Get all history (most recent first, across all event types)
 - `repos.history.get_by_date(date, label="", event_type="")` - Get specific setlist
 - `repos.history.get_by_date_all(date)` - Get all setlists for a date (all labels/types)

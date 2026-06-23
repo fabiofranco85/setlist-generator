@@ -382,6 +382,21 @@ G            D        A
 
 ### Adding a New Song
 
+**Quickest: `songbook add`.** It collects the metadata (prompting for anything
+you don't pass as a flag), saves the song to the active storage backend, then
+opens the chord sheet in your editor — the mirror of `songbook edit`:
+
+```bash
+songbook add                                   # fully interactive
+songbook add "Nova Canção" --energy 2 --tags "louvor(3),prelúdio"
+songbook add "Hino Jovem" --tags "louvor(5)" -e youth --no-edit
+```
+
+At least one moment is required (so the generator can pick the song). Pass
+`--no-edit` to skip the editor (e.g. in scripts).
+
+**Or add it manually:**
+
 1. **Classify the song's energy** (1-4):
    - Listen to the song and assess its tempo, intensity, and mood
    - Use the energy scale guide above

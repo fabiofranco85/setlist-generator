@@ -184,6 +184,16 @@ class SupabaseSongRepository:
         library = self.get_all()
         return title in library
 
+    def add(self, song: Song) -> None:
+        """Add a new song at user visibility (core SongRepository contract).
+
+        Thin wrapper over :meth:`create` so this multi-tenant repository also
+        satisfies the base ``SongRepository`` protocol. The CLI ``add`` command
+        targets the filesystem/postgres backends; the SaaS API uses
+        :meth:`create` directly to choose a visibility scope.
+        """
+        self.create(song, visibility="user")
+
     def create(self, song: Song, visibility: str = "user") -> str:
         """Create a new song.
 

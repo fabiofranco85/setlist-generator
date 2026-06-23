@@ -58,6 +58,7 @@ def cli(ctx, verbose):
       view-setlist   View generated setlist (markdown format)
       view-song      View song lyrics, chords, and metadata
       info           Show detailed statistics for a song
+      add            Add a new song to your repertoire
       edit           Open a song's chord file in your editor
       transpose      Transpose a song to a different key
       replace        Replace song in existing setlist
@@ -178,6 +179,33 @@ def info(song_name):
     """
     from cli.commands.info import run
     run(song_name)
+
+
+@cli.command()
+@click.argument("title", required=False)
+@click.option("--energy", type=int, default=None, help="Energy level (1-4)")
+@click.option("--tags", default=None, help='Moments with optional weights, e.g. "louvor(5),prelúdio"')
+@click.option("--youtube", default=None, help="YouTube URL (optional)")
+@click.option("--event-type", "-e", "event_types", multiple=True, help="Bind the song to event type(s) (repeatable; empty = all)")
+@click.option("--editor", default=None, help="Editor command to use (overrides $VISUAL / $EDITOR; default: vim)")
+@click.option("--no-edit", is_flag=True, help="Create the record without opening the editor")
+def add(title, energy, tags, youtube, event_types, editor, no_edit):
+    """Add a new song to your repertoire.
+
+    \b
+    Collects the song's metadata (interactively, or via flags) then opens the
+    chord sheet in your editor — the mirror of `songbook edit`. At least one
+    moment is required so the song can be selected by the generator.
+
+    \b
+    Examples:
+      songbook add                                   # fully interactive
+      songbook add "Novo Louvor"                     # prompts for the rest
+      songbook add "Novo Louvor" --energy 2 --tags "louvor(5),prelúdio"
+      songbook add "Youth Anthem" --tags "louvor(5)" -e youth --no-edit
+    """
+    from cli.commands.add import run
+    run(title, energy, tags, youtube, event_types, editor=editor, no_edit=no_edit)
 
 
 @cli.command()

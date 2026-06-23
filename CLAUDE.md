@@ -57,6 +57,9 @@ songbook view-setlist --keys         # View setlist with keys
 songbook view-setlist --label evening  # View labeled setlist
 songbook view-song "Oceanos"         # View song details
 songbook view-song                   # Interactive song picker
+songbook add                         # Add a new song (interactive), then open editor
+songbook add "Novo Louvor" --energy 2 --tags "louvor(5),prelúdio"  # Add via flags
+songbook add "Youth Anthem" --tags "louvor(5)" -e youth --no-edit  # Bind + skip editor
 songbook edit "Oceanos"              # Open chord file in $EDITOR (default: vim)
 songbook edit                        # Interactive picker → editor
 songbook edit "Oceanos" --editor nano  # Override editor for this invocation
@@ -174,6 +177,19 @@ Where:
 **Recency Formula:** `recency_score = 1.0 - exp(-days_since_last_use / 45)`
 
 ## Adding New Songs
+
+**Fastest path — `songbook add`** (works on the active storage backend):
+```bash
+songbook add                                   # fully interactive, then opens the editor
+songbook add "Novo Louvor" --energy 2 --tags "louvor(5),prelúdio"
+songbook add "Youth Anthem" --tags "louvor(5)" -e youth --no-edit
+```
+The command collects the metadata (prompting for anything not passed as a flag;
+at least one moment is required), persists it via `repos.songs.add()`, then
+opens the chord sheet in your editor — the mirror of `songbook edit`. Pass
+`--no-edit` to skip the editor (required for scripts / CI).
+
+**Manual path** (edit the storage directly):
 
 1. Add to `database.csv`:
    ```csv
@@ -384,6 +400,7 @@ for moment, song_list in setlist.moments.items():
 ```
 
 **Key repository methods (label-aware and event-type-aware):**
+- `repos.songs.add(song)` - Add a new song to the repertoire (used by `songbook add`). Persists metadata + tags + chord content; raises `ValueError` if the title already exists. Implemented on filesystem and postgres; supabase delegates to its multi-tenant `create()`.
 - `repos.songs.update_tags(title, tags)` - Replace a song's full ``{moment: weight}`` mapping (used by `songbook weights`). Raises `KeyError` if the song is missing, `ValueError` for invalid weights.
 - `repos.songs.update_youtube(title, youtube_url)` - Set a song's YouTube URL (used by `songbook youtube links`); stores the value verbatim, pass `""` to clear. Raises `KeyError` if the song is missing.
 - `repos.history.backend_name` - Property returning the backend name (e.g. `"filesystem"`, `"postgres"`)
