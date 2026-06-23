@@ -117,34 +117,42 @@ class TestResolveSetlistVideos:
         title, vid = next((t, v) for t, v in result if t == "Missing")
         assert vid is None
 
-    def test_moment_order_follows_setlist(self):
-        """Songs should appear in the setlist's moment iteration order."""
+    def test_moment_order_follows_canonical_not_dict_iteration(self):
+        """Songs follow the canonical service order, not the dict's key order.
+
+        Regression: on the postgres backend ``setlist['moments']`` comes back
+        in JSONB key order (sorted by byte-length, then bytewise), NOT the
+        user-defined service order. The playlist must still be built in
+        service order (prelúdio before louvor), so resolution routes through
+        ``canonical_moment_order`` instead of iterating the dict directly.
+        """
         songs = {
             "A": make_song(title="A", youtube_url="https://youtu.be/a", tags={"prelúdio": 3}),
             "B": make_song(title="B", youtube_url="https://youtu.be/b", tags={"louvor": 3}),
         }
-        # Setlist has louvor first, prelúdio second
-        setlist = {
-            "moments": {
-                "louvor": ["B"],
-                "prelúdio": ["A"],
-            },
-        }
+        # louvor appears FIRST in the dict (as postgres JSONB would return it),
+        # but prelúdio precedes louvor in the canonical service order.
+        setlist = {"moments": {"louvor": ["B"], "prelúdio": ["A"]}}
         result = resolve_setlist_videos(setlist, songs)
         titles = [t for t, _ in result]
-        # Should follow setlist moment order (louvor before prelúdio)
-        assert titles == ["B", "A"]
+        assert titles == ["A", "B"]  # prelúdio (A) before louvor (B)
 
-        # Reverse order in setlist
-        setlist_reversed = {
-            "moments": {
-                "prelúdio": ["A"],
-                "louvor": ["B"],
-            },
-        }
-        result_reversed = resolve_setlist_videos(setlist_reversed, songs)
-        titles_reversed = [t for t, _ in result_reversed]
+        # Dict key order must not change the outcome.
+        setlist_reversed = {"moments": {"prelúdio": ["A"], "louvor": ["B"]}}
+        titles_reversed = [t for t, _ in resolve_setlist_videos(setlist_reversed, songs)]
         assert titles_reversed == ["A", "B"]
+
+    def test_explicit_moments_order_drives_sequence(self):
+        """An explicit moments_order (custom event type) drives the sequence."""
+        songs = {
+            "A": make_song(title="A", youtube_url="https://youtu.be/a", tags={"louvor": 3}),
+            "B": make_song(title="B", youtube_url="https://youtu.be/b", tags={"prelúdio": 3}),
+        }
+        setlist = {"moments": {"prelúdio": ["B"], "louvor": ["A"]}}
+        # Custom event type orders louvor before prelúdio.
+        result = resolve_setlist_videos(setlist, songs, moments_order=["louvor", "prelúdio"])
+        titles = [t for t, _ in result]
+        assert titles == ["A", "B"]  # louvor (A) first per explicit order
 
 
 # ---------------------------------------------------------------------------

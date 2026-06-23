@@ -3,6 +3,7 @@ YouTube command - create YouTube playlist from existing setlist.
 """
 
 from library import (
+    canonical_moment_order,
     get_repositories,
     resolve_setlist_videos,
 )
@@ -34,6 +35,10 @@ def run(date, output_dir, history_dir, label="", event_type=""):
     et = resolve_event_type(repos, event_type)
     et_slug = event_type
     et_name = et.name if et and not (et_slug == "" or et_slug == "main") else ""
+    # The event type's user-defined moment order. Required because setlists
+    # loaded from postgres/supabase come back with JSONB-internal key order,
+    # not the service order — see resolve_setlist_videos / canonical_moment_order.
+    et_moments_order = et.moments_order if et else None
 
     print("Loading songs...")
     songs = repos.songs.get_all()
@@ -53,12 +58,15 @@ def run(date, output_dir, history_dir, label="", event_type=""):
         header += f" ({target_label})"
     print(header + "...")
     print("Moments:")
-    for moment, song_list in target_setlist["moments"].items():
+    # Display in service order (canonical), not the dict's raw key order.
+    moments_ref = {m: 0 for m in et_moments_order} if et_moments_order else None
+    for moment in canonical_moment_order(target_setlist["moments"], reference_config=moments_ref):
+        song_list = target_setlist["moments"][moment]
         display_moment = moment.capitalize()
         print(f"  {display_moment}: {', '.join(song_list)}")
 
     # Resolve videos and show status
-    video_entries = resolve_setlist_videos(target_setlist, songs)
+    video_entries = resolve_setlist_videos(target_setlist, songs, moments_order=et_moments_order)
 
     added = [(title, vid) for title, vid in video_entries if vid]
     skipped = [title for title, vid in video_entries if not vid]
@@ -111,6 +119,7 @@ def run(date, output_dir, history_dir, label="", event_type=""):
             songs=songs,
             credentials=credentials,
             event_type_name=et_name,
+            moments_order=et_moments_order,
         )
     except Exception as e:
         handle_error(f"Creating playlist: {e}")

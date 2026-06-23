@@ -13,6 +13,7 @@ from .config import (
     YOUTUBE_PLAYLIST_NAME_PATTERN,
     YOUTUBE_PLAYLIST_PRIVACY,
     YOUTUBE_TOKEN_FILE,
+    canonical_moment_order,
 )
 
 
@@ -97,20 +98,33 @@ def format_playlist_name(
 def resolve_setlist_videos(
     setlist_dict: dict,
     songs: dict,
+    moments_order: list[str] | None = None,
 ) -> list[tuple[str, str | None]]:
-    """Map setlist songs to (title, video_id_or_none) in setlist moment order.
+    """Map setlist songs to (title, video_id_or_none) in service order.
+
+    Moments are emitted in canonical service order rather than the raw
+    iteration order of ``setlist_dict["moments"]``. This matters on the
+    postgres/supabase backends, where the JSONB ``moments`` column returns
+    keys in byte-length order, not the user-defined service order — the same
+    reason ``format_setlist_markdown`` and ``generate_setlist_pdf`` route
+    through ``canonical_moment_order``.
 
     Args:
         setlist_dict: Setlist dict with "moments" key
         songs: Dict of {title: Song} with youtube_url field
+        moments_order: Optional explicit moment ordering from an event type.
+            When provided, it is the reference order; otherwise the default
+            MOMENTS_CONFIG order is used.
 
     Returns:
-        List of (song_title, video_id_or_none) in moment order
+        List of (song_title, video_id_or_none) in service order
     """
     result = []
 
-    for moment in setlist_dict.get("moments", {}):
-        song_titles = setlist_dict["moments"].get(moment, [])
+    moments = setlist_dict.get("moments", {})
+    ref = {m: 0 for m in moments_order} if moments_order else None
+    for moment in canonical_moment_order(moments, reference_config=ref):
+        song_titles = moments.get(moment, [])
         for title in song_titles:
             song = songs.get(title)
             video_id = None
@@ -253,6 +267,7 @@ def create_setlist_playlist(
     playlist_name_pattern: str = YOUTUBE_PLAYLIST_NAME_PATTERN,
     privacy: str = YOUTUBE_PLAYLIST_PRIVACY,
     event_type_name: str = "",
+    moments_order: list[str] | None = None,
 ) -> tuple[str, list[str], list[str]]:
     """Create a YouTube playlist from a setlist.
 
@@ -266,6 +281,9 @@ def create_setlist_playlist(
         playlist_name_pattern: Pattern for playlist title
         privacy: Privacy status for the playlist
         event_type_name: Optional event type display name for playlist title
+        moments_order: Optional explicit moment ordering from an event type,
+            forwarded to resolve_setlist_videos so the playlist follows the
+            user-defined service order even on JSONB-backed storage
 
     Returns:
         Tuple of (playlist_url, added_songs, skipped_songs)
@@ -280,7 +298,7 @@ def create_setlist_playlist(
         playlist_title += f" ({label})"
 
     # Resolve videos
-    video_entries = resolve_setlist_videos(setlist_dict, songs)
+    video_entries = resolve_setlist_videos(setlist_dict, songs, moments_order=moments_order)
 
     added_songs = []
     skipped_songs = []

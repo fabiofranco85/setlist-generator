@@ -265,7 +265,7 @@ The `supabase` backend powers the SaaS API layer in `api/`. Output repositories 
 - Optional dep guard: `try/except ImportError` in `repositories/__init__.py`
 
 **JSONB key-order pitfall (postgres + supabase):** Postgres' `JSONB` type does *not* preserve dict insertion order — keys are stored in an internal binary order and come back in that order on `SELECT`. Anywhere we round-trip a Python dict through a `JSONB` column (e.g. `event_types.moments`, `setlists.moments`), the iteration order on read is **not** the order on write. Two consequences:
-1. `setlists.moments` is intentionally **not** the source of moment order for display — formatters (`format_setlist_markdown`, `generate_setlist_pdf`) and the CLI display loops route through `canonical_moment_order(setlist.moments, reference_config={m: 0 for m in et.moments_order})` to recover the user-defined service order from the event type.
+1. `setlists.moments` is intentionally **not** the source of moment order for display — formatters (`format_setlist_markdown`, `generate_setlist_pdf`), the YouTube playlist builder (`resolve_setlist_videos`), and the CLI display loops route through `canonical_moment_order(setlist.moments, reference_config={m: 0 for m in et.moments_order})` to recover the user-defined service order from the event type.
 2. `event_types.moments_order` is a sibling column that explicitly stores the user-defined key order as a JSON *array* (arrays preserve order). When the column is `NULL` (e.g., the seed-inserted `main` row before the migration), `PostgresEventTypeRepository._load_all` and `SupabaseEventTypeRepository.get_all` fall back to `canonical_moment_order(moments)` so the default event type displays in canonical order instead of JSONB-internal order.
 
 **Cross-event-type lookup invariants:** `HistoryRepository.get_by_date(date, label, event_type)` and `get_by_date_all(date, event_type)` treat `event_type=""` as the default event type (main) — it is a **real filter value**, not a "no filter" wildcard. The filesystem and postgres backends now agree on this; supabase matches. CLI code (`generate --label evening` etc.) relies on this contract to avoid picking up a base setlist from a different event type when deriving labeled variants.
@@ -493,8 +493,8 @@ observability/
 **Contents:**
 - `extract_video_id(url)` - Parse a YouTube watch / short URL into a video ID (also reused by the `songbook youtube links` CLI command to classify link status and validate typed URLs)
 - `format_playlist_name(date, label="", event_type_name="")` - Build the playlist title (Portuguese date with event type / label suffixes)
-- `resolve_setlist_videos(setlist, songs)` - Map a setlist's songs to `(title, video_id)` pairs in service order; songs without YouTube URLs are skipped with a warning
-- `create_setlist_playlist(setlist, songs)` - End-to-end: build name, OAuth-authenticate, create unlisted playlist, add videos. Re-authenticates automatically when the cached token is expired.
+- `resolve_setlist_videos(setlist, songs, moments_order=None)` - Map a setlist's songs to `(title, video_id)` pairs in service order; songs without YouTube URLs are skipped with a warning. Moments are emitted via `canonical_moment_order` (not raw dict iteration) so the playlist follows the user-defined service order even on JSONB-backed storage, where `setlist["moments"]` returns keys in byte-length order — see the JSONB key-order pitfall under `repositories/`. The CLI passes the event type's `moments_order`; `None` falls back to `MOMENTS_CONFIG` order.
+- `create_setlist_playlist(setlist, songs, ..., moments_order=None)` - End-to-end: build name, OAuth-authenticate, create unlisted playlist, add videos in service order (forwards `moments_order` to `resolve_setlist_videos`). Re-authenticates automatically when the cached token is expired.
 
 **Dependencies:** `google-api-python-client`, `google-auth-oauthlib`, `google-auth-httplib2` (all installed by `uv sync`).
 
