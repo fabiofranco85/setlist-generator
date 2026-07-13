@@ -108,24 +108,38 @@ This is a **setlist generator** for church worship services. It intelligently se
 - **Recency tracking**: Avoids recently used songs using time-based exponential decay (45-day default)
 - **Manual overrides**: Allows forcing specific songs for any moment
 
+## Source of Truth: PostgreSQL
+
+**This repository does not ship song data.** `database.csv`, `chords/`,
+`history/`, and `event_types.json` were removed — PostgreSQL is the single
+source of truth for songs, chord content, history, and event types.
+
+- The repo `.env` sets `STORAGE_BACKEND=postgres` + `DATABASE_URL`, so every
+  `songbook` command reads and writes the database.
+- Add/edit songs with `songbook add`, `songbook edit`, `songbook weights`, and
+  `songbook youtube links` — they all route through `repos.songs.*` to the
+  active backend. **Do not** recreate `database.csv` or hand-edit chord files.
+- The **filesystem backend still exists as a code path** (it remains the default
+  when `STORAGE_BACKEND` is unset, and the test suite exercises it against
+  temporary fixtures). It simply has no data in this repo: running with
+  `STORAGE_BACKEND=filesystem` fails loudly with "Song database not found",
+  which is the intended behavior.
+- `output/` is **not** database-backed. Markdown/PDF output is always written to
+  the filesystem, even on postgres, so that directory is live — not stale.
+
+Sections below that describe the CSV/JSON formats document the *filesystem
+backend's* storage format, which is still valid for that backend. They are not
+instructions for this repo's data.
+
 ## File Structure
 
 ```
 .
-├── database.csv                 # Song database: "song;energy;tags;youtube"
-├── event_types.json             # Event type definitions (auto-created)
-├── chords/                      # Individual song files with chords
-│   └── <Song Name>.md
-├── output/                      # Generated markdown/PDF setlists
+├── output/                      # Generated markdown/PDF setlists (always filesystem)
 │   ├── YYYY-MM-DD.md           # Default event type (root)
 │   ├── YYYY-MM-DD_label.md     # Labeled setlist
 │   └── <event-type>/           # Non-default event types (subdirectory)
 │       └── YYYY-MM-DD.md
-├── history/                     # JSON history tracking
-│   ├── YYYY-MM-DD.json         # Default event type (root)
-│   ├── YYYY-MM-DD_label.json   # Labeled setlist
-│   └── <event-type>/           # Non-default event types (subdirectory)
-│       └── YYYY-MM-DD.json
 ├── library/                     # Core package (modular architecture)
 │   ├── config.py               # Configuration constants + GenerationConfig
 │   ├── models.py               # Song and Setlist data structures
@@ -190,28 +204,20 @@ at least one moment is required), persists it via `repos.songs.add()`, then
 opens the chord sheet in your editor — the mirror of `songbook edit`. Pass
 `--no-edit` to skip the editor (required for scripts / CI).
 
-**Manual path** (edit the storage directly):
+Song metadata means:
+- **Energy**: 1=upbeat, 2=moderate-high, 3=moderate-low, 4=contemplative
+- **Tags**: moment names with optional weights, e.g. `louvor(4),prelúdio`
+- **YouTube**: optional video URL
+- **Event types**: optional slugs restricting the song to those types; empty = available for all
 
-1. Add to `database.csv`:
-   ```csv
-   New Song Title;2;louvor(4),prelúdio;https://youtu.be/VIDEO_ID
-   # With optional 5th column to bind the song to specific event types
-   Youth Anthem;1;louvor(5);https://youtu.be/VIDEO_ID;youth,christmas
-   ```
-   - Energy: 1=upbeat, 2=moderate-high, 3=moderate-low, 4=contemplative
-   - Tags: moment names with optional weights in parentheses
-   - YouTube: optional YouTube video URL
-   - `event_types` (optional 5th column): comma-separated slugs to restrict the song to those event types; empty (or column omitted) = available for all types
+**Editing an existing song:** use `songbook edit` (chords/lyrics), `songbook weights`
+(per-moment weights), or `songbook youtube links` (video URL). All route through the
+repository layer to postgres.
 
-2. Create `chords/New Song Title.md`:
-   ```markdown
-   ### New Song Title (G)
-
-   G               D
-   Verse lyrics...
-   ```
-
-3. Run generator - new song automatically included in selection pool
+> **Do not hand-edit `database.csv` or `chords/*.md` — they no longer exist in this
+> repo.** PostgreSQL is the source of truth (see "Source of Truth" above). Those
+> formats are documented elsewhere in this file as the *filesystem backend's* storage
+> layout, not as this repo's data.
 
 ## Common Tasks
 

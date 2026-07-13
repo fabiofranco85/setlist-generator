@@ -2,6 +2,28 @@
 
 This document describes the fundamental architecture and concepts of the setlist generator system. This documentation is always loaded regardless of which files you're working on.
 
+## Source of Truth: PostgreSQL
+
+**This repository no longer ships song data.** `database.csv`, `chords/`,
+`history/`, and `event_types.json` have been deleted; PostgreSQL holds songs,
+chord content, history, and event types. The repo `.env` pins
+`STORAGE_BACKEND=postgres`.
+
+Consequences when working in this codebase:
+
+- Never instruct a user (or yourself) to edit `database.csv` or `chords/*.md`.
+  Route through `repos.songs.*` — i.e. `songbook add`, `edit`, `weights`,
+  `youtube links`.
+- The filesystem backend **code** is intact and still the default when
+  `STORAGE_BACKEND` is unset. It has no data here, so it fails loudly with
+  "Song database not found". Tests exercise it against `tmp_project` fixtures,
+  which is why the suite still passes.
+- `output/` is untouched: markdown/PDF output is always written to the
+  filesystem, even on the postgres backend.
+- The CSV/JSON layouts described below document the *filesystem backend's*
+  storage format. They remain accurate for that backend and are not a
+  description of this repo's contents.
+
 ## Project Overview
 
 This is a **setlist generator** for church worship services. It intelligently selects songs based on:
