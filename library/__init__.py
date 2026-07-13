@@ -20,6 +20,12 @@ from .event_type import (
     validate_event_type_slug,
     is_default_event_type,
 )
+from .desired import (
+    assign_desired_to_moments,
+    parse_desired,
+    plan_desired_songs,
+    resolve_desired_songs,
+)
 from .formatter import format_setlist_markdown
 from .labeler import relabel_setlist
 from .generator import SetlistGenerator, generate_setlist
@@ -131,6 +137,11 @@ __all__ = [
     "format_setlist_markdown",
     "generate_setlist_pdf",
     "generate_setlist_pdf_bytes",
+    # Desired songs (must-play requests placed automatically)
+    "parse_desired",
+    "resolve_desired_songs",
+    "assign_desired_to_moments",
+    "plan_desired_songs",
     # Sharing
     "merge_effective_library",
     "validate_share_request",

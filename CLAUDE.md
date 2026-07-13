@@ -51,6 +51,7 @@ uv add --dev package-name
 songbook --help                      # Main help
 songbook generate --date 2026-02-15  # Generate setlist (prompts if one already exists)
 songbook generate --date 2026-02-15 --yes  # Overwrite existing without prompting
+songbook generate --desired "Bondade de Deus, Precioso"  # Must-play songs, moment auto-chosen
 songbook generate --label evening    # Derive labeled variant from primary
 songbook generate --label evening --replace 3  # Derive replacing 3 songs
 songbook view-setlist --keys         # View setlist with keys
@@ -223,6 +224,30 @@ songbook generate -e youth --date 2026-03-20  # Generate for event type
 songbook generate --date 2026-02-15 --yes     # Overwrite existing without prompting
 ```
 
+**Desired ("must-play") songs:**
+
+```bash
+songbook generate --desired "Bondade de Deus, Precioso, Vou Seguir com Fé"
+songbook generate -d "Oceanos, Hosana" --date 2026-02-15
+```
+
+`--desired` names songs that must appear without saying where they go — the system
+places them. Each song lands in the moment where it has the highest tag weight (ties
+broken by service order), falling back to another of its tagged moments when that one
+is full. Placement is a bipartite matching (`library/desired.py`), so a workable
+arrangement is never missed just because an earlier song took a contested slot.
+
+Within its moment, a desired song is sorted by the **energy arc** like any auto-picked
+song — it is *not* pinned to the front. That's the difference from `--override`, which
+names both the moment and the position. The two can be combined: overrides claim their
+slots first, and desired songs compete for what's left.
+
+Names match case-insensitively. Generation **aborts before writing anything** if a song
+doesn't exist (reporting every miss at once, with close-match suggestions), isn't tagged
+for any moment in the setlist, or if the desired set can't fit. `--desired` is not valid
+when `--label` derives from an existing base setlist — that path copies songs from the
+base instead of running selection.
+
 **Overwrite-confirmation guard:**
 
 When a setlist already exists at the target `(date, label, event_type)` triple, `songbook generate` prompts before overwriting it. Pass `--yes` / `-y` to skip the prompt (required for CI/scripts and non-interactive shells). `--no-save` disables the check entirely (dry-run mode writes nothing, so no collision is possible). The check is *exact-key*: generating a labeled variant when only the primary exists does not prompt; generating with `-e youth` does not collide with an existing `main` setlist for the same date.
@@ -369,6 +394,13 @@ generator = SetlistGenerator.from_repositories(repos.songs, repos.history)
 setlist = generator.generate(
     date="2026-02-15",
     overrides={"louvor": ["Oceanos", "Ousado Amor"]}
+)
+
+# Guarantee specific songs appear, letting the generator choose the moment
+# (raises ValueError if a song is unknown or the set cannot fit)
+setlist = generator.generate(
+    date="2026-02-15",
+    desired=["Bondade de Deus", "Precioso", "Vou Seguir com Fé"],
 )
 
 # Generate labeled setlist (for multiple services on same date)

@@ -32,10 +32,12 @@ Where:
 3. **Load history** from the storage backend (sorted by date, most recent first; within same date, unlabeled before labeled)
 4. **Calculate recency scores** for all songs using time-based exponential decay (considers full history — global, not per event type)
 5. **Load moments config** from event type (or global `MOMENTS_CONFIG` for default type)
-6. **Generate setlist** by selecting songs for each moment using score-based algorithm
-   - If `--label` specified and a base setlist exists for the date, **derive** from the base by replacing a subset of songs
-7. **Apply energy ordering** to multi-song moments (e.g., louvor: 1→4 progression)
-8. **Save results** (filenames use `setlist_id` = `date_label` or just `date` when unlabeled):
+6. **Assign desired songs** (`--desired`) to moments before selection runs — an unknown song or an unfittable set aborts generation here, before anything is written
+7. **Generate setlist** by selecting songs for each moment using score-based algorithm
+   - Desired songs are force-included in their assigned moment; songs assigned to a *later* moment are withheld from earlier moments' candidate pools so auto-selection can't consume them
+   - If `--label` specified and a base setlist exists for the date, **derive** from the base by replacing a subset of songs (`--desired` is rejected on this path — derivation copies from the base rather than running selection)
+8. **Apply energy ordering** to multi-song moments (e.g., louvor: 1→4 progression). Desired songs are sorted here alongside auto-picked songs; only `--override` songs are pinned
+9. **Save results** (filenames use `setlist_id` = `date_label` or just `date` when unlabeled):
    - Terminal summary (song titles only)
    - Output markdown/PDF — routed to subdirectory for non-default event types
    - History record — routed to subdirectory for non-default event types
@@ -68,6 +70,7 @@ Where:
     ├── loader.py            # Tag parsing utilities
     ├── labeler.py           # Setlist label management (add/rename/remove)
     ├── selector.py          # Song selection algorithms
+    ├── desired.py           # "Must-play" song resolution + moment assignment
     ├── paths.py             # Path resolution utilities
     ├── ordering.py          # Energy-based ordering
     ├── transposer.py        # Chord transposition (chromatic)
@@ -108,6 +111,7 @@ The codebase is organized into focused modules for better maintainability and re
 - `loader.py` - Tag parsing utilities (`parse_tags()`)
 - `labeler.py` - Setlist label management (`relabel_setlist()` — add, rename, or remove labels)
 - `selector.py` - Song selection algorithms (scoring, recency calculation, usage queries)
+- `desired.py` - "Must-play" songs (`songbook generate --desired`). Resolves user-typed titles case-insensitively, then assigns each song to a moment via bipartite matching (Kuhn's augmenting path) so the whole set is guaranteed to fit. Pure functions. Unlike overrides, a desired song gets a *moment* but not a *position* — energy ordering places it
 - `paths.py` - Output path resolution (`PathConfig` dataclass, CLI/env/default cascade)
 - `ordering.py` - Energy-based ordering for emotional arcs
 - `transposer.py` - Deterministic chromatic chord transposition (pure functions, `re` only)

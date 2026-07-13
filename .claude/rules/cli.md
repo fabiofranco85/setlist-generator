@@ -99,6 +99,10 @@ songbook generate --label evening --replace all    # Replace all songs
 # Combine event type + label
 songbook generate -e youth --label evening --date 2026-03-20
 
+# Desired songs — must appear; the system picks the moment and position
+songbook generate --desired "Bondade de Deus, Precioso, Vou Seguir com Fé"
+songbook generate -d "Oceanos, Hosana"
+
 # Override specific moments
 songbook generate --override "louvor:Oceanos,Santo Pra Sempre"
 songbook generate --override "prelúdio:Estamos de Pé" --override "louvor:Oceanos"
@@ -118,7 +122,8 @@ songbook generate --output-dir custom/output --history-dir custom/history
 - `--event-type TEXT` or `-e` - Event type slug (e.g., "youth"). Uses the type's moments config and filters songs
 - `--label TEXT` or `-l` - Setlist label for multiple setlists per date (e.g., "evening", "morning")
 - `--replace N` or `-r` - Songs to replace when deriving (number or "all", default: random). Only valid with `--label`
-- `--override "moment:song1,song2"` - Force specific songs for a moment (can be used multiple times)
+- `--desired "song1,song2"` or `-d` - Songs that must appear in the setlist. The system chooses the moment and position (see below). Not valid when deriving a labeled setlist from an existing base
+- `--override "moment:song1,song2"` - Force specific songs into a named moment, pinned to the front (can be used multiple times)
 - `--pdf` - Generate PDF output in addition to markdown
 - `--no-chords` - When combined with `--pdf`, generate a lyrics-only PDF (no chord lines, no key suffixes) for non-musicians. Filename gets a `_lyrics` suffix
 - `--no-save` - Dry run mode, don't save to history
@@ -144,6 +149,38 @@ songbook generate --output-dir custom/output --history-dir custom/history
 - Single song: `--override "prelúdio:Estamos de Pé"`
 - Multiple songs: `--override "louvor:Oceanos,Santo Pra Sempre,Hosana"`
 - Multiple moments: Use multiple `--override` flags
+
+**Desired-song behavior (`--desired`):**
+
+`--desired` is the "must-play" list: the user names songs but *not* where they go.
+Placement is the system's job, and every named song is guaranteed to appear.
+
+- **Moment assignment** (`library/desired.py:assign_desired_to_moments`): each song
+  prefers the moment where it carries the highest tag weight; ties break by service
+  order. When that moment is full, the song falls back to another moment it's tagged
+  for. This is a bipartite matching (Kuhn's augmenting path), not a greedy pass — an
+  already-seated song is *re-seated* if that's what lets a later song fit. Greedy
+  would strand two songs that both prefer a one-slot moment even when a second
+  shared moment sits empty.
+- **Position**: desired songs are handed to `select_songs_for_moment` as forced
+  inclusions but are *excluded* from `apply_energy_ordering`'s `override_count`, so
+  they get sorted into the moment's energy arc alongside auto-picked songs rather
+  than pinned to the front. This is the one behavioral difference from `--override`.
+- **Reservation**: a desired song bound for a later moment is hidden from every
+  earlier moment's candidate pool. Without this, a song tagged for both louvor and
+  prelúdio but assigned to prelúdio could be randomly auto-picked by louvor (which
+  generates first), leaving prelúdio to silently skip it.
+- **Name matching** is case-insensitive; duplicates in the list collapse.
+- **Errors** (all raised before any file is written): unknown song (lists every
+  miss at once, with `difflib` close-match suggestions); song not tagged for any
+  moment in the active moments config; desired set can't fit the available slots.
+- **Interaction with `--override`**: overrides consume their moment's slots first,
+  shrinking the capacity desired songs compete for. A song named in both is dropped
+  from the desired set (the override already guarantees it).
+- **Not supported with derivation**: `--label` on a date that already has a base
+  setlist takes the `derive_setlist` path, which copies songs out of the base instead
+  of running selection — there is no assignment step for `--desired` to hook into, so
+  the combination is rejected rather than silently ignored.
 
 **Event type behavior:**
 - When `-e youth` is specified, uses the youth event type's moments config and filters songs

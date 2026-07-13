@@ -48,7 +48,8 @@ def parse_overrides(override_args: tuple[str, ...] | None) -> dict[str, list[str
 
 
 def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=False,
-        label="", replace_count=None, event_type="", no_chords=False, yes=False):
+        label="", replace_count=None, event_type="", no_chords=False, yes=False,
+        desired=""):
     """
     Generate a setlist for a service date.
 
@@ -70,10 +71,14 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
             when a setlist already exists at the target (date, label,
             event_type) triple. Required for non-interactive usage
             (CI, scripts).
+        desired: Comma-separated song titles that must appear in the setlist.
+            The moment for each one is chosen automatically (unlike ``override``,
+            which names the moment explicitly).
     """
     import click
 
     from cli.cli_utils import resolve_paths, print_metrics_summary, validate_label, handle_error, resolve_event_type
+    from library.desired import parse_desired
     from library.observability import Observability
     from library.replacer import derive_setlist
     from library.models import Setlist
@@ -90,6 +95,8 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
     # --no-chords only makes sense alongside --pdf
     if no_chords and not pdf:
         handle_error("--no-chords requires --pdf")
+
+    desired_songs = parse_desired(desired)
 
     # Use today if no date specified
     if not date:
@@ -146,10 +153,24 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
     if overrides:
         print(f"Overrides: {overrides}")
 
+    if desired_songs:
+        print(f"Desired songs: {', '.join(desired_songs)}")
+
     # Derivation path: when label is provided and a base setlist exists
     if label:
         existing = repos.history.get_by_date_all(date, event_type=et_slug)
         if existing:
+            # Derivation copies songs out of a base setlist rather than running
+            # the selection algorithm, so there is no moment-assignment step for
+            # --desired to hook into. Refuse rather than silently ignore it.
+            if desired_songs:
+                handle_error(
+                    f"--desired cannot be combined with deriving a labeled setlist "
+                    f"from an existing base ({date}). Either drop --label to "
+                    f"generate fresh, or add the songs afterwards with "
+                    f"'songbook replace --label {label} --with ...'."
+                )
+
             # Derive from primary (first by label sort: unlabeled first)
             base = existing[0]
             print(f"\nDeriving setlist from base ({base.get('date')}"
@@ -204,6 +225,7 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
                 setlist = generate_setlist(
                     songs, history, date, overrides, obs=obs, label=label,
                     event_type=et_slug, moments_config=moments_config,
+                    desired=desired_songs,
                 )
             except ValueError as e:
                 handle_error(str(e))
@@ -214,6 +236,7 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
             setlist = generate_setlist(
                 songs, history, date, overrides, obs=obs,
                 event_type=et_slug, moments_config=moments_config,
+                desired=desired_songs,
             )
         except ValueError as e:
             handle_error(str(e))
@@ -232,11 +255,20 @@ def run(date, override, pdf, no_save, output_dir, history_dir, output, verbose=F
     # event type's moments_order — `setlist.moments.items()` would otherwise
     # surface keys in the order postgres JSONB stored them in, which is not
     # the user-defined service order.
+    # The user named desired songs without saying where they go, so flag where
+    # the generator ended up putting each one.
+    desired_placed = {
+        song
+        for song_list in setlist.moments.values()
+        for song in song_list
+        if any(song.casefold() == d.casefold() for d in desired_songs)
+    }
     for moment in canonical_moment_order(setlist.moments, reference_config=moments_ref):
         song_list = setlist.moments[moment]
         print(f"\n{moment.upper()}:")
         for song in song_list:
-            print(f"  - {song}")
+            marker = "  (desired)" if song in desired_placed else ""
+            print(f"  - {song}{marker}")
 
     # Generate markdown
     markdown = format_setlist_markdown(setlist, songs, event_type_name=et_name, moments_order=et_moments_order)

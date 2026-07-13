@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from .config import GenerationConfig
+from .desired import plan_desired_songs
 from .event_type import filter_songs_for_event_type
 from .models import Song, Setlist
 from .ordering import apply_energy_ordering
@@ -54,6 +55,7 @@ class SetlistGenerator:
         self.config = config or GenerationConfig.from_defaults()
         self._recency_scores: dict[str, float] = {}
         self._already_selected: set[str] = set()
+        self._reserved: set[str] = set()
         self._moments: dict[str, list[str]] = {}
 
     @classmethod
@@ -97,6 +99,7 @@ class SetlistGenerator:
         label: str = "",
         event_type: str = "",
         moments_config: dict[str, int] | None = None,
+        desired: list[str] | None = None,
     ) -> Setlist:
         """
         Generate a complete setlist for all moments.
@@ -108,14 +111,29 @@ class SetlistGenerator:
             event_type: Optional event type slug for song filtering
             moments_config: Optional moments configuration override
                 (defaults to MOMENTS_CONFIG)
+            desired: Optional song titles that must appear in the setlist. Unlike
+                ``overrides``, the caller does not say which moment each song
+                goes in — the generator picks it (see :mod:`library.desired`) and
+                the song's position within that moment is left to energy ordering.
 
         Returns:
             Setlist object with selected songs
+
+        Raises:
+            ValueError: If a desired song is unknown, is not tagged for any
+                moment in this setlist, or if the desired set cannot fit.
         """
         effective_moments = moments_config or self.config.moments_config
 
         # Filter songs by event type if specified
         available = filter_songs_for_event_type(self.songs, event_type) if event_type else self.songs
+
+        # Resolve desired songs to moments before doing any work — an unknown
+        # song or an oversubscribed moment must abort the whole generation
+        # rather than silently produce a setlist that is missing a request.
+        desired_by_moment = plan_desired_songs(
+            desired or [], available, effective_moments, overrides,
+        )
 
         with self.obs.tracer.span("generate_setlist", date=date):
             self.obs.logger.info("Generating setlist", date=date, songs=len(available))
@@ -132,11 +150,18 @@ class SetlistGenerator:
                 # Reset state for new generation
                 self._already_selected = set()
                 self._moments = {}
+                self._reserved = {
+                    title for titles in desired_by_moment.values() for title in titles
+                }
 
                 # Generate songs for each moment using the event type's config
                 uses_custom_moments = moments_config is not None
                 for moment, count in effective_moments.items():
-                    self._generate_moment(moment, count, overrides, available, strict=uses_custom_moments)
+                    self._generate_moment(
+                        moment, count, overrides, available,
+                        strict=uses_custom_moments,
+                        desired=desired_by_moment.get(moment),
+                    )
 
             self.obs.metrics.counter("setlists_generated")
             self.obs.logger.info(
@@ -154,6 +179,7 @@ class SetlistGenerator:
         overrides: dict[str, list[str]] | None,
         songs: dict[str, Song] | None = None,
         strict: bool = False,
+        desired: list[str] | None = None,
     ) -> None:
         """
         Select and order songs for a specific moment.
@@ -164,20 +190,38 @@ class SetlistGenerator:
             overrides: Optional manual song overrides per moment
             songs: Available songs (defaults to self.songs)
             strict: If True, raise ValueError when no songs are tagged for this moment
+            desired: Songs assigned to this moment by ``plan_desired_songs``. They
+                are guaranteed a place, but not a position — see below.
         """
         available = songs if songs is not None else self.songs
         moment_overrides = overrides.get(moment) if overrides else None
         override_count = len(moment_overrides) if moment_overrides else 0
 
-        # Select songs using scoring algorithm
+        # `select_songs_for_moment` force-includes whatever it is handed here, so
+        # desired songs ride along with the overrides and can never be dropped in
+        # favour of an auto-picked song. `override_count` deliberately stays at
+        # the override total: energy ordering pins only that many leading songs,
+        # which leaves the desired songs to be sorted into the moment's energy arc
+        # alongside the auto-picked ones. Guaranteed inclusion, unpinned position.
+        forced = (moment_overrides or []) + (desired or [])
+
+        # Hide desired songs bound for *other* moments from this moment's
+        # candidate pool. A song tagged for both louvor and prelúdio but assigned
+        # to prelúdio would otherwise be fair game for louvor's auto-selection —
+        # and since louvor is generated first, a lucky roll would consume it,
+        # leaving prelúdio to silently skip it as "already selected". Reserving
+        # makes the assignment hold instead of depending on the random factor.
+        off_limits = self._already_selected | (self._reserved - set(desired or []))
+
         selected_with_energy = select_songs_for_moment(
             moment,
             count,
             available,
             self._recency_scores,
-            self._already_selected,  # Mutated internally
-            moment_overrides
+            off_limits,  # Scratch set — mutated internally, synced back below
+            forced or None,
         )
+        self._already_selected.update(title for title, _ in selected_with_energy)
 
         # Apply energy-based ordering (preserves override order)
         ordered_songs = apply_energy_ordering(
@@ -222,6 +266,7 @@ def generate_setlist(
     event_type: str = "",
     moments_config: dict[str, int] | None = None,
     config: GenerationConfig | None = None,
+    desired: list[str] | None = None,
 ) -> Setlist:
     """
     Generate a complete setlist for all moments.
@@ -239,6 +284,7 @@ def generate_setlist(
         event_type: Optional event type slug for song filtering
         moments_config: Optional moments configuration override
         config: Generation config (defaults to GenerationConfig.from_defaults())
+        desired: Optional song titles guaranteed to appear, placed automatically
 
     Returns:
         Setlist object with selected songs
@@ -247,4 +293,5 @@ def generate_setlist(
     return generator.generate(
         date, overrides, label=label,
         event_type=event_type, moments_config=moments_config,
+        desired=desired,
     )

@@ -112,9 +112,51 @@ songbook generate --date 2026-02-15 --pdf
 songbook generate --date 2026-02-15 --pdf --no-chords
 ```
 
+**Desired Songs (must-play, moment chosen for you):**
+
+Name songs you want in the setlist without deciding where they go. The generator
+picks the moment for each one and guarantees all of them make it in.
+
+```bash
+# "These three must be in Sunday's setlist — you figure out where"
+songbook generate --desired "Bondade de Deus, Precioso, Vou Seguir com Fé"
+
+# Short flag
+songbook generate -d "Oceanos, Hosana"
+```
+
+**How desired songs work:**
+- **Moment**: each song goes to the moment where it carries the highest tag
+  weight. A song tagged `louvor(7),prelúdio(2)` lands in louvor. Ties are broken
+  by service order.
+- **Fitting**: if a song's best moment is already full of other desired songs,
+  it falls back to another moment it's tagged for — and the generator will even
+  re-seat an already-placed song to make room, so a workable arrangement is
+  never missed.
+- **Position**: desired songs are sorted into their moment's energy arc along
+  with the auto-picked songs. An energy-4 song in louvor (which ascends 1→4)
+  naturally lands last. They are *not* pinned to the front.
+- **Names**: matched case-insensitively, so `"vou seguir com fé"` finds
+  `Vou Seguir Com Fé`.
+- **Errors**: the run aborts *before writing anything* if a song doesn't exist
+  (with close-match suggestions), isn't tagged for any moment in this setlist,
+  or if the whole set simply can't fit.
+
+**`--desired` vs `--override`:**
+
+| | `--desired "Song"` | `--override "moment:Song"` |
+|---|---|---|
+| You choose the moment | No — system does | Yes |
+| You choose the position | No — energy ordering does | Yes, pinned to the front |
+| Guaranteed in the setlist | Yes | Yes |
+
+Use `--desired` when you know *what* you want to sing; use `--override` when you
+also know *exactly where* it goes. They can be combined — overrides claim their
+slots first, and desired songs compete for what's left.
+
 **Using Overrides:**
 
-Force specific songs for any moment:
+Force specific songs into a specific moment:
 
 ```bash
 # Force "Oceanos" for one of the louvor songs
@@ -205,7 +247,8 @@ When using `-e`, the generator:
 | `--event-type TEXT`, `-e` | Event type slug (e.g., "youth"). Uses that type's moments and filters songs |
 | `--label TEXT`, `-l` | Setlist label for multiple setlists per date (e.g., "evening") |
 | `--replace N`, `-r` | Songs to replace when deriving (number or "all"). Requires `--label` |
-| `--override MOMENT:SONGS` | Force specific songs (can be used multiple times) |
+| `--desired "SONG1,SONG2"`, `-d` | Songs that must appear. The moment and position are chosen by the system. Errors if a song doesn't exist or the set can't fit. Not valid when deriving a labeled setlist from a base |
+| `--override MOMENT:SONGS` | Force specific songs into a named moment, pinned to the front (can be used multiple times) |
 | `--pdf` | Generate PDF in addition to markdown |
 | `--no-chords` | Combined with `--pdf`, also produce a lyrics-only PDF (no chords, no key suffixes). Filename gets a `_lyrics` suffix |
 | `--no-save` | Preview mode - don't save to history |

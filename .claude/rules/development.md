@@ -295,6 +295,61 @@ score = weight × (recency + 0.1) + random(0, 0.5)
 - Random factor adds variety: `random.uniform(0, 0.5)`
 - Overrides bypass scoring (user-specified songs)
 
+### desired.py
+**Purpose:** Place user-requested "must-play" songs into moments (`songbook generate --desired`)
+
+**Contents:**
+- `parse_desired(raw)` - Split the comma-separated CLI value into titles; trims blanks, collapses case-insensitive duplicates
+- `resolve_desired_songs(names, songs)` - Case-insensitive lookup returning `{canonical_title: Song}`. Raises `ValueError` listing **every** unmatched name at once, each with `difflib` close-match suggestions
+- `assign_desired_to_moments(desired, capacities)` - Assign each song to one of its tagged moments. Raises `ValueError` if the set cannot fit
+- `plan_desired_songs(names, songs, moments_config, overrides=None)` - The single entry point used by `generator.py`: resolve → discount override-consumed slots → assign
+
+**Key algorithm — bipartite matching, not greedy:**
+
+Each song ranks its eligible moments by tag weight (descending), ties broken by
+service order. `_seat()` is Kuhn's augmenting-path step: it walks a song's moments
+in preference order, takes the first with a free slot, and — when a preferred
+moment is full — asks a current occupant to relocate rather than giving up.
+
+A plain greedy pass is *wrong* here. Two songs both tagged `prelúdio` + `poslúdio`,
+where the second is prelúdio-only-preferred: greedy seats the first in prelúdio
+(1 slot) and then declares the second unfittable, even though poslúdio is empty and
+the first song could have gone there. The augmenting path re-seats the first. The
+`visited` set prevents cycling between moments while searching for that rearrangement.
+
+**Why `--desired` is not just `--override`:**
+
+| | `--desired` | `--override` |
+|---|---|---|
+| Moment | Chosen by `assign_desired_to_moments` | Named by the user |
+| Position | Energy ordering decides | Pinned to the front |
+| Counted in `override_count` | **No** | Yes |
+
+That last row is the whole trick. `generator._generate_moment` passes
+`overrides + desired` to `select_songs_for_moment` (so both are force-included and
+can never be dropped), but passes only `len(overrides)` as `apply_energy_ordering`'s
+`override_count`. Energy ordering pins that many leading songs and sorts the rest —
+so desired songs are guaranteed a place, but flow into the moment's energy arc.
+Neither `selector.py` nor `ordering.py` needed changes.
+
+**Reservation invariant (`generator._reserved`):**
+
+Moments generate in config order and share one `_already_selected` set. A song
+tagged for both `louvor` and `prelúdio` but *assigned* to prelúdio would otherwise be
+fair game for louvor's auto-selection — and since louvor generates first, a lucky roll
+of the random factor would consume it, leaving prelúdio to silently skip it as
+"already selected". `_generate_moment` therefore hides desired songs bound for other
+moments from the current moment's candidate pool, passing a scratch exclusion set and
+syncing `_already_selected` from the result afterwards.
+
+**When to modify:**
+- Changing how a song's preferred moment is chosen (weight → something else)
+- Allowing desired songs to *expand* a moment beyond its configured count
+- Supporting `--desired` on the derivation path (today it is rejected — `derive_setlist`
+  copies from a base rather than running selection, so there is no assignment step)
+
+---
+
 ### ordering.py
 **Purpose:** Energy-based song ordering
 

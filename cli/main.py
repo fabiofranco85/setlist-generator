@@ -88,7 +88,8 @@ def cli(ctx, verbose):
 @click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label (for multiple setlists per date)")
 @click.option("--event-type", "-e", default="", help="Event type slug (e.g., youth)")
 @click.option("--replace", "-r", "replace_count", default=None, help="Songs to replace when deriving (number or 'all', default: random)")
-@click.option("--override", multiple=True, help="Force songs: MOMENT:SONG1,SONG2")
+@click.option("--override", multiple=True, help="Force songs into a moment: MOMENT:SONG1,SONG2")
+@click.option("--desired", "-d", default="", help="Songs that must appear: SONG1,SONG2 (moment chosen automatically)")
 @click.option("--pdf", is_flag=True, help="Generate PDF output")
 @click.option("--no-chords", is_flag=True, default=False, help="When combined with --pdf, generate a lyrics-only PDF for non-musicians")
 @click.option("--no-save", is_flag=True, help="Dry run (don't save to history)")
@@ -97,7 +98,7 @@ def cli(ctx, verbose):
 @click.option("--history-dir", help="Custom history directory")
 @click.option("--output", help="Custom output filename")
 @click.pass_context
-def generate(ctx, date, label, event_type, replace_count, override, pdf, no_chords, no_save, yes, output_dir, history_dir, output):
+def generate(ctx, date, label, event_type, replace_count, override, desired, pdf, no_chords, no_save, yes, output_dir, history_dir, output):
     """Generate new setlist for a service date.
 
     \b
@@ -105,6 +106,7 @@ def generate(ctx, date, label, event_type, replace_count, override, pdf, no_chor
       songbook generate
       songbook generate --date 2026-02-15 --pdf
       songbook generate --date 2026-02-15 --pdf --no-chords  # lyrics-only PDF
+      songbook generate --desired "Bondade de Deus, Precioso"  # must-play songs
       songbook generate --override "louvor:Oceanos,Santo Pra Sempre"
       songbook generate --label evening                  # derive from primary
       songbook generate --label evening --replace 3      # derive replacing 3 songs
@@ -114,7 +116,7 @@ def generate(ctx, date, label, event_type, replace_count, override, pdf, no_chor
     from cli.commands.generate import run
     run(date, override, pdf, no_save, output_dir, history_dir, output,
         verbose=ctx.obj.get("verbose", False), label=label, replace_count=replace_count,
-        event_type=event_type, no_chords=no_chords, yes=yes)
+        event_type=event_type, no_chords=no_chords, yes=yes, desired=desired)
 
 
 @cli.command("view-setlist")
