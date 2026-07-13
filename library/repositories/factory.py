@@ -4,12 +4,20 @@ This module provides the factory pattern for instantiating repositories
 based on the configured storage backend. The backend is determined by:
 1. Explicit parameter to get_repositories()
 2. STORAGE_BACKEND environment variable
-3. Default: "filesystem"
+3. Default: "postgres"
+
+PostgreSQL is the source of truth for this project — the repo ships no
+database.csv / chords/ / history/ data. The filesystem backend remains fully
+supported (and is what the test suite runs against, via temporary fixtures),
+but it must now be requested explicitly: `STORAGE_BACKEND=filesystem` or
+`get_repositories(backend="filesystem")`. Defaulting to it would silently serve
+an empty repertoire from a directory that no longer exists, which is a worse
+failure than a missing DATABASE_URL.
 
 Example:
-    >>> repos = get_repositories()  # Uses STORAGE_BACKEND env var or default
+    >>> repos = get_repositories()  # postgres, unless STORAGE_BACKEND says otherwise
     >>> repos = get_repositories(backend="filesystem")  # Explicit filesystem
-    >>> repos = get_repositories(backend="postgres", database_url="...")  # Future
+    >>> repos = get_repositories(backend="postgres", database_url="...")
 """
 
 import os
@@ -125,7 +133,8 @@ def get_repositories(
 
     Args:
         backend: Storage backend name. If None, reads from STORAGE_BACKEND
-                 environment variable, defaulting to "filesystem".
+                 environment variable, defaulting to "postgres" (the source of
+                 truth for this project).
         base_path: Base path for filesystem operations (default: current directory).
                    Used by filesystem backend for locating database.csv and chords/.
         history_dir: Path to history directory. If None, uses default from config.
@@ -137,7 +146,7 @@ def get_repositories(
         RepositoryContainer with all repository instances
 
     Examples:
-        # Use default filesystem backend
+        # Use the default postgres backend (needs DATABASE_URL)
         >>> repos = get_repositories()
         >>> songs = repos.songs.get_all()
 
@@ -148,15 +157,16 @@ def get_repositories(
         ...     history_dir=Path("/data/history"),
         ... )
 
-        # Future: PostgreSQL backend
+        # Explicit PostgreSQL
         >>> repos = get_repositories(
         ...     backend="postgres",
         ...     database_url="postgresql://user:pass@host/db",
         ... )
     """
-    # Determine backend
+    # Determine backend. Defaults to postgres: this project's data lives there,
+    # and the repo carries no filesystem dataset to fall back to.
     if backend is None:
-        backend = os.getenv("STORAGE_BACKEND", "filesystem")
+        backend = os.getenv("STORAGE_BACKEND", "postgres")
 
     # Set up common filesystem paths if not provided
     if base_path is None:

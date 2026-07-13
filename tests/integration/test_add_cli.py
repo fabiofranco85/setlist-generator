@@ -19,7 +19,7 @@ from cli.main import cli
 @pytest.fixture()
 def project(tmp_project, monkeypatch) -> Path:
     """tmp_project rooted as cwd with no env-var contamination."""
-    monkeypatch.delenv("STORAGE_BACKEND", raising=False)
+    monkeypatch.setenv("STORAGE_BACKEND", "filesystem")
     monkeypatch.delenv("SETLIST_OUTPUT_DIR", raising=False)
     monkeypatch.delenv("SETLIST_HISTORY_DIR", raising=False)
     monkeypatch.delenv("DATABASE_URL", raising=False)

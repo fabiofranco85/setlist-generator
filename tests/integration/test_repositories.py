@@ -293,7 +293,7 @@ class TestFilesystemOutputRepository:
 
 class TestGetRepositories:
     def test_default_filesystem(self, tmp_project, monkeypatch):
-        monkeypatch.delenv("STORAGE_BACKEND", raising=False)
+        monkeypatch.setenv("STORAGE_BACKEND", "filesystem")
         monkeypatch.delenv("SETLIST_OUTPUT_DIR", raising=False)
         monkeypatch.delenv("SETLIST_HISTORY_DIR", raising=False)
         repos = get_repositories(base_path=tmp_project)

@@ -47,7 +47,7 @@ def youth_project(tmp_path: Path, monkeypatch) -> Path:
     any code path that silently canonicalizes will flip it to
     ``["louvor", "final"]`` and be caught by the assertions below.
     """
-    monkeypatch.delenv("STORAGE_BACKEND", raising=False)
+    monkeypatch.setenv("STORAGE_BACKEND", "filesystem")
     monkeypatch.delenv("SETLIST_OUTPUT_DIR", raising=False)
     monkeypatch.delenv("SETLIST_HISTORY_DIR", raising=False)
     monkeypatch.delenv("DATABASE_URL", raising=False)

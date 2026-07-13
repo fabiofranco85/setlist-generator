@@ -16,7 +16,7 @@ from library.repositories import get_repositories
 class TestGenerationWorkflow:
     @pytest.fixture()
     def repos(self, tmp_project, monkeypatch):
-        monkeypatch.delenv("STORAGE_BACKEND", raising=False)
+        monkeypatch.setenv("STORAGE_BACKEND", "filesystem")
         monkeypatch.delenv("SETLIST_OUTPUT_DIR", raising=False)
         monkeypatch.delenv("SETLIST_HISTORY_DIR", raising=False)
         return get_repositories(base_path=tmp_project)
@@ -88,7 +88,7 @@ class TestLabeledGenerationWorkflow:
 
     @pytest.fixture()
     def repos(self, tmp_project, monkeypatch):
-        monkeypatch.delenv("STORAGE_BACKEND", raising=False)
+        monkeypatch.setenv("STORAGE_BACKEND", "filesystem")
         monkeypatch.delenv("SETLIST_OUTPUT_DIR", raising=False)
         monkeypatch.delenv("SETLIST_HISTORY_DIR", raising=False)
         return get_repositories(base_path=tmp_project)

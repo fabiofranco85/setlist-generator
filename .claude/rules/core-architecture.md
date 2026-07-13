@@ -14,10 +14,11 @@ Consequences when working in this codebase:
 - Never instruct a user (or yourself) to edit `database.csv` or `chords/*.md`.
   Route through `repos.songs.*` — i.e. `songbook add`, `edit`, `weights`,
   `youtube links`.
-- The filesystem backend **code** is intact and still the default when
-  `STORAGE_BACKEND` is unset. It has no data here, so it fails loudly with
-  "Song database not found". Tests exercise it against `tmp_project` fixtures,
-  which is why the suite still passes.
+- **`postgres` is the default backend** (`factory.py`); `DATABASE_URL` is
+  required. The filesystem backend **code** is intact and still exercised by the
+  test suite against `tmp_project` fixtures, but it must be requested explicitly
+  (`STORAGE_BACKEND=filesystem`) and has no data here, so it fails with "Song
+  database not found".
 - `output/` is untouched: markdown/PDF output is always written to the
   filesystem, even on the postgres backend.
 - The CSV/JSON layouts described below document the *filesystem backend's*
@@ -392,11 +393,11 @@ Edit `ENERGY_ORDERING_ENABLED` or `ENERGY_ORDERING_RULES` in `library/config.py`
 
 The repository pattern provides a clean abstraction for data access with pluggable backends:
 
-- **filesystem** (default): CSV + JSON files, zero external dependencies
+- **filesystem**: CSV + JSON files, zero external dependencies (explicit opt-in)
 - **postgres**: PostgreSQL database, requires `psycopg[binary,pool]>=3.1`
 - **supabase**: Supabase multi-tenant Postgres + Auth + RLS, requires `supabase>=2.0` (paired with the SaaS API in `api/`)
 
-Backend is selected via `STORAGE_BACKEND` env var (default: `filesystem`).
+Backend is selected via `STORAGE_BACKEND` env var (default: `postgres`).
 - PostgreSQL also requires `DATABASE_URL`.
 - Supabase also requires `SUPABASE_URL` and `SUPABASE_KEY`.
 
@@ -407,7 +408,7 @@ Output storage is independent: filesystem ships with all data backends; the SaaS
 ```python
 from library import get_repositories, SetlistGenerator
 
-# Get repositories (uses STORAGE_BACKEND env var, default: filesystem)
+# Get repositories (uses STORAGE_BACKEND env var, default: postgres)
 repos = get_repositories()
 
 # Create generator from repositories
@@ -530,6 +531,6 @@ transposed = transpose_content(song.content, semitones, use_flats)
 - Standard library plus `click` (CLI) and `reportlab` (PDF generation) — both pulled in by `uv sync`
 - `simple-term-menu` — interactive song picker used by `view-song`, `info`, and `replace --pick`
 - YouTube integration: `google-api-python-client`, `google-auth-oauthlib`, `google-auth-httplib2`
-- Optional: `psycopg[binary,pool]>=3.1` for PostgreSQL backend (`uv sync --group postgres`)
+- `psycopg[binary,pool]>=3.1` — PostgreSQL driver, a core dependency (postgres is the default backend)
 - Optional SaaS layer (`uv sync --group saas`): `supabase>=2.0`, `boto3>=1.28`, `fastapi>=0.115`, `uvicorn>=0.30`
 - Optional: `uv` for package management

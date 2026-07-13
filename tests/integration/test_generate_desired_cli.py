@@ -50,7 +50,8 @@ ENERGIES = {
 
 @pytest.fixture()
 def project(tmp_path, monkeypatch) -> Path:
-    for name in ("STORAGE_BACKEND", "SETLIST_OUTPUT_DIR", "SETLIST_HISTORY_DIR", "DATABASE_URL"):
+    monkeypatch.setenv("STORAGE_BACKEND", "filesystem")
+    for name in ("SETLIST_OUTPUT_DIR", "SETLIST_HISTORY_DIR", "DATABASE_URL"):
         monkeypatch.delenv(name, raising=False)
 
     (tmp_path / "chords").mkdir()

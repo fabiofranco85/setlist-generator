@@ -26,7 +26,7 @@ def project(tmp_project, monkeypatch) -> Path:
     backend/path env vars (so the developer's .env-driven postgres backend isn't
     used) and chdir into the temp project so database.csv/history resolve there.
     """
-    monkeypatch.delenv("STORAGE_BACKEND", raising=False)
+    monkeypatch.setenv("STORAGE_BACKEND", "filesystem")
     monkeypatch.delenv("SETLIST_OUTPUT_DIR", raising=False)
     monkeypatch.delenv("SETLIST_HISTORY_DIR", raising=False)
     monkeypatch.delenv("DATABASE_URL", raising=False)

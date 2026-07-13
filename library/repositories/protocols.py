@@ -5,7 +5,7 @@ must follow. Using Protocol enables structural subtyping - any class that implem
 the required methods satisfies the protocol without explicit inheritance.
 
 Backends:
-- Filesystem (default): CSV + JSON files (current behavior)
+- Filesystem: CSV + JSON files (must be requested explicitly)
 - PostgreSQL/Supabase: SQL database
 - S3: Object storage for chord files and outputs (cloud)
 """

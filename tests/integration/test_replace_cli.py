@@ -35,7 +35,7 @@ def project(tmp_project, monkeypatch) -> Path:
     The fixture monkeypatches the storage backend to filesystem-on-tmp so
     the CLI doesn't pick up the developer's real history during tests.
     """
-    monkeypatch.delenv("STORAGE_BACKEND", raising=False)
+    monkeypatch.setenv("STORAGE_BACKEND", "filesystem")
     monkeypatch.delenv("SETLIST_OUTPUT_DIR", raising=False)
     monkeypatch.delenv("SETLIST_HISTORY_DIR", raising=False)
     monkeypatch.delenv("DATABASE_URL", raising=False)

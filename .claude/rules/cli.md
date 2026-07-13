@@ -438,7 +438,7 @@ VISUAL=vim songbook edit "Oceanos"
 4. `vim`
 
 **Behavior:**
-- **Filesystem backend (default):** Opens `chords/<title>.md` *in place*. After the editor exits, the song cache is invalidated so subsequent commands (`view-song`, `transpose`, `pdf`, ...) immediately see the changes.
+- **Filesystem backend:** Opens `chords/<title>.md` *in place*. After the editor exits, the song cache is invalidated so subsequent commands (`view-song`, `transpose`, `pdf`, ...) immediately see the changes.
 - **Other backends (postgres, supabase):** Round-trips the current content through a temporary file, then writes it back via `repos.songs.update_content()`.
 - **Missing chord file:** If the song exists in `database.csv` but has no chord file yet, a stub `### Title ()\n\n` heading is created so the editor opens on a real file. The CLI prints a "Created" notice in that case.
 - **No changes:** If the file is saved unchanged, the CLI prints `No changes made.` and exits cleanly.

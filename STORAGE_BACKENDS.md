@@ -6,15 +6,15 @@ The setlist generator uses a **repository pattern** to abstract data access, all
 
 | Backend | Storage | Dependencies | Best For |
 |---------|---------|--------------|----------|
-| `filesystem` (default) | CSV + JSON + `.md` files | None (built-in) | Local use, single user |
+| `filesystem` | CSV + JSON + `.md` files | None (built-in) | Local use, single user (explicit opt-in) |
 | `postgres` | PostgreSQL database | `psycopg[binary,pool]` | Teams, servers, web apps |
 | `supabase` | Supabase (Postgres + Auth + RLS) | `supabase>=2.0` | Multi-tenant SaaS deployments (paired with the FastAPI layer in `api/`) |
 
-The backend is selected via the `STORAGE_BACKEND` environment variable (default: `filesystem`). All CLI commands and programmatic APIs work identically regardless of backend.
+The backend is selected via the `STORAGE_BACKEND` environment variable (default: `postgres`). All CLI commands and programmatic APIs work identically regardless of backend.
 
 **Output storage is independent.** All three data backends ship with a filesystem `OutputRepository` for markdown/PDF files. The SaaS API layer can additionally use an **S3-compatible** `CloudOutputRepository` (`library/repositories/s3/`, requires `boto3>=1.28`) to store outputs in AWS S3, Cloudflare R2, or MinIO — see `.claude/rules/api.md` for the cloud deployment story.
 
-## Filesystem Backend (Default)
+## Filesystem Backend
 
 The filesystem backend stores data as plain files in the project directory. No extra setup is needed.
 
@@ -48,7 +48,7 @@ The PostgreSQL backend stores songs, tags, history, and configuration in a relat
 
 ```bash
 # Install the optional PostgreSQL dependency group
-uv sync --group postgres
+uv sync
 ```
 
 ### Database Setup
@@ -185,7 +185,7 @@ repos.history.save(setlist)
 The `psycopg` package is not installed. Run:
 
 ```bash
-uv sync --group postgres
+uv sync
 ```
 
 #### "No database URL provided"

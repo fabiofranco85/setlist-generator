@@ -56,7 +56,7 @@ An intelligent setlist generator for church worship services that automatically 
    - ✓ Installs the songbook package in editable mode
    - ✓ Creates an isolated virtual environment
 
-   For PostgreSQL backend support, add `--group postgres` (see [Storage Backends](./STORAGE_BACKENDS.md)).
+   This includes the PostgreSQL driver — postgres is the default backend and the source of truth (see [Storage Backends](./STORAGE_BACKENDS.md)).
 
 That's it! The `songbook` command is now available.
 
@@ -591,13 +591,13 @@ By default, the generator stores all data as local files (CSV, JSON, markdown). 
 
 | Backend | Data Storage | Best For |
 |---------|-------------|----------|
-| `filesystem` (default) | CSV + JSON + `.md` files | Local use, single user |
+| `filesystem` | CSV + JSON + `.md` files | Local use, single user (explicit opt-in) |
 | `postgres` | PostgreSQL database | Teams, servers, web apps |
 
 **Quick setup (PostgreSQL):**
 
 ```bash
-uv sync --group postgres
+uv sync
 psql $DATABASE_URL -f scripts/schema.sql
 python scripts/migrate_to_postgres.py --database-url $DATABASE_URL
 STORAGE_BACKEND=postgres DATABASE_URL=... songbook generate
@@ -616,7 +616,7 @@ The repository pattern provides a clean abstraction for data access, enabling ba
 ```python
 from library import get_repositories, SetlistGenerator
 
-# Get repositories (uses STORAGE_BACKEND env var, default: filesystem)
+# Get repositories (uses STORAGE_BACKEND env var, default: postgres)
 repos = get_repositories()
 
 # Create generator from repositories

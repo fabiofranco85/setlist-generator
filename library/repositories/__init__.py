@@ -3,7 +3,7 @@
 This module provides a clean abstraction layer for data access, allowing
 the application to switch between different storage backends:
 
-- **filesystem** (default): CSV files + JSON files (current behavior)
+- **filesystem**: CSV files + JSON files (must be requested explicitly)
 - **postgres**: PostgreSQL database (requires psycopg)
 - **supabase**: Supabase multi-tenant Postgres + Auth + RLS (requires supabase)
 
@@ -14,7 +14,7 @@ Usage:
     >>> history = repos.history.get_all()
 
 Configuration via environment variables:
-    STORAGE_BACKEND=filesystem  # Default (CSV + JSON files)
+    STORAGE_BACKEND=postgres    # Default (PostgreSQL — source of truth)
     STORAGE_BACKEND=postgres    # PostgreSQL
     STORAGE_BACKEND=supabase    # Supabase multi-tenant (paired with the SaaS API in api/)
 

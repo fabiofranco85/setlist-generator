@@ -11,6 +11,10 @@ dependencies = [
     "google-api-python-client>=2.100.0",
     "google-auth-oauthlib>=1.1.0",
     "google-auth-httplib2>=0.2.0",
+    # PostgreSQL is the default storage backend and this project's source of
+    # truth, so its driver is a core dependency — `uv sync` must produce a
+    # working `songbook`, not one that fails on the default backend.
+    "psycopg[binary,pool]>=3.1",
 ]
 
 [project.scripts]
@@ -31,9 +35,6 @@ dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
-]
-postgres = [
-    "psycopg[binary,pool]>=3.1",
 ]
 saas = [
     "supabase>=2.0",
