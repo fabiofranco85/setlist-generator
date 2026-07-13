@@ -462,11 +462,11 @@ songbook transpose "Lugar Secreto" --to A
 
 **Options:**
 - `--to KEY` - Required: Target key (e.g. G, Bb, F#m)
-- `--save` - Overwrite `chords/<song>.md` with transposed content
+- `--save` - Persist the transposed content through the active storage backend
 
 **Behavior:**
-- **Default (no `--save`)**: Preview mode — shows transposed output without modifying files
-- **With `--save`**: Overwrites the chord file in place with transposed content
+- **Default (no `--save`)**: Preview mode — shows transposed output without modifying anything
+- **With `--save`**: Persists the transposed content via `repos.songs.update_content()`, so it routes to whatever `STORAGE_BACKEND` is configured — the filesystem backend rewrites `chords/<song>.md` in place, while postgres/supabase update the song's stored content. It never writes a `chords/<song>.md` file when the backend isn't filesystem.
 - **Same key**: Detects when song is already in target key, shows "Already in X" message
 - **Quality inference**: If original key is minor (Bm) and target is major (G), automatically transposes to the minor equivalent (Gm) to preserve sharp/flat conventions
 - **Column alignment**: Chord positions are preserved relative to lyrics; longer chords get minimum 1-space gap

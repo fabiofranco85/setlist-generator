@@ -323,7 +323,7 @@ scope for this command — do that via `database.csv` or your storage backend.
 **Transpose a song:**
 ```bash
 songbook transpose "Oceanos" --to G          # Preview only
-songbook transpose "Oceanos" --to G --save   # Overwrite chord file
+songbook transpose "Oceanos" --to G --save   # Persist via the active backend
 songbook view-song "Oceanos" --transpose G   # View transposed (always dry)
 ```
 

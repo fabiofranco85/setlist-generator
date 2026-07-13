@@ -2,8 +2,6 @@
 Transpose command - display a song transposed to a different key.
 """
 
-from pathlib import Path
-
 from library import get_repositories
 from library.transposer import (
     calculate_semitones,
@@ -133,10 +131,11 @@ def run(song_name: str, to_key: str, save: bool = False):
         print("(No chord content available)")
     print()
 
-    # Save transposed content to chord file
+    # Persist transposed content through the repository so it routes to the
+    # configured backend (filesystem chord file, postgres UPDATE, ...) instead
+    # of writing chords/<song>.md directly regardless of STORAGE_BACKEND.
     if save and semitones != 0:
-        chord_file = Path.cwd() / "chords" / f"{song_name}.md"
-        chord_file.write_text(transposed, encoding="utf-8")
-        print(f"Saved transposed chords to {chord_file}")
+        repos.songs.update_content(song_name, transposed)
+        print(f"Saved transposed chords for '{song_name}'.")
     elif save and semitones == 0:
         print(f"Nothing to save — song is already in {to_key}.")
