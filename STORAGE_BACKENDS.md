@@ -89,28 +89,24 @@ uv sync
 
 ### Migrating Existing Data
 
-If you have existing data in `database.csv`, `chords/`, and `history/`, migrate it to PostgreSQL:
+> **The filesystem → PostgreSQL migration is complete and its scripts have been
+> removed.** This repository ships no `database.csv`, `chords/`, or `history/`
+> data; PostgreSQL is the source of truth. `scripts/migrate_to_postgres.py` and
+> `scripts/migrate_chords_to_postgres.py` read those deleted directories, so
+> they could only fail — they were deleted rather than left as traps.
+
+To populate a **fresh** database, apply the schema and add songs through the CLI
+(`songbook add`), which writes straight to the active backend:
 
 ```bash
-python scripts/migrate_to_postgres.py --database-url postgresql://user:pass@localhost/songbook
+psql $DATABASE_URL -f scripts/schema.sql
+songbook add "Song Title" --energy 2 --tags "louvor(4)"
 ```
 
-Options:
-
-| Flag | Description |
-|------|-------------|
-| `--database-url URL` | PostgreSQL connection string (or set `DATABASE_URL` env var) |
-| `--apply-schema` | Run `scripts/schema.sql` before migrating |
-| `--base-path PATH` | Project root directory (auto-detected by default) |
-
-The migration script is **idempotent** — all operations use `ON CONFLICT DO UPDATE`, so it's safe to re-run after adding new songs or history.
-
-**Combined setup and migration:**
+If you need the old importers, they are in git history:
 
 ```bash
-python scripts/migrate_to_postgres.py \
-  --database-url postgresql://user:pass@localhost/songbook \
-  --apply-schema
+git show 775dbc7:scripts/migrate_to_postgres.py
 ```
 
 ### Configuration
@@ -220,11 +216,14 @@ psql $DATABASE_URL -f scripts/schema.sql
 
 #### Data out of sync
 
-If songs or history seem outdated after editing `database.csv`, re-run the migration:
+There is no longer a second copy to fall out of sync with — PostgreSQL is the
+only source of truth, and `database.csv` / `chords/` no longer exist. Edits made
+through `songbook add`, `edit`, `weights`, and `youtube links` land in the
+database directly.
 
-```bash
-python scripts/migrate_to_postgres.py --database-url $DATABASE_URL
-```
+If a command still shows stale data, it is the in-process song cache, not the
+store: the repositories cache songs and config for the life of the process, so
+start a new `songbook` invocation.
 
 ## Supabase Backend
 

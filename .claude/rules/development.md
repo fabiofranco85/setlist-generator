@@ -258,7 +258,7 @@ The `supabase` backend powers the SaaS API layer in `api/`. Output repositories 
 **PostgreSQL backend details:**
 - Install: `uv sync` — `psycopg[binary,pool]>=3.1` is a core dependency (postgres is the default backend)
 - Schema: `scripts/schema.sql` (run with `psql $DATABASE_URL -f scripts/schema.sql`)
-- Migration: `python scripts/migrate_to_postgres.py --database-url $DATABASE_URL`
+- Migration: the filesystem → postgres importers were one-shot and have been deleted (see `.claude/rules/data-maintenance.md`); populate a fresh DB with `schema.sql` + `songbook add`
 - Songs + tags are cached in memory (same as filesystem); history is NOT cached
 - Config falls back to Python constants for missing keys
 - Output always uses `FilesystemOutputRepository` (files are always local)

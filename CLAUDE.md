@@ -172,8 +172,7 @@ instructions for this repo's data.
 │   ├── supabase_schema.sql     # Supabase multi-tenant schema + RLS
 │   ├── supabase_seed.sql       # System config seed data
 │   ├── migrate_event_types.sql    # Event types migration (existing DBs)
-│   ├── migrate_moments_order.sql  # Add moments_order column (existing DBs)
-│   └── migrate_to_postgres.py     # Filesystem → PostgreSQL migration
+│   └── migrate_moments_order.sql  # Add moments_order column (existing DBs)
 └── cli/                         # CLI interface
     ├── main.py                 # Entry point
     ├── picker.py               # Interactive song picker (searchable menu)
@@ -494,11 +493,11 @@ longer has.
 # Driver ships with the core install
 uv sync
 
-# Apply schema
+# Apply schema to a fresh database
 psql $DATABASE_URL -f scripts/schema.sql
 
-# Migrate existing data
-python scripts/migrate_to_postgres.py --database-url $DATABASE_URL
+# Add songs through the CLI — it writes straight to the active backend
+songbook add "Song Title" --energy 2 --tags "louvor(4)"
 
 # DATABASE_URL is all that's needed; the backend already defaults to postgres
 DATABASE_URL=postgresql://user:pass@host/db songbook generate --date 2026-03-15

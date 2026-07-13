@@ -598,9 +598,8 @@ By default, the generator stores all data as local files (CSV, JSON, markdown). 
 
 ```bash
 uv sync
-psql $DATABASE_URL -f scripts/schema.sql
-python scripts/migrate_to_postgres.py --database-url $DATABASE_URL
-STORAGE_BACKEND=postgres DATABASE_URL=... songbook generate
+psql $DATABASE_URL -f scripts/schema.sql   # fresh database only
+DATABASE_URL=... songbook generate          # postgres is the default backend
 ```
 
 For complete setup instructions, see **[Storage Backends Guide (STORAGE_BACKENDS.md)](./STORAGE_BACKENDS.md)**.

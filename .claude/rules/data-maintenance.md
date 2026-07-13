@@ -114,18 +114,26 @@ Adds the `moments_order` column to existing `event_types` tables (introduced by 
 
 Helper SQL for setting Supabase RLS context (`current_setting('app.org_id', true)::UUID`).
 
-### scripts/migrate_to_postgres.py
+### scripts/migrate_to_postgres.py, scripts/migrate_chords_to_postgres.py — **DELETED**
 
-One-shot migration of filesystem data (`database.csv`, `chords/`, `history/`, `event_types.json`) into PostgreSQL. Idempotent — uses `ON CONFLICT DO UPDATE` everywhere.
+Both were one-shot filesystem → PostgreSQL importers: the first loaded
+`database.csv` / `chords/` / `history/` / `event_types.json`, the second
+backfilled `songs.content` from `chords/*.md`.
+
+They were **deleted** once the migration completed and PostgreSQL became the
+sole source of truth. The directories they read no longer exist in this repo, so
+both could only ever fail — leaving them in place would have been a trap for
+anyone (human or agent) who found them and assumed they still worked.
+
+Recover from git history if ever needed:
 
 ```bash
-python scripts/migrate_to_postgres.py --database-url postgresql://user:pass@host/db
-python scripts/migrate_to_postgres.py --database-url $DATABASE_URL --apply-schema
+git show 775dbc7:scripts/migrate_to_postgres.py
+git show 775dbc7:scripts/migrate_chords_to_postgres.py
 ```
 
-### scripts/migrate_chords_to_postgres.py
-
-Backfills `songs.content` (chord markdown) from `chords/*.md` into PostgreSQL. Useful when the schema migration ran before the chord files were imported.
+To populate a fresh database, apply `scripts/schema.sql` and add songs via
+`songbook add`, which writes straight to the active backend.
 
 ### migrate_folders.py (project root)
 
