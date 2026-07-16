@@ -56,6 +56,7 @@ def cli(ctx, verbose):
     Core Commands:
       generate       Generate new setlist for a service date
       view-setlist   View generated setlist (markdown format)
+      setlists       Browse generated setlists (view, delete, re-use)
       view-song      View song lyrics, chords, and metadata
       browse         Browse the repertoire song by song
       info           Show detailed statistics for a song
@@ -163,6 +164,23 @@ def view_song(song_name, list, no_metadata, transpose_to):
     """
     from cli.commands.view_song import run
     run(song_name, list, no_metadata, transpose_to)
+
+
+@cli.command()
+def setlists():
+    """Browse generated setlists (view, delete, re-use).
+
+    \b
+    Lists every setlist newest-first, labeled or not. Pick one to read its
+    songs in a pager (q to come back). Press d to delete it (with
+    confirmation), or r to re-use it on a new date. Esc/q quits.
+
+    \b
+    Examples:
+      songbook setlists
+    """
+    from cli.commands.setlists import run
+    run()
 
 
 @cli.command()

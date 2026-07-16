@@ -35,6 +35,7 @@ songbook view-setlist --label evening  # View labeled setlist
 songbook view-song "Oceanos"         # View song details
 songbook view-song                   # Interactive song picker
 songbook browse                      # Browse repertoire: list → read → back → repeat
+songbook setlists                    # Browse setlists: view, d to delete, r to re-use
 songbook info "Oceanos"              # Song statistics and history
 songbook info                        # Interactive picker → statistics
 songbook add                         # Add a new song (interactive), then open editor
@@ -282,6 +283,80 @@ Displays:
 - Fuzzy matching for typos and partial names
 - Transposition preserves chord-lyric column alignment
 - Minor/major quality inferred from original key (e.g., `--transpose G` on a Bm song transposes to Gm)
+
+---
+
+### songbook setlists
+
+Browse generated setlists — the setlist counterpart of `songbook browse`.
+Lists every setlist newest-first and keeps the picker open so you can inspect
+one, come back, and act on another.
+
+**Usage:**
+```bash
+songbook setlists
+```
+
+**Options:** none.
+
+**Keys:**
+
+| Key | Action |
+|-----|--------|
+| `Enter` | View the setlist's songs (with keys) in a pager; `q` returns to the list |
+| `d` | Delete the setlist — history record + all output files — after confirming |
+| `r` | Re-use the setlist: prompts for a date and optional label, copies the same songs |
+| `/` | Search the list |
+| `Esc` / `q` | Quit |
+
+**Listing:**
+- Rows render as `DATE  LABEL  N songs  [event-type]`; the label column is
+  blank for unlabeled setlists and the `[event-type]` suffix only appears for
+  non-default types.
+- Order is newest-first, taken straight from `repos.history.get_all()`, which
+  already sorts by date descending. Labeled and unlabeled setlists are listed
+  together — a date with two labeled variants shows two rows.
+
+**Delete (`d`):**
+- Prompts `[y/N]` — the default is *no*, so a stray Enter keeps the setlist.
+- Deletes the history record first, then output files, matching the ordering
+  (and rationale) of `songbook delete`: a partial failure then leaves outputs
+  findable by filename.
+- Deleting the last remaining setlist exits cleanly rather than reopening an
+  empty picker.
+
+**Re-use (`r`):**
+- Prompts for a **date** (required, `YYYY-MM-DD`) and an **optional label**.
+  Invalid input re-prompts rather than aborting — a typo must not tear down
+  the browse loop. Blank date cancels.
+- Dates are lenient on input and canonical on output: `2026-2-15` is accepted
+  and normalized to `2026-02-15`; `2026-02-30` is rejected (real calendar
+  validation, not a regex).
+- **Inherits the source's event type.** Re-using a `ceia` setlist produces
+  another `ceia` setlist, routed to `output/ceia/`. The prompt only asks for
+  date + label, so the event type is carried over rather than re-chosen.
+- **Overwrite guard**: a target `(date, label, event_type)` that already
+  exists prompts before clobbering — the same hazard `generate` guards with
+  `--yes`. Identity includes the event type, so re-using onto a date that has
+  a `main` setlist does *not* collide with a `ceia` one.
+- Copies the song lists (not aliases them), saves history, then regenerates
+  markdown. If markdown generation fails the history record is still correct
+  and the CLI says so, pointing at `songbook markdown`.
+
+**Non-interactive mode:**
+Falls back to a numbered list and views a single setlist, then exits
+(one-shot) — matching `browse` and `weights`. `d` and `r` are deliberately
+unavailable there: they're destructive and key-driven, so they stay out of the
+scripted path.
+
+**Implementation:**
+`cli/commands/setlists.py`. The multi-key menu uses
+`TerminalMenu(accept_keys=("enter", "d", "r"))` + `chosen_accept_key`.
+Rendering is `view_setlist.render_setlist` (the pure, returns-a-string half of
+`display_setlist`); deletion and persistence go through the repository layer
+exactly as `delete` and `markdown` do. Note it cannot use
+`cli_utils.validate_label`, which calls `handle_error()` → `SystemExit` and
+would kill the loop on a typo.
 
 ---
 

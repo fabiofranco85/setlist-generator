@@ -22,6 +22,69 @@ def format_date_display(date_str: str) -> str:
     return dt.strftime("%A, %B %d, %Y")
 
 
+def render_setlist(
+    setlist_dict: dict,
+    songs: dict,
+    show_keys: bool = False,
+    moments_order: list[str] | None = None,
+) -> str:
+    """Render a setlist's header and moments as text.
+
+    The pure counterpart of :func:`display_setlist`: returns the text instead
+    of printing it, so callers can page it (``songbook setlists``) or print it
+    (``songbook view-setlist``). The FILES section is deliberately excluded —
+    it belongs to ``view-setlist``, not to the setlist itself.
+
+    Args:
+        setlist_dict: Setlist dictionary with date and moments
+        songs: Dictionary of song name -> Song object (used for keys)
+        show_keys: Whether to show song keys
+        moments_order: Explicit moment ordering from the event type (see
+            :func:`display_setlist`)
+
+    Returns:
+        The rendered setlist text.
+    """
+    from cli.picker import extract_key
+
+    date = setlist_dict["date"]
+    # Backends store label as None (or omit it), not "" — normalize.
+    label = setlist_dict.get("label") or ""
+    moments = setlist_dict["moments"]
+
+    out: list[str] = []
+
+    out.append("")
+    out.append("=" * 60)
+    header = f"SETLIST FOR {date}"
+    if label:
+        header += f" ({label})"
+    out.append(header)
+    out.append(format_date_display(date))
+    out.append("=" * 60)
+    out.append("")
+
+    # Display each moment using the event type's moments_order so that
+    # custom moments are preserved AND the user-defined service order is
+    # honored (postgres JSONB doesn't preserve dict insertion order).
+    moments_ref = {m: 0 for m in moments_order} if moments_order else None
+    for moment in canonical_moment_order(moments, reference_config=moments_ref):
+        song_list = moments[moment]
+        if not song_list:
+            continue
+
+        out.append(f"{moment.upper()}:")
+        for song_title in song_list:
+            key = ""
+            if show_keys:
+                song = songs.get(song_title)
+                key = extract_key(song.content) if song else ""
+            out.append(f"  - {song_title} ({key})" if key else f"  - {song_title}")
+        out.append("")
+
+    return "\n".join(out)
+
+
 def display_setlist(
     setlist_dict: dict,
     songs: dict,
@@ -47,8 +110,7 @@ def display_setlist(
             intended order. When None, falls back to ``MOMENTS_CONFIG``.
     """
     date = setlist_dict["date"]
-    label = setlist_dict.get("label", "")
-    moments = setlist_dict["moments"]
+    label = setlist_dict.get("label") or ""
 
     output_dir = output_dir or Path("output")
     history_dir = history_dir or Path("history")
@@ -62,43 +124,7 @@ def display_setlist(
         output_dir = output_dir / event_type
         history_dir = history_dir / event_type
 
-    print("\n" + "=" * 60)
-    header = f"SETLIST FOR {date}"
-    if label:
-        header += f" ({label})"
-    print(header)
-    print(format_date_display(date))
-    print("=" * 60)
-    print()
-
-    # Display each moment using the event type's moments_order so that
-    # custom moments are preserved AND the user-defined service order is
-    # honored (postgres JSONB doesn't preserve dict insertion order).
-    moments_ref = {m: 0 for m in moments_order} if moments_order else None
-    for moment in canonical_moment_order(moments, reference_config=moments_ref):
-        song_list = moments[moment]
-        if not song_list:
-            continue
-
-        print(f"{moment.upper()}:")
-        for song_title in song_list:
-            if show_keys:
-                # Try to extract key from song content
-                song = songs.get(song_title)
-                if song and song.content:
-                    first_line = song.content.split("\n")[0].strip()
-                    if "(" in first_line and ")" in first_line:
-                        start = first_line.rfind("(")
-                        end = first_line.rfind(")")
-                        if start != -1 and end != -1 and end > start:
-                            key = first_line[start + 1 : end].strip()
-                            print(f"  - {song_title} ({key})")
-                            continue
-
-                print(f"  - {song_title}")
-            else:
-                print(f"  - {song_title}")
-        print()
+    print(render_setlist(setlist_dict, songs, show_keys=show_keys, moments_order=moments_order))
 
     # Show file paths
     output_md = output_dir / f"{setlist_id}.md"

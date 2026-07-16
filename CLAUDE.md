@@ -61,6 +61,7 @@ songbook view-setlist --label evening  # View labeled setlist
 songbook view-song "Oceanos"         # View song details
 songbook view-song                   # Interactive song picker
 songbook browse                      # Browse the repertoire: list → read → back → repeat
+songbook setlists                    # Browse setlists: view, d to delete, r to re-use
 songbook add                         # Add a new song (interactive), then open editor
 songbook add "Novo Louvor" --energy 2 --tags "louvor(5),prelúdio"  # Add via flags
 songbook add "Youth Anthem" --tags "louvor(5)" -e youth --no-edit  # Bind + skip editor
@@ -344,6 +345,21 @@ The interactive counterpart of `view-song --list`. The picker shows every song
 with its key, energy, and tags; selecting one opens it in a pager (`q` returns
 to the list), and the cursor lands back on the song you just read. `Esc`/`q` at
 the list quits. Read-only — it never writes.
+
+**Browse setlists:**
+```bash
+songbook setlists        # Newest first → Enter to view, d to delete, r to re-use
+```
+
+Lists every generated setlist newest-first, labeled or not, across event types.
+`Enter` pages the setlist's songs (with keys), `d` deletes it after confirming
+(history record + all output files), `r` re-uses it — prompting for a date and
+optional label, then copying the same songs to that new setlist and
+regenerating its markdown. `Esc`/`q` quits.
+
+Re-use **inherits the source's event type** and guards against overwriting an
+existing `(date, label, event_type)` — it prompts rather than clobbering, the
+same hazard `generate --yes` guards.
 
 **Song statistics:**
 ```bash
