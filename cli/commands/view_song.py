@@ -148,7 +148,12 @@ def render_song(song_name: str, song, show_metadata: bool = True,
                 4: "Deep worship, contemplative, intimate",
             }
             desc = energy_desc.get(song.energy, "Unknown")
-            out.append(f"Energy: {song.energy} - {desc}")
+            # Energy is a float (postgres REAL), so whole values arrive as 3.0.
+            # Drop the decimal for those; DEFAULT_ENERGY is 2.5, so genuine
+            # fractions are meaningful and must survive intact.
+            energy = song.energy
+            energy_display = int(energy) if float(energy).is_integer() else energy
+            out.append(f"Energy: {energy_display} - {desc}")
 
         out.append("")
         out.append("-" * 70)

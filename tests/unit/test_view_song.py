@@ -40,6 +40,23 @@ def test_render_song_includes_key_and_metadata():
     assert "Energy: 3" in out
 
 
+def test_render_song_shows_whole_energy_without_decimal():
+    # Postgres stores energy as REAL, so a whole number arrives as 3.0.
+    # It should read "Energy: 3", matching how the picker renders "[3 mid-]".
+    out = render_song("Oceanos", _make_song(energy=3.0))
+
+    assert "Energy: 3 - Moderate-low, reflective, slower" in out
+    assert "3.0" not in out
+
+
+def test_render_song_preserves_fractional_energy():
+    # DEFAULT_ENERGY is 2.5, so fractional energy is legitimate and must not
+    # be truncated to 2 by a naive int() cast.
+    out = render_song("Oceanos", _make_song(energy=2.5))
+
+    assert "Energy: 2.5" in out
+
+
 def test_render_song_omits_metadata_when_disabled():
     out = render_song("Oceanos", _make_song(), show_metadata=False)
 
