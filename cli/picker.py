@@ -78,7 +78,13 @@ def _is_interactive() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
-def _pick_with_menu(entries: list[str], titles: list[str], title: str) -> str | None:
+def _pick_with_menu(
+    entries: list[str],
+    titles: list[str],
+    title: str,
+    *,
+    cursor_index: int = 0,
+) -> str | None:
     """Show interactive terminal menu. Returns selected title or None."""
     from simple_term_menu import TerminalMenu
 
@@ -87,6 +93,7 @@ def _pick_with_menu(entries: list[str], titles: list[str], title: str) -> str | 
         title=title,
         search_key="/",
         show_search_hint=True,
+        cursor_index=cursor_index,
     )
     index = menu.show()
     if index is None:
@@ -121,6 +128,7 @@ def pick_song(
     title: str = "Pick a song:",
     moment_filter: str | None = None,
     exclude: set[str] | None = None,
+    cursor_title: str | None = None,
 ) -> str | None:
     """Show an interactive song picker and return the selected title.
 
@@ -129,6 +137,10 @@ def pick_song(
         title: Header text for the picker.
         moment_filter: If set, only show songs tagged for this moment.
         exclude: Set of song titles to hide (e.g., songs already in setlist).
+        cursor_title: Song to start the cursor on. Lets a caller that reopens
+            the picker in a loop (``songbook browse``) land back on the song
+            just viewed instead of jumping to the top. Ignored when the title
+            isn't in the visible list.
 
     Returns:
         The selected song title, or ``None`` if cancelled.
@@ -151,10 +163,12 @@ def pick_song(
     entries = [format_song_entry(name, song) for name, song in filtered]
     titles = [name for name, _ in filtered]
 
+    cursor_index = titles.index(cursor_title) if cursor_title in titles else 0
+
     # Try interactive menu, fall back to numbered list
     if _is_interactive():
         try:
-            return _pick_with_menu(entries, titles, title)
+            return _pick_with_menu(entries, titles, title, cursor_index=cursor_index)
         except ImportError:
             pass
 

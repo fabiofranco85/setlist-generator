@@ -34,6 +34,7 @@ songbook view-setlist --keys         # View setlist with keys
 songbook view-setlist --label evening  # View labeled setlist
 songbook view-song "Oceanos"         # View song details
 songbook view-song                   # Interactive song picker
+songbook browse                      # Browse repertoire: list → read → back → repeat
 songbook info "Oceanos"              # Song statistics and history
 songbook info                        # Interactive picker → statistics
 songbook add                         # Add a new song (interactive), then open editor
@@ -281,6 +282,56 @@ Displays:
 - Fuzzy matching for typos and partial names
 - Transposition preserves chord-lyric column alignment
 - Minor/major quality inferred from original key (e.g., `--transpose G` on a Bm song transposes to Gm)
+
+---
+
+### songbook browse
+
+Browse the repertoire song by song — the interactive counterpart of
+`view-song --list`. Instead of printing a static list and exiting, it keeps a
+searchable picker open so you can read one song, come back, and pick another
+until you're done.
+
+**Usage:**
+```bash
+songbook browse
+```
+
+**Options:** none.
+
+**Flow:**
+1. Opens a searchable picker listing every song as
+   `Title (Key)  [energy label]  tags` — the same `format_song_entry` rendering
+   used by `replace --pick`, which is strictly richer than `view-song --list`.
+2. Selecting a song renders it (title, key, tags, energy, chords/lyrics) and
+   pipes it through a pager via `click.echo_via_pager`. `q` exits the pager and
+   returns to the list.
+3. The picker reopens with the cursor on the song you just read, so you don't
+   lose your place. `Esc`/`q` at the list quits with `Done.`
+
+**Behavior:**
+- **Read-only.** Nothing is written — no history, no output files, no song
+  edits. Songs are fetched once and the list stays stable while you browse.
+- **Pager, not print.** Chord sheets are frequently longer than a terminal
+  screen; the pager gives scrollback and in-song search for free, and `q`
+  doubles as the natural "go back" gesture. `echo_via_pager` degrades to a
+  plain echo when stdout isn't a TTY.
+- **No transposition.** Use `songbook view-song "Song" -t G` for that.
+- **No `--event-type` / `--moment` filtering.** `browse` shows the whole
+  repertoire; use `replace --pick` for moment-filtered selection.
+- **Empty repertoire** exits with status 1 and a `No songs found.` notice.
+
+**Non-interactive mode:**
+When stdin/stdout aren't a TTY, the picker falls back to a numbered list and
+the command views a single song, then exits (one-shot semantics) — matching
+`songbook weights` and `songbook youtube links`. Looping without a TTY would
+hang, since there'd be no way to close the picker.
+
+**Implementation:**
+`cli/commands/browse.py` is composition, not new logic — it loops over
+`cli.picker.pick_song` (which gained a `cursor_title=` kwarg for the
+cursor-restore behavior) and `cli.commands.view_song.render_song` (the pure,
+returns-a-string half of `display_song`).
 
 ---
 

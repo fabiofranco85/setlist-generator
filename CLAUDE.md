@@ -60,6 +60,7 @@ songbook view-setlist --keys         # View setlist with keys
 songbook view-setlist --label evening  # View labeled setlist
 songbook view-song "Oceanos"         # View song details
 songbook view-song                   # Interactive song picker
+songbook browse                      # Browse the repertoire: list → read → back → repeat
 songbook add                         # Add a new song (interactive), then open editor
 songbook add "Novo Louvor" --energy 2 --tags "louvor(5),prelúdio"  # Add via flags
 songbook add "Youth Anthem" --tags "louvor(5)" -e youth --no-edit  # Bind + skip editor
@@ -333,6 +334,16 @@ songbook event-type moments youth --set "louvor=5,prelúdio=1"  # Set moments
 songbook event-type remove youth                               # Remove event type
 songbook event-type default --name "Sunday Worship"            # Edit default type
 ```
+
+**Browse the repertoire:**
+```bash
+songbook browse          # Searchable list → read a song → q → pick another
+```
+
+The interactive counterpart of `view-song --list`. The picker shows every song
+with its key, energy, and tags; selecting one opens it in a pager (`q` returns
+to the list), and the cursor lands back on the song you just read. `Esc`/`q` at
+the list quits. Read-only — it never writes.
 
 **Song statistics:**
 ```bash

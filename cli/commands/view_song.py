@@ -39,6 +39,128 @@ def list_all_songs(songs: dict):
     print()
 
 
+def render_song(song_name: str, song, show_metadata: bool = True,
+                transpose_to: str | None = None) -> str:
+    """Render a song's content as text, optionally transposed.
+
+    The pure counterpart of :func:`display_song`: it returns the rendered text
+    instead of printing it, so callers can route it wherever they need — to
+    stdout (``view-song``) or through a pager (``browse``).
+
+    Args:
+        song_name: Name of the song (used as a title fallback)
+        song: The Song object to render
+        show_metadata: Whether to include metadata (tags, energy)
+        transpose_to: Target key for transposition (None = no transposition)
+
+    Returns:
+        The rendered song text.
+
+    Raises:
+        ValueError: If the content cannot be transposed to ``transpose_to``.
+    """
+    title = song_name
+    key = ""
+    content = song.content or ""
+
+    original_key = ""
+    if transpose_to:
+        from library.transposer import (
+            calculate_semitones,
+            resolve_target_key,
+            should_use_flats,
+            transpose_content,
+        )
+
+    if transpose_to and content:
+        # Extract original key before transposing
+        first_line = content.split("\n")[0].strip()
+        if "(" in first_line and ")" in first_line:
+            s = first_line.rfind("(")
+            e = first_line.rfind(")")
+            if s != -1 and e != -1 and e > s:
+                original_key = first_line[s + 1 : e].strip()
+
+        if original_key:
+            effective_key = resolve_target_key(original_key, transpose_to)
+            semitones = calculate_semitones(original_key, effective_key)
+            use_flats = should_use_flats(effective_key)
+            content = transpose_content(content, semitones, use_flats)
+
+    if content:
+        lines = content.split("\n")
+        first_line = lines[0].strip()
+
+        # Parse markdown heading: ### Title (Key)
+        if first_line.startswith("###"):
+            first_line = first_line.replace("###", "").strip()
+
+            if "(" in first_line and ")" in first_line:
+                start = first_line.rfind("(")
+                end = first_line.rfind(")")
+                if start != -1 and end != -1 and end > start:
+                    key = first_line[start + 1 : end].strip()
+                    title = first_line[:start].strip()
+
+            # Remove first line from content
+            content = "\n".join(lines[1:]).strip()
+
+    out: list[str] = []
+
+    # Header
+    out.append("")
+    out.append("=" * 70)
+    if transpose_to and original_key:
+        semitones = calculate_semitones(original_key, transpose_to)
+        if semitones == 0:
+            out.append(f"{title} ({key})")
+        else:
+            out.append(f"{title} ({key})  [original: {original_key}]")
+    elif key:
+        out.append(f"{title} ({key})")
+    else:
+        out.append(title)
+    out.append("=" * 70)
+
+    # Note when already in target key
+    if transpose_to and original_key:
+        semitones = calculate_semitones(original_key, transpose_to)
+        if semitones == 0:
+            out.append("")
+            out.append(f"  Already in {transpose_to} — showing original.")
+
+    if show_metadata:
+        out.append("")
+        if song.tags:
+            tags_display = []
+            for moment, weight in song.tags.items():
+                if weight == 3:  # Default weight
+                    tags_display.append(moment)
+                else:
+                    tags_display.append(f"{moment}({weight})")
+            out.append(f"Tags:   {', '.join(tags_display)}")
+
+        if song.energy:
+            energy_desc = {
+                1: "High energy, upbeat, celebratory",
+                2: "Moderate-high, engaging, rhythmic",
+                3: "Moderate-low, reflective, slower",
+                4: "Deep worship, contemplative, intimate",
+            }
+            desc = energy_desc.get(song.energy, "Unknown")
+            out.append(f"Energy: {song.energy} - {desc}")
+
+        out.append("")
+        out.append("-" * 70)
+
+    # Content
+    out.append("")
+    out.append(content if content else "(No chord content available)")
+    out.append("")
+
+    return "\n".join(out)
+
+
 def display_song(song_name: str, songs: dict, show_metadata: bool = True,
                  transpose_to: str | None = None):
     """Display a song's content, optionally transposed.
@@ -73,111 +195,15 @@ def display_song(song_name: str, songs: dict, show_metadata: bool = True,
 
         return 1
 
-    # Extract title and key from content
-    title = song_name
-    key = ""
-    content = song.content or ""
-
-    # Apply transposition if requested
-    original_key = ""
-    if transpose_to:
-        from library.transposer import (
-            calculate_semitones,
-            resolve_target_key,
-            should_use_flats,
-            transpose_content,
+    try:
+        rendered = render_song(
+            song_name, song, show_metadata=show_metadata, transpose_to=transpose_to
         )
+    except ValueError as exc:
+        print(f"\nTransposition error: {exc}")
+        return 1
 
-    if transpose_to and content:
-        # Extract original key before transposing
-        first_line = content.split("\n")[0].strip()
-        if "(" in first_line and ")" in first_line:
-            s = first_line.rfind("(")
-            e = first_line.rfind(")")
-            if s != -1 and e != -1 and e > s:
-                original_key = first_line[s + 1 : e].strip()
-
-        if original_key:
-            try:
-                effective_key = resolve_target_key(original_key, transpose_to)
-                semitones = calculate_semitones(original_key, effective_key)
-                use_flats = should_use_flats(effective_key)
-                content = transpose_content(content, semitones, use_flats)
-            except ValueError as exc:
-                print(f"\nTransposition error: {exc}")
-                return 1
-
-    if content:
-        lines = content.split("\n")
-        first_line = lines[0].strip()
-
-        # Parse markdown heading: ### Title (Key)
-        if first_line.startswith("###"):
-            first_line = first_line.replace("###", "").strip()
-
-            if "(" in first_line and ")" in first_line:
-                start = first_line.rfind("(")
-                end = first_line.rfind(")")
-                if start != -1 and end != -1 and end > start:
-                    key = first_line[start + 1 : end].strip()
-                    title = first_line[:start].strip()
-
-            # Remove first line from content
-            content = "\n".join(lines[1:]).strip()
-
-    # Display header
-    print("\n" + "=" * 70)
-    if transpose_to and original_key:
-        semitones = calculate_semitones(original_key, transpose_to)
-        if semitones == 0:
-            print(f"{title} ({key})")
-        else:
-            print(f"{title} ({key})  [original: {original_key}]")
-    elif key:
-        print(f"{title} ({key})")
-    else:
-        print(title)
-    print("=" * 70)
-
-    # Note when already in target key
-    if transpose_to and original_key:
-        semitones = calculate_semitones(original_key, transpose_to)
-        if semitones == 0:
-            print(f"\n  Already in {transpose_to} — showing original.")
-
-    # Show metadata if requested
-    if show_metadata:
-        print()
-        if song.tags:
-            tags_display = []
-            for moment, weight in song.tags.items():
-                if weight == 3:  # Default weight
-                    tags_display.append(moment)
-                else:
-                    tags_display.append(f"{moment}({weight})")
-            print(f"Tags:   {', '.join(tags_display)}")
-
-        if song.energy:
-            energy_desc = {
-                1: "High energy, upbeat, celebratory",
-                2: "Moderate-high, engaging, rhythmic",
-                3: "Moderate-low, reflective, slower",
-                4: "Deep worship, contemplative, intimate",
-            }
-            desc = energy_desc.get(song.energy, "Unknown")
-            print(f"Energy: {song.energy} - {desc}")
-
-        print()
-        print("-" * 70)
-
-    # Display content
-    print()
-    if content:
-        print(content)
-    else:
-        print("(No chord content available)")
-    print()
-
+    print(rendered)
     return 0
 
 

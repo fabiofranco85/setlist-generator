@@ -57,6 +57,7 @@ def cli(ctx, verbose):
       generate       Generate new setlist for a service date
       view-setlist   View generated setlist (markdown format)
       view-song      View song lyrics, chords, and metadata
+      browse         Browse the repertoire song by song
       info           Show detailed statistics for a song
       add            Add a new song to your repertoire
       edit           Open a song's chord file in your editor
@@ -162,6 +163,23 @@ def view_song(song_name, list, no_metadata, transpose_to):
     """
     from cli.commands.view_song import run
     run(song_name, list, no_metadata, transpose_to)
+
+
+@cli.command()
+def browse():
+    """Browse the repertoire song by song.
+
+    \b
+    Opens a searchable list of every song. Pick one to read its lyrics and
+    chords in a pager, press q to come back, then pick another. Esc/q at the
+    list quits.
+
+    \b
+    Examples:
+      songbook browse
+    """
+    from cli.commands.browse import run
+    run()
 
 
 @cli.command()

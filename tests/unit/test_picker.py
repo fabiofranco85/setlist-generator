@@ -193,3 +193,30 @@ class TestPickSong:
         call_args = mock_menu.call_args
         titles = call_args[0][1]
         assert titles == sorted(titles)
+
+    @patch("cli.picker._is_interactive", return_value=True)
+    @patch("cli.picker._pick_with_menu")
+    def test_cursor_title_resolves_to_its_index(self, mock_menu, mock_interactive, songs_dict):
+        mock_menu.return_value = "Oceanos"
+        # Sorted order is Hosana, Lugar Secreto, Oceanos -> Oceanos is index 2.
+        pick_song(songs_dict, cursor_title="Oceanos")
+
+        assert mock_menu.call_args.kwargs["cursor_index"] == 2
+
+    @patch("cli.picker._is_interactive", return_value=True)
+    @patch("cli.picker._pick_with_menu")
+    def test_cursor_title_defaults_to_first_entry(self, mock_menu, mock_interactive, songs_dict):
+        mock_menu.return_value = "Hosana"
+        pick_song(songs_dict)
+
+        assert mock_menu.call_args.kwargs["cursor_index"] == 0
+
+    @patch("cli.picker._is_interactive", return_value=True)
+    @patch("cli.picker._pick_with_menu")
+    def test_filtered_out_cursor_title_falls_back_to_first(self, mock_menu, mock_interactive, songs_dict):
+        # A cursor_title that isn't in the visible list (excluded/filtered)
+        # must not raise — it just starts at the top.
+        mock_menu.return_value = "Hosana"
+        pick_song(songs_dict, exclude={"Oceanos"}, cursor_title="Oceanos")
+
+        assert mock_menu.call_args.kwargs["cursor_index"] == 0
