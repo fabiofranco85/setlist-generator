@@ -99,7 +99,21 @@ songbook list-moments -e youth       # List moments for event type
 songbook event-type list             # List event types
 songbook event-type add youth --name "Youth Service"  # Add event type
 songbook generate -e youth           # Generate for event type
+songbook install-completion          # Install tab completion (auto-detects shell)
 ```
+
+### Shell Completion
+
+`songbook install-completion` wires tab completion for commands, song names,
+moments, musical keys, dates, labels, and event type slugs. Everything
+data-driven resolves through the repository layer, so completion follows
+`STORAGE_BACKEND` like the commands do.
+
+**When you add a command or an option with a known set of values, wire its
+`shell_complete=` in the same change** — `tests/unit/test_completions.py` walks
+the Click command tree and fails when one is missing. Callbacks live in
+`cli/completions.py`. See `.claude/SHELL_COMPLETION.md` for the zsh `fpath`
+install and troubleshooting.
 
 ## Project Overview
 

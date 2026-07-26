@@ -2,18 +2,47 @@
 
 This module provides completion functions for Click's built-in shell completion system.
 Completions are dynamically generated from:
-- Song names (database.csv)
+- Song names (the active storage backend)
 - Moment names (config.MOMENTS_CONFIG)
-- Available dates (history/*.json files)
+- Available dates and labels (setlist history in the active storage backend)
+- Event type slugs (the active storage backend)
 - Musical key names (for transposition commands)
 
-All functions gracefully handle errors by returning empty lists rather than raising exceptions.
+Everything data-driven goes through the repository layer rather than reading files
+directly, so completion follows STORAGE_BACKEND like the commands themselves do.
+
+All functions gracefully handle errors by returning empty lists rather than raising
+exceptions.
 """
 
-from pathlib import Path
 from typing import List
-import click
 from click.shell_completion import CompletionItem
+
+
+def _get_repositories(ctx):
+    """Build a repository container for a completion callback.
+
+    Honors ``--history-dir`` / ``--output-dir`` when they are already parsed on
+    the context, so completion looks at the same data the command would.
+    Imports are deferred to keep the TAB round-trip cheap.
+
+    Args:
+        ctx: Click context object (may be None)
+
+    Returns:
+        RepositoryContainer for the active storage backend.
+    """
+    from cli.cli_utils import resolve_paths
+    from library import get_repositories
+
+    history_dir = None
+    output_dir = None
+    if ctx is not None and ctx.params:
+        history_dir = ctx.params.get("history_dir")
+        output_dir = ctx.params.get("output_dir")
+
+    paths = resolve_paths(output_dir, history_dir)
+    return get_repositories(history_dir=paths.history_dir, output_dir=paths.output_dir)
 
 
 def complete_song_names(ctx, param, incomplete: str) -> List[CompletionItem]:
@@ -124,9 +153,11 @@ def complete_key_names(ctx, param, incomplete: str) -> List[CompletionItem]:
 
 
 def complete_history_dates(ctx, param, incomplete: str) -> List[CompletionItem]:
-    """Complete dates from history/*.json files.
+    """Complete dates of stored setlists.
 
-    Supports both plain dates (YYYY-MM-DD) and labeled setlists (YYYY-MM-DD_label).
+    Reads the setlist history through the repository layer, so it works on every
+    backend. Dates of labeled setlists are offered too (the date portion only) —
+    ``--label`` completes separately.
 
     Args:
         ctx: Click context object
@@ -136,62 +167,37 @@ def complete_history_dates(ctx, param, incomplete: str) -> List[CompletionItem]:
     Returns:
         List of CompletionItem objects matching the incomplete input.
         Dates are sorted in descending order (most recent first).
-        Returns empty list on errors (e.g., missing history directory).
+        Returns empty list on errors (e.g., unreachable database).
 
     Example:
-        Input: "2025-" -> Returns: ["2025-12-25", "2025-12-18", ...]
-        Input: "2025-12" -> Returns: ["2025-12-25", "2025-12-18", ...]
+        Input: "2026-" -> Returns: ["2026-03-01", "2026-02-15", ...]
+        Input: "2026-02" -> Returns: ["2026-02-15", ...]
     """
     try:
-        # Get history-dir from context if available
-        history_dir = None
-        output_dir = None
-        if ctx and ctx.params:
-            history_dir = ctx.params.get('history_dir')
-            output_dir = ctx.params.get('output_dir')
+        repos = _get_repositories(ctx)
 
-        # Resolve using CLI utilities (respects --history-dir and env vars)
-        from cli.cli_utils import resolve_paths
-        paths = resolve_paths(output_dir, history_dir)
-        history_path = paths.history_dir
+        dates = {
+            entry["date"]
+            for entry in repos.history.get_all()
+            if entry.get("date")
+        }
 
-        # Find all JSON files in history directory
-        if not history_path.exists():
-            return []
+        # Most recent first — the date you want is nearly always a recent one
+        matching = sorted(
+            (date for date in dates if date.startswith(incomplete)),
+            reverse=True,
+        )
 
-        json_files = list(history_path.glob("*.json"))
-
-        # Extract date (and optional label) from filenames
-        dates = []
-        for json_file in json_files:
-            stem = json_file.stem
-            # Plain date: YYYY-MM-DD (10 chars)
-            if len(stem) == 10 and stem.count('-') == 2:
-                dates.append(stem)
-            # Labeled: YYYY-MM-DD_label (>10 chars, starts with date pattern)
-            elif len(stem) > 10 and stem[10] == '_' and stem[:10].count('-') == 2:
-                dates.append(stem[:10])  # Only offer the date portion
-
-        # Deduplicate and sort descending
-        dates = sorted(set(dates), reverse=True)
-
-        # Filter by incomplete input
-        matching_dates = [
-            date for date in dates
-            if date.startswith(incomplete)
-        ]
-
-        # Return as CompletionItem objects
-        return [CompletionItem(date) for date in matching_dates]
+        return [CompletionItem(date) for date in matching]
 
     except Exception:
         # Gracefully return empty list on any error
-        # (e.g., missing history directory, permission errors)
+        # (e.g., unreachable backend, missing DATABASE_URL)
         return []
 
 
 def complete_history_labels(ctx, param, incomplete: str) -> List[CompletionItem]:
-    """Complete labels from history/*.json files.
+    """Complete labels of stored setlists.
 
     Args:
         ctx: Click context object
@@ -199,35 +205,54 @@ def complete_history_labels(ctx, param, incomplete: str) -> List[CompletionItem]
         incomplete: Partial input from user
 
     Returns:
-        List of CompletionItem objects for known labels.
+        List of CompletionItem objects for known labels, alphabetically sorted.
+        Returns empty list on errors.
     """
     try:
-        history_dir = None
-        output_dir = None
-        if ctx and ctx.params:
-            history_dir = ctx.params.get('history_dir')
-            output_dir = ctx.params.get('output_dir')
+        repos = _get_repositories(ctx)
 
-        from cli.cli_utils import resolve_paths
-        paths = resolve_paths(output_dir, history_dir)
-        history_path = paths.history_dir
+        labels = {
+            entry["label"]
+            for entry in repos.history.get_all()
+            if entry.get("label")
+        }
 
-        if not history_path.exists():
-            return []
+        matching = sorted(
+            label for label in labels
+            if label.startswith(incomplete.lower())
+        )
 
-        json_files = list(history_path.glob("*.json"))
+        return [CompletionItem(label) for label in matching]
 
-        labels = set()
-        for json_file in json_files:
-            stem = json_file.stem
-            # Labeled: YYYY-MM-DD_label
-            if len(stem) > 10 and stem[10] == '_':
-                label = stem[11:]
-                if label:
-                    labels.add(label)
+    except Exception:
+        return []
 
-        matching = sorted(l for l in labels if l.startswith(incomplete.lower()))
-        return [CompletionItem(l) for l in matching]
+
+def complete_event_type_slugs(ctx, param, incomplete: str) -> List[CompletionItem]:
+    """Complete event type slugs, described by their display name.
+
+    Args:
+        ctx: Click context object
+        param: Click parameter object
+        incomplete: Partial input from user
+
+    Returns:
+        List of CompletionItem objects, alphabetically sorted by slug.
+        Returns empty list on errors.
+
+    Example:
+        Input: "y" -> Returns: ["youth"] (described as "Youth Service")
+    """
+    try:
+        repos = _get_repositories(ctx)
+
+        event_types = repos.event_types.get_all()
+
+        return [
+            CompletionItem(slug, help=event_types[slug].name)
+            for slug in sorted(event_types)
+            if slug.startswith(incomplete.lower())
+        ]
 
     except Exception:
         return []

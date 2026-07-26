@@ -40,6 +40,7 @@ from cli.completions import (
     complete_history_dates,
     complete_history_labels,
     complete_key_names,
+    complete_event_type_slugs,
 )
 
 
@@ -88,7 +89,7 @@ def cli(ctx, verbose):
 @cli.command()
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (YYYY-MM-DD, default: today)")
 @click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label (for multiple setlists per date)")
-@click.option("--event-type", "-e", default="", help="Event type slug (e.g., youth)")
+@click.option("--event-type", "-e", default="", shell_complete=complete_event_type_slugs, help="Event type slug (e.g., youth)")
 @click.option("--replace", "-r", "replace_count", default=None, help="Songs to replace when deriving (number or 'all', default: random)")
 @click.option("--override", multiple=True, help="Force songs into a moment: MOMENT:SONG1,SONG2")
 @click.option("--desired", "-d", default="", help="Songs that must appear: SONG1,SONG2 (moment chosen automatically)")
@@ -124,7 +125,7 @@ def generate(ctx, date, label, event_type, replace_count, override, desired, pdf
 @cli.command("view-setlist")
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
 @click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
-@click.option("--event-type", "-e", default="", help="Event type slug")
+@click.option("--event-type", "-e", default="", shell_complete=complete_event_type_slugs, help="Event type slug")
 @click.option("--keys", "-k", is_flag=True, help="Show song keys")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
@@ -224,7 +225,7 @@ def info(song_name):
 @click.option("--energy", type=int, default=None, help="Energy level (1-4)")
 @click.option("--tags", default=None, help='Moments with optional weights, e.g. "louvor(5),prelúdio"')
 @click.option("--youtube", default=None, help="YouTube URL (optional)")
-@click.option("--event-type", "-e", "event_types", multiple=True, help="Bind the song to event type(s) (repeatable; empty = all)")
+@click.option("--event-type", "-e", "event_types", multiple=True, shell_complete=complete_event_type_slugs, help="Bind the song to event type(s) (repeatable; empty = all)")
 @click.option("--editor", default=None, help="Editor command to use (overrides $VISUAL / $EDITOR; default: vim)")
 @click.option("--no-edit", is_flag=True, help="Create the record without opening the editor")
 def add(title, energy, tags, youtube, event_types, editor, no_edit):
@@ -292,7 +293,7 @@ def transpose(song_name, to_key, save):
 
 @cli.command()
 @click.option("--moment", "-m", shell_complete=complete_moment_names, help="Pre-select a moment (skips the picker)")
-@click.option("--event-type", "-e", default="", help="Event type slug (filters song pool and moments config)")
+@click.option("--event-type", "-e", default="", shell_complete=complete_event_type_slugs, help="Event type slug (filters song pool and moments config)")
 def weights(moment, event_type):
     """Edit song-moment weights interactively.
 
@@ -312,7 +313,7 @@ def weights(moment, event_type):
 
 
 @cli.command("list-moments")
-@click.option("--event-type", "-e", default="", help="Event type slug (show moments for this type)")
+@click.option("--event-type", "-e", default="", shell_complete=complete_event_type_slugs, help="Event type slug (show moments for this type)")
 def list_moments(event_type):
     """List available service moments.
 
@@ -333,7 +334,7 @@ def list_moments(event_type):
 @click.option("--keep-position", is_flag=True, help="Skip energy reordering — keep the new song at the requested position")
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
 @click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
-@click.option("--event-type", "-e", default="", help="Event type slug")
+@click.option("--event-type", "-e", default="", shell_complete=complete_event_type_slugs, help="Event type slug")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
 @click.pass_context
@@ -361,7 +362,7 @@ def replace(ctx, moment, position, positions, replacement, pick, keep_position, 
 @click.option("--all", "all_songs", is_flag=True, help="Remove the entire moment (all songs in it)")
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
 @click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
-@click.option("--event-type", "-e", default="", help="Event type slug")
+@click.option("--event-type", "-e", default="", shell_complete=complete_event_type_slugs, help="Event type slug")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
 @click.pass_context
@@ -391,7 +392,7 @@ def remove(ctx, moment, position, all_songs, date, label, event_type, output_dir
 @cli.command()
 @click.option("--date", required=True, shell_complete=complete_history_dates, help="Target date (YYYY-MM-DD)")
 @click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Source label (omit for unlabeled)")
-@click.option("--event-type", "-e", default="", help="Event type slug")
+@click.option("--event-type", "-e", default="", shell_complete=complete_event_type_slugs, help="Event type slug")
 @click.option("--to", "to_label", shell_complete=complete_history_labels, help="New label to assign")
 @click.option("--remove", is_flag=True, help="Remove the label (make unlabeled)")
 @click.option("--output-dir", help="Custom output directory")
@@ -412,7 +413,7 @@ def label(date, label, event_type, to_label, remove, output_dir, history_dir):
 @cli.command()
 @click.option("--date", required=True, shell_complete=complete_history_dates, help="Target date (YYYY-MM-DD)")
 @click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label (omit for unlabeled)")
-@click.option("--event-type", "-e", default="", help="Event type slug")
+@click.option("--event-type", "-e", default="", shell_complete=complete_event_type_slugs, help="Event type slug")
 @click.option("--yes", "-y", is_flag=True, help="Skip the confirmation prompt")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
@@ -437,7 +438,7 @@ def delete(date, label, event_type, yes, output_dir, history_dir):
 @cli.command()
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
 @click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
-@click.option("--event-type", "-e", default="", help="Event type slug")
+@click.option("--event-type", "-e", default="", shell_complete=complete_event_type_slugs, help="Event type slug")
 @click.option("--no-chords", is_flag=True, default=False, help="Generate a lyrics-only PDF (no chord lines) for non-musicians")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
@@ -458,7 +459,7 @@ def pdf(date, label, event_type, no_chords, output_dir, history_dir):
 @cli.command()
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
 @click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
-@click.option("--event-type", "-e", default="", help="Event type slug")
+@click.option("--event-type", "-e", default="", shell_complete=complete_event_type_slugs, help="Event type slug")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
 def markdown(date, label, event_type, output_dir, history_dir):
@@ -494,7 +495,7 @@ def youtube():
 @youtube.command("create")
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
 @click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
-@click.option("--event-type", "-e", default="", help="Event type slug")
+@click.option("--event-type", "-e", default="", shell_complete=complete_event_type_slugs, help="Event type slug")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
 def youtube_create(date, label, event_type, output_dir, history_dir):
@@ -522,7 +523,7 @@ def youtube_create(date, label, event_type, output_dir, history_dir):
 @youtube.command("links")
 @click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
 @click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
-@click.option("--event-type", "-e", default="", help="Event type slug")
+@click.option("--event-type", "-e", default="", shell_complete=complete_event_type_slugs, help="Event type slug")
 @click.option("--output-dir", help="Custom output directory")
 @click.option("--history-dir", help="Custom history directory")
 def youtube_links(date, label, event_type, output_dir, history_dir):
@@ -584,6 +585,77 @@ def import_history():
     """
     from cli.commands.maintenance import run_import
     run_import()
+
+
+def _install_zsh_completion(script: str, home: Path) -> list[str]:
+    """Install the zsh completion as an autoloaded function on ``fpath``.
+
+    Sourcing the script from ``.zshrc`` registers it with ``compdef``, and any
+    ``compinit`` running later in ``.zshrc`` rebuilds ``_comps`` from scratch and
+    drops that registration — silently, so completion just stops working. Tools
+    that install a ``_<command>`` file on ``fpath`` (git, kubectl, deno) are
+    immune, because every ``compinit`` rediscovers them. This does the same.
+
+    Args:
+        script: Generated zsh completion script.
+        home: Home directory to install into.
+
+    Returns:
+        List of human-readable notes describing what changed.
+    """
+    notes: list[str] = []
+
+    completions_dir = home / ".zsh" / "completions"
+    completions_dir.mkdir(parents=True, exist_ok=True)
+    target = completions_dir / "_songbook"
+    target.write_text(script, encoding="utf-8")
+    notes.append(f"✓ Completion function installed at {target}")
+
+    zshrc = home / ".zshrc"
+    original = zshrc.read_text(encoding="utf-8") if zshrc.exists() else ""
+    updated = original
+
+    # Retire the legacy sourced install — a leftover `source` line registers a
+    # compdef that the next compinit throws away, which is the failure mode
+    # this whole function exists to avoid.
+    legacy_script = home / ".songbook-complete.zsh"
+    if ".songbook-complete.zsh" in updated:
+        updated = "".join(
+            line for line in updated.splitlines(keepends=True)
+            if ".songbook-complete.zsh" not in line
+            and line.strip() != "# Songbook completion"
+        )
+        notes.append("✓ Removed the old 'source ~/.songbook-complete.zsh' line")
+    if legacy_script.exists():
+        legacy_script.unlink()
+        notes.append(f"✓ Removed {legacy_script}")
+
+    # compinit only scans fpath as it stands when it runs, so this has to be
+    # prepended — appending would put it after the compinit it needs to precede.
+    if ".zsh/completions" not in updated:
+        updated = (
+            "# Songbook completion (fpath must be set before compinit runs)\n"
+            'fpath=("$HOME/.zsh/completions" $fpath)\n\n'
+        ) + updated
+        notes.append(f"✓ Added ~/.zsh/completions to fpath in {zshrc}")
+
+    if updated != original:
+        if original:
+            backup = home / ".zshrc.songbook-backup"
+            backup.write_text(original, encoding="utf-8")
+            notes.append(f"✓ Backed up your previous .zshrc to {backup}")
+        zshrc.write_text(updated, encoding="utf-8")
+
+    # `compinit -C` (used by several installers) trusts its dump file without
+    # checking for new functions, so a cached dump would hide _songbook until
+    # something else invalidated it. These are caches; zsh rebuilds them.
+    removed = [dump.name for dump in home.glob(".zcompdump*")]
+    for dump in home.glob(".zcompdump*"):
+        dump.unlink()
+    if removed:
+        notes.append(f"✓ Cleared the zsh completion cache ({len(removed)} file(s))")
+
+    return notes
 
 
 @cli.command("install-completion")
@@ -676,30 +748,14 @@ def install_completion(shell):
             click.echo(f"  source ~/.bashrc")
 
         elif shell == 'zsh':
-            # Save to ~/.songbook-complete.zsh
-            completion_path = Path.home() / '.songbook-complete.zsh'
-            completion_path.write_text(completion_script)
-            click.secho(f"✓ Completion script saved to {completion_path}", fg="green")
-
-            # Add source line to ~/.zshrc if not present
-            zshrc_path = Path.home() / '.zshrc'
-            source_line = f'source {completion_path}\n'
-
-            if zshrc_path.exists():
-                zshrc_content = zshrc_path.read_text()
-                if str(completion_path) not in zshrc_content:
-                    with zshrc_path.open('a') as f:
-                        f.write(f'\n# Songbook completion\n{source_line}')
-                    click.secho(f"✓ Added source line to {zshrc_path}", fg="green")
-                else:
-                    click.secho(f"✓ Source line already in {zshrc_path}", fg="yellow")
-            else:
-                click.secho(f"⚠ {zshrc_path} not found. Add this line manually:", fg="yellow")
-                click.echo(f"  {source_line}")
+            # Installed as an autoloaded function on fpath, not sourced — see
+            # _install_zsh_completion for why sourcing is fragile.
+            for note in _install_zsh_completion(completion_script, Path.home()):
+                click.secho(note, fg="green")
 
             click.echo()
-            click.secho("To activate completion, run:", fg="cyan")
-            click.echo(f"  source ~/.zshrc")
+            click.secho("To activate completion, start a new shell:", fg="cyan")
+            click.echo("  exec zsh")
 
         elif shell == 'fish':
             # Save to ~/.config/fish/completions/songbook.fish

@@ -12,6 +12,7 @@ Provides CRUD operations for event types:
 
 import click
 
+from cli.completions import complete_event_type_slugs
 from library import get_repositories
 from library.event_type import (
     DEFAULT_EVENT_TYPE_SLUG,
@@ -127,7 +128,7 @@ def add_type(slug, name, description, moments):
 
 
 @event_type_group.command("edit")
-@click.argument("slug")
+@click.argument("slug", shell_complete=complete_event_type_slugs)
 @click.option("--name", "-n", default=None, help="New display name")
 @click.option("--description", "-d", default=None, help="New description")
 def edit_type(slug, name, description):
@@ -171,7 +172,7 @@ def edit_type(slug, name, description):
 
 
 @event_type_group.command("remove")
-@click.argument("slug")
+@click.argument("slug", shell_complete=complete_event_type_slugs)
 def remove_type(slug):
     """Remove an event type.
 
@@ -202,7 +203,7 @@ def remove_type(slug):
 
 
 @event_type_group.command("moments")
-@click.argument("slug")
+@click.argument("slug", shell_complete=complete_event_type_slugs)
 @click.option("--set", "moments_str", default=None, help="Moments config (e.g., 'louvor=4,prelúdio=1')")
 def manage_moments(slug, moments_str):
     """View or update moments configuration for an event type.

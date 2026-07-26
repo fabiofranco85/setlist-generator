@@ -1329,7 +1329,7 @@ Uses `library/paths.py` module for consistent path handling across all commands.
 
 ## Shell Completion
 
-Enable tab completion for commands, song names, moments, and dates:
+Enable tab completion for commands, song names, moments, dates, labels, and event types:
 
 ```bash
 # Auto-install (detects your shell)
@@ -1341,40 +1341,56 @@ songbook install-completion --shell zsh
 songbook install-completion --shell fish
 ```
 
-Then restart your shell or run `source ~/.bashrc` (bash) / `source ~/.zshrc` (zsh).
+Then start a new shell (`exec zsh` / `source ~/.bashrc` / `exec fish`).
 
 **What gets completed:**
-- Command names (generate, view-song, replace, transpose, etc.)
-- Song names (from database.csv)
+- Command names (generate, view-song, browse, setlists, weights, etc.)
+- Song names (from the active storage backend)
 - Moment names (prelúdio, louvor, ofertório, etc.)
+- Event type slugs (from the active storage backend, described by display name)
 - Musical key names (C, C#, Db, ..., Bm, F#m — for `--to` and `--transpose`)
-- Dates (from history directory, including labeled setlists)
-- Labels (from history directory filenames)
-- Option names (--date, --moment, --with, --to, --label, etc.)
+- Dates of stored setlists
+- Labels of stored setlists
+- Option names (--date, --moment, --with, --to, --label, --event-type, etc.)
 
 **Completion points:**
-- `info SONG_NAME` - autocomplete song names
-- `view-song SONG_NAME` - autocomplete song names
-- `edit SONG_NAME` - autocomplete song names
-- `view-song --transpose` - autocomplete key names
-- `transpose SONG_NAME` - autocomplete song names
-- `transpose --to` - autocomplete key names
-- `replace --moment` - autocomplete moment names
-- `replace --with` - autocomplete song names
-- All `--date` options - autocomplete available dates from history
-- All `--label` options - autocomplete known labels from history
+- `info` / `view-song` / `edit` / `transpose` `SONG_NAME` - song names
+- `view-song --transpose`, `transpose --to` - key names
+- `replace --moment`, `remove --moment`, `weights --moment` - moment names
+- `replace --with` - song names
+- `event-type edit|remove|moments SLUG` - existing event type slugs
+- All `--date` options - dates of stored setlists
+- All `--label` options - labels of stored setlists
+- All `--event-type` / `-e` options - event type slugs
+
+Deliberately **not** completed: `add TITLE` and `event-type add SLUG` (both name
+something that does not exist yet), the comma-separated composite values
+(`--desired`, `--override`, `add --tags`), and `--output-dir` / `--history-dir`.
 
 **Features:**
 - Case-insensitive song name matching
 - Dates sorted by most recent first
-- Graceful error handling (no crashes on missing files)
-- Respects --history-dir and SETLIST_HISTORY_DIR
+- Graceful error handling — callbacks never raise, they return no candidates
+- Reads through the repository layer, so it follows `STORAGE_BACKEND`
+- Respects `--history-dir` / `SETLIST_HISTORY_DIR` on the filesystem backend
+
+**Implementation notes:**
+- Callbacks live in `cli/completions.py` and are wired via `shell_complete=` in
+  `cli/main.py` and `cli/commands/event_type.py`.
+- **When adding a command, wire its completions in the same change.**
+  `tests/unit/test_completions.py` walks the whole Click command tree and fails if a
+  `--date` / `--label` / `--moment` / `--event-type` / song argument does not complete.
+- **zsh installs to `fpath`** (`~/.zsh/completions/_songbook`), not via `source`.
+  Sourcing registers with `compdef`, and any `compinit` that runs later in `.zshrc`
+  rebuilds `_comps` and silently drops the registration — that failure mode is
+  documented in `.claude/SHELL_COMPLETION.md`.
 
 **Examples:**
 ```bash
-songbook view-song Oce<TAB>              # Completes to "Oceanos"
+songbook view-song Oce<TAB>              # Completes to "Oceano" (common prefix)
 songbook replace --moment lou<TAB>       # Completes to "louvor"
-songbook view-setlist --date 2025-<TAB>  # Shows all 2025 dates
+songbook view-setlist --date 2026-0<TAB> # Shows matching dates, newest first
+songbook generate -e <TAB>               # Lists event types with their names
 ```
 
 See `.claude/SHELL_COMPLETION.md` for detailed documentation and troubleshooting.
