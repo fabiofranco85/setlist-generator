@@ -100,6 +100,7 @@ Where:
     ├── generator.py         # Core setlist generation (label + event-type aware)
     ├── replacer.py          # Song replacement + derive_setlist()
     ├── remover.py           # Song / moment removal with single-song cascade
+    ├── reconciler.py        # Moment projection when copying across event types
     ├── repositories/        # Data access abstraction layer
     │   ├── protocols.py     # Repository interfaces (core + SaaS protocols)
     │   ├── factory.py       # Backend factory + RepositoryContainer + SaaSRepositoryContainer
@@ -140,6 +141,7 @@ The codebase is organized into focused modules for better maintainability and re
 - `transposer.py` - Deterministic chromatic chord transposition (pure functions, `re` only)
 - `generator.py` - Orchestrates setlist generation (`SetlistGenerator`, label + event-type aware, strict mode for custom moments configs)
 - `replacer.py` - Song replacement, batch replacement, and `derive_setlist()` for creating labeled variants
+- `reconciler.py` - Projection of one setlist's moments onto another event type's shape (`plan_reconciliation`). Backs the cross-event-type re-use in `songbook setlists`: reports what carries over, what is dropped (missing moment / overflow / not in the target's pool) and how many slots are left for the caller to fill. Pure functions, no prompting and no selection.
 - `remover.py` - Song and moment removal. `remove_song_from_setlist()` drops a song and cascades to remove the moment when its last song goes; `remove_moment_from_setlist()` drops the whole moment in one call. Pure functions, immutable input pattern.
 - `formatter.py` - Output formatting (markdown, JSON; label + event type name in header)
 - `sharing.py` - Multi-tenant library merging + share-request validation (used by SaaS API)

@@ -39,6 +39,11 @@ from .models import Setlist, Song
 from .paths import PathConfig, get_output_paths
 from .pdf_formatter import generate_setlist_pdf, generate_setlist_pdf_bytes
 from .sharing import merge_effective_library, validate_share_request
+from .reconciler import (
+    MomentPlan,
+    ReconcilePlan,
+    plan_reconciliation,
+)
 from .remover import (
     remove_moment_from_setlist,
     remove_song_from_setlist,
@@ -160,6 +165,10 @@ __all__ = [
     # Removal functions
     "remove_song_from_setlist",
     "remove_moment_from_setlist",
+    # Event-type reconciliation
+    "MomentPlan",
+    "ReconcilePlan",
+    "plan_reconciliation",
     # Transposition
     "transpose_content",
     "calculate_semitones",

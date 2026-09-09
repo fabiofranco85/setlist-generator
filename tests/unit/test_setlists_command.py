@@ -14,7 +14,9 @@ from dataclasses import dataclass, field
 import pytest
 
 from cli.commands import setlists as setlists_cmd
+from library.event_type import EventType
 from library.models import Song
+from tests.helpers.factories import make_song
 
 
 # ---------------------------------------------------------------------------
@@ -88,8 +90,16 @@ class FakeSongRepo:
 
 @dataclass
 class FakeEventTypeRepo:
+    types: dict[str, EventType] = field(default_factory=dict)
+
     def get(self, slug):
-        return None
+        return self.types.get(slug)
+
+    def get_all(self):
+        return dict(self.types)
+
+    def get_default_slug(self):
+        return "main"
 
 
 @dataclass
@@ -350,7 +360,7 @@ def test_deleting_the_last_setlist_exits_cleanly(mocker):
 def test_r_copies_the_setlist_to_the_requested_date(wired, mocker):
     picker, _, repos = wired
     picker.side_effect = [(3, "r"), None]
-    mocker.patch.object(setlists_cmd, "_prompt_reuse_target", return_value=("2026-12-25", ""))
+    mocker.patch.object(setlists_cmd, "_prompt_reuse_target", return_value=("2026-12-25", "", ""))
 
     setlists_cmd.run()
 
@@ -367,7 +377,7 @@ def test_r_applies_the_requested_label(wired, mocker):
     picker, _, repos = wired
     picker.side_effect = [(3, "r"), None]
     mocker.patch.object(
-        setlists_cmd, "_prompt_reuse_target", return_value=("2026-12-25", "evening")
+        setlists_cmd, "_prompt_reuse_target", return_value=("2026-12-25", "evening", "")
     )
 
     setlists_cmd.run()
@@ -375,10 +385,13 @@ def test_r_applies_the_requested_label(wired, mocker):
     assert repos.history.records[0]["label"] == "evening"
 
 
-def test_r_inherits_the_source_event_type(wired, mocker):
+def test_r_keeps_the_source_event_type_when_it_is_chosen(wired, mocker):
+    """The menu starts on the source's type, so accepting it must round-trip."""
     picker, _, repos = wired
     picker.side_effect = [(0, "r"), None]  # the 'ceia' setlist
-    mocker.patch.object(setlists_cmd, "_prompt_reuse_target", return_value=("2026-12-25", ""))
+    mocker.patch.object(
+        setlists_cmd, "_prompt_reuse_target", return_value=("2026-12-25", "", "ceia")
+    )
 
     setlists_cmd.run()
 
@@ -402,7 +415,7 @@ def test_r_onto_an_existing_setlist_asks_before_overwriting(wired, mocker):
     picker.side_effect = [(3, "r"), None]
     # Target 2026-09-13/ceia already exists -> must confirm, not clobber.
     mocker.patch.object(
-        setlists_cmd, "_prompt_reuse_target", return_value=("2026-07-19", "culto_dia")
+        setlists_cmd, "_prompt_reuse_target", return_value=("2026-07-19", "culto_dia", "")
     )
     confirm = mocker.patch.object(setlists_cmd.click, "confirm", return_value=False)
 
@@ -416,7 +429,7 @@ def test_r_onto_an_existing_setlist_asks_before_overwriting(wired, mocker):
 def test_r_does_not_mutate_the_source_setlists_moments(wired, mocker):
     picker, _, repos = wired
     picker.side_effect = [(3, "r"), None]
-    mocker.patch.object(setlists_cmd, "_prompt_reuse_target", return_value=("2026-12-25", ""))
+    mocker.patch.object(setlists_cmd, "_prompt_reuse_target", return_value=("2026-12-25", "", ""))
 
     setlists_cmd.run()
 
@@ -424,3 +437,211 @@ def test_r_does_not_mutate_the_source_setlists_moments(wired, mocker):
     new = repos.history.records[0]
     new["moments"]["louvor"].append("MUTATED")
     assert source["moments"]["louvor"] == ["D", "E", "F"]
+
+
+# ---------------------------------------------------------------------------
+# Loop: re-use into another event type
+# ---------------------------------------------------------------------------
+
+
+def _event_types() -> dict[str, EventType]:
+    """Three shapes: default, a smaller one, and a bigger one."""
+    return {
+        "main": EventType(slug="main", name="Main Event",
+                          moments={"louvor": 2, "prelúdio": 1}),
+        "ceia": EventType(slug="ceia", name="Ceia", moments={"louvor": 2}),
+        "youth": EventType(slug="youth", name="Youth Service",
+                           moments={"louvor": 3, "crianças": 1}),
+    }
+
+
+def _songs() -> dict[str, Song]:
+    return {
+        "A": make_song(title="A", tags={"louvor": 3}, energy=1),
+        "B": make_song(title="B", tags={"louvor": 3}, energy=2),
+        "C": make_song(title="C", tags={"louvor": 3}, energy=3),
+        "D": make_song(title="D", tags={"louvor": 3}, energy=1),
+        "E": make_song(title="E", tags={"louvor": 3}, energy=2),
+        "F": make_song(title="F", tags={"louvor": 3}, energy=4),
+        "Kids One": make_song(title="Kids One", tags={"crianças": 3}, energy=2),
+        "Kids Two": make_song(title="Kids Two", tags={"crianças": 3}, energy=2),
+        "Youth Only": make_song(title="Youth Only", tags={"louvor": 5}, energy=2,
+                                event_types=["youth"]),
+    }
+
+
+@pytest.fixture()
+def rich_repos():
+    """Repos with real songs and event types, for the cross-type paths."""
+    return FakeRepos(
+        history=FakeHistoryRepo(_records()),
+        songs=FakeSongRepo(_songs()),
+        event_types=FakeEventTypeRepo(_event_types()),
+    )
+
+
+def _reuse_into(mocker, record, repos, event_type, date="2026-12-25", label=""):
+    """Run ``_reuse`` with the prompts answered up front."""
+    mocker.patch.object(
+        setlists_cmd, "_prompt_reuse_target", return_value=(date, label, event_type)
+    )
+    setlists_cmd._reuse(record, repos)
+    return repos.history.records[0]
+
+
+# --- the event type prompt -------------------------------------------------
+
+
+def test_reuse_prompt_asks_for_date_event_type_then_label(mocker, rich_repos):
+    mocker.patch.object(setlists_cmd.click, "prompt", side_effect=["2026-12-25", "evening"])
+    mocker.patch.object(setlists_cmd, "_pick_event_type", return_value="youth")
+
+    assert setlists_cmd._prompt_reuse_target(
+        _records()[0], rich_repos
+    ) == ("2026-12-25", "evening", "youth")
+
+
+def test_cancelling_the_event_type_menu_cancels_the_reuse(mocker, rich_repos):
+    mocker.patch.object(setlists_cmd.click, "prompt", side_effect=["2026-12-25", ""])
+    mocker.patch.object(setlists_cmd, "_pick_event_type", return_value=None)
+
+    assert setlists_cmd._prompt_reuse_target(_records()[0], rich_repos) is None
+
+
+def test_event_type_menu_starts_on_the_source_type(mocker, rich_repos):
+    menu = mocker.patch.object(setlists_cmd, "_show_menu", return_value=0)
+
+    setlists_cmd._pick_event_type(rich_repos, "ceia")
+
+    rows = menu.call_args[0][0]
+    assert rows[menu.call_args.kwargs["cursor_index"]].startswith("ceia")
+    assert any(row.startswith("youth") for row in rows)
+
+
+def test_picking_the_default_event_type_yields_the_empty_slug(mocker, rich_repos):
+    """The repo layer stores default-type setlists with an empty slug.
+
+    Saving one as "main" would write to the same file while comparing unequal
+    in `exists()`, so the overwrite guard would wave through a clobber.
+    """
+    mocker.patch.object(setlists_cmd, "_show_menu", return_value=0)  # "main" sorts first
+
+    assert setlists_cmd._pick_event_type(rich_repos, "ceia") == ""
+
+
+def test_event_type_prompt_is_skipped_when_the_backend_has_none(mocker, repos):
+    menu = mocker.patch.object(setlists_cmd, "_show_menu")
+    repos.event_types = None
+
+    assert setlists_cmd._pick_event_type(repos, "ceia") == "ceia"
+    assert menu.call_count == 0
+
+
+# --- reconciliation --------------------------------------------------------
+
+
+def test_same_event_type_copies_the_songs_and_never_prompts(mocker, rich_repos):
+    pick = mocker.patch.object(setlists_cmd, "pick_song")
+
+    new = _reuse_into(mocker, _records()[0], rich_repos, "ceia")
+
+    assert new["moments"] == {"louvor": ["A", "B"]}
+    assert pick.call_count == 0
+
+
+def test_reuse_into_a_smaller_event_type_drops_the_overflow(mocker, rich_repos):
+    source = {"date": "2026-06-28", "moments": {"louvor": ["D", "E", "F"]}}
+
+    new = _reuse_into(mocker, source, rich_repos, "ceia")
+
+    assert new["moments"] == {"louvor": ["D", "E"]}
+    assert new["event_type"] == "ceia"
+
+
+def test_reuse_drops_moments_the_target_event_type_lacks(mocker, rich_repos):
+    source = {"date": "2026-07-19", "moments": {"louvor": ["A"], "prelúdio": ["B"]}}
+    mocker.patch.object(setlists_cmd, "pick_song", return_value=None)
+
+    new = _reuse_into(mocker, source, rich_repos, "ceia")
+
+    assert "prelúdio" not in new["moments"]
+
+
+def test_reuse_prompts_once_per_empty_slot(mocker, rich_repos):
+    # ceia louvor(2) -> youth louvor(3) + crianças(1): two slots to fill.
+    pick = mocker.patch.object(setlists_cmd, "pick_song", return_value=None)
+
+    _reuse_into(mocker, _records()[0], rich_repos, "youth")
+
+    assert pick.call_count == 2
+    moments_asked = {call.kwargs["moment_filter"] for call in pick.call_args_list}
+    assert moments_asked == {"louvor", "crianças"}
+
+
+def test_a_picked_song_lands_in_its_moment(mocker, rich_repos):
+    mocker.patch.object(setlists_cmd, "pick_song", side_effect=["C", "Kids Two"])
+
+    new = _reuse_into(mocker, _records()[0], rich_repos, "youth")
+
+    assert set(new["moments"]["louvor"]) == {"A", "B", "C"}
+    assert new["moments"]["crianças"] == ["Kids Two"]
+
+
+def test_a_blank_slot_is_auto_filled_from_the_moments_candidates(mocker, rich_repos):
+    mocker.patch.object(setlists_cmd, "pick_song", return_value=None)
+
+    new = _reuse_into(mocker, _records()[0], rich_repos, "youth")
+
+    assert len(new["moments"]["louvor"]) == 3
+    assert new["moments"]["crianças"][0] in {"Kids One", "Kids Two"}
+
+
+def test_auto_fill_never_repeats_a_song_already_in_the_setlist(mocker, rich_repos):
+    mocker.patch.object(setlists_cmd, "pick_song", return_value=None)
+
+    new = _reuse_into(mocker, _records()[0], rich_repos, "youth")
+
+    placed = [s for songs in new["moments"].values() for s in songs]
+    assert len(placed) == len(set(placed))
+
+
+def test_songs_bound_to_another_event_type_are_dropped(mocker, rich_repos):
+    source = {"date": "2026-09-13", "event_type": "youth",
+              "moments": {"louvor": ["A", "Youth Only"]}}
+    mocker.patch.object(setlists_cmd, "pick_song", return_value=None)
+
+    new = _reuse_into(mocker, source, rich_repos, "ceia")
+
+    assert "Youth Only" not in new["moments"]["louvor"]
+    # The freed slot is refilled rather than left short.
+    assert len(new["moments"]["louvor"]) == 2
+
+
+def test_moment_order_follows_the_target_event_type(mocker, rich_repos):
+    source = {"date": "2026-09-13", "moments": {"crianças": ["Kids One"]}}
+    mocker.patch.object(setlists_cmd, "pick_song", return_value=None)
+
+    new = _reuse_into(mocker, source, rich_repos, "youth")
+
+    assert list(new["moments"].keys()) == ["louvor", "crianças"]
+
+
+def test_the_picker_only_offers_songs_not_already_placed(mocker, rich_repos):
+    pick = mocker.patch.object(setlists_cmd, "pick_song", return_value=None)
+
+    _reuse_into(mocker, _records()[0], rich_repos, "youth")
+
+    louvor_call = next(
+        c for c in pick.call_args_list if c.kwargs["moment_filter"] == "louvor"
+    )
+    assert {"A", "B"} <= louvor_call.kwargs["exclude"]
+    # Youth-bound songs are legal here; songs bound elsewhere never reach the pool.
+    assert "Youth Only" in louvor_call.args[0]
+
+
+def test_markdown_is_written_under_the_new_event_type(mocker, rich_repos):
+    mocker.patch.object(setlists_cmd, "pick_song", return_value=None)
+
+    _reuse_into(mocker, _records()[0], rich_repos, "youth", label="evening")
+
+    assert rich_repos.output.saved == [("2026-12-25", "evening", "youth")]

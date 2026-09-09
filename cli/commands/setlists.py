@@ -9,8 +9,12 @@ Flow:
 1. List all setlists (newest first), labeled or not, across event types.
 2. ``Enter`` opens the setlist's songs in a pager — ``q`` returns to the list.
 3. ``d`` deletes the setlist (history record + output files) after confirming.
-4. ``r`` re-uses it: prompts for a date and optional label, then copies the
-   same songs to that new setlist and regenerates its markdown.
+4. ``r`` re-uses it: prompts for a date, an event type and an optional label,
+   then copies the songs to that new setlist and regenerates its markdown.
+   Copying into a *different* event type reconciles the moments first (see
+   :mod:`library.reconciler`): whatever fits carries over, the rest is dropped
+   with a reason, and every empty slot is either picked by the user or filled
+   by the same selection the generator uses.
 5. ``Esc``/``q`` quits.
 
 Composition over new logic: rendering is
@@ -28,11 +32,20 @@ from datetime import datetime
 import click
 
 from cli.commands.view_setlist import render_setlist
+from cli.picker import pick_song
 from library import (
+    ENERGY_ORDERING_ENABLED,
+    ENERGY_ORDERING_RULES,
     Setlist,
+    calculate_recency_scores,
+    filter_songs_for_event_type,
     format_setlist_markdown,
     get_repositories,
+    is_default_event_type,
+    plan_reconciliation,
 )
+from library.ordering import apply_energy_ordering
+from library.selector import select_songs_for_moment
 
 _DATE_FORMAT = "%Y-%m-%d"
 
@@ -170,6 +183,82 @@ def _show_picker(rows: list[str], cursor_index: int) -> tuple[int, str] | None:
     return choice - 1, "enter"
 
 
+def _show_menu(rows: list[str], title: str, *, cursor_index: int = 0) -> int | None:
+    """Show a plain single-select menu. Returns the chosen index, or None.
+
+    ``_show_picker`` is specific to the setlist table (it carries the d/r
+    accept keys); this is the generic one-choice-out-of-a-list counterpart.
+    """
+    if _is_interactive():
+        try:
+            from simple_term_menu import TerminalMenu
+
+            return TerminalMenu(
+                rows, title=title, search_key="/", show_search_hint=True,
+                cursor_index=cursor_index,
+            ).show()
+        except ImportError:
+            pass
+
+    click.echo(f"\n{title}\n")
+    for i, row in enumerate(rows, 1):
+        click.echo(f"  {i}. {row}")
+    try:
+        choice = click.prompt("\nSelect number (0 to cancel)", type=int, default=0)
+    except (click.Abort, EOFError):
+        return None
+    if choice <= 0 or choice > len(rows):
+        return None
+    return choice - 1
+
+
+def _event_type_repo(repos):
+    """Return the event type repository, or None when unusable."""
+    repo = getattr(repos, "event_types", None)
+    if repo is None:
+        return None
+    try:
+        return repo if repo.get_all() else None
+    except Exception:
+        return None
+
+
+def _pick_event_type(repos, current_slug: str) -> str | None:
+    """Ask which event type the copy belongs to. Returns a slug, or None.
+
+    The returned slug follows the repository convention: the default type is
+    the empty string. Storing it as "main" instead would route to the same
+    files while comparing unequal in ``exists()``, so the overwrite guard
+    would wave through a clobber.
+
+    Backends without event types (or with none defined) keep the source's
+    type and are never prompted.
+    """
+    repo = _event_type_repo(repos)
+    if repo is None:
+        return current_slug
+
+    types = repo.get_all()
+    default_slug = repo.get_default_slug()
+    # Default first, then alphabetical: the most-used type is one keypress away.
+    slugs = sorted(types, key=lambda s: (s != default_slug, s))
+    rows = [f"{slug}  {types[slug].name}" for slug in slugs]
+
+    effective = current_slug or default_slug
+    cursor = slugs.index(effective) if effective in slugs else 0
+
+    index = _show_menu(
+        rows,
+        "Event type for the copy  (Esc/q to cancel)",
+        cursor_index=cursor,
+    )
+    if index is None:
+        return None
+
+    chosen = slugs[index]
+    return "" if is_default_event_type(chosen) else chosen
+
+
 def _moments_order(repos, event_type: str) -> list[str] | None:
     """Best-effort moments order for an event type.
 
@@ -226,9 +315,12 @@ def _delete(record: dict, repos) -> None:
         click.echo(f"    removed {path}")
 
 
-def _prompt_reuse_target(record: dict) -> tuple[str, str] | None:
-    """Ask for the new date and optional label. None when cancelled."""
-    click.echo(f"\nRe-using {_describe(record)} — same songs, new date.")
+def _prompt_reuse_target(record: dict, repos) -> tuple[str, str, str] | None:
+    """Ask for the new date, event type and optional label.
+
+    Returns ``(date, label, event_type)``, or None when cancelled at any step.
+    """
+    click.echo(f"\nRe-using {_describe(record)} with the same songs.")
 
     while True:
         try:
@@ -244,6 +336,10 @@ def _prompt_reuse_target(record: dict) -> tuple[str, str] | None:
             continue
         break
 
+    event_type = _pick_event_type(repos, _record_key(record)[2])
+    if event_type is None:
+        return None
+
     while True:
         try:
             raw = click.prompt("  Label (optional, blank for none)",
@@ -258,20 +354,161 @@ def _prompt_reuse_target(record: dict) -> tuple[str, str] | None:
                 fg="yellow",
             )
             continue
-        return date, label
+        return date, label, event_type
+
+
+def _resolve_event_type(repos, slug: str):
+    """Return the EventType for a slug ("" = default), or None.
+
+    Never exits: a browse loop must survive a backend that cannot answer.
+    """
+    repo = _event_type_repo(repos)
+    if repo is None:
+        return None
+    try:
+        return repo.get(slug or repo.get_default_slug())
+    except Exception:
+        return None
+
+
+def _report_plan(plan, target_name: str) -> None:
+    """Print what carries over and what cannot, before anything is chosen."""
+    click.echo(f"\n  Reconciling moments for '{target_name}':")
+
+    for mp in plan.moments:
+        kept = ", ".join(mp.carried) if mp.carried else "(nothing carried over)"
+        suffix = f", {mp.slots} to choose" if mp.slots else ""
+        click.echo(f"    {mp.moment}: {kept}{suffix}")
+
+    for moment, songs in plan.dropped_moments.items():
+        click.secho(
+            f"    dropped {moment} ({', '.join(songs)}): "
+            f"'{target_name}' has no such moment",
+            fg="yellow",
+        )
+    for moment, song in plan.overflow:
+        click.secho(f"    dropped {song}: no room left in {moment}", fg="yellow")
+    for moment, song in plan.unavailable:
+        click.secho(
+            f"    dropped {song} (from {moment}): not available for "
+            f"'{target_name}'",
+            fg="yellow",
+        )
+
+
+def _fill_slots(plan, available: dict, history: list[dict], date: str) -> None:
+    """Fill every empty slot: ask first, auto-select whatever is left blank.
+
+    A chosen song is guaranteed a place in its moment but not a position, the
+    same contract ``--desired`` has: energy ordering places it afterwards.
+    """
+    placed = {title for mp in plan.moments for title in mp.carried}
+
+    # `slots` is kept as "still missing" throughout: every song that lands in
+    # a moment decrements it. Without that invariant a moment's target size
+    # would grow with each pick and the moment would overfill.
+    for mp in plan.moments:
+        total = mp.slots
+        for slot in range(total):
+            title = pick_song(
+                available,
+                title=(
+                    f"{mp.moment}: pick song {slot + 1} of {total}  "
+                    "(Esc to let the generator choose)"
+                ),
+                moment_filter=mp.moment,
+                exclude=placed,
+            )
+            if title is None:
+                continue
+            mp.carried.append(title)
+            mp.slots -= 1
+            placed.add(title)
+
+    pending = [mp for mp in plan.moments if mp.slots]
+    if not pending:
+        return
+
+    recency_scores = calculate_recency_scores(available, history, current_date=date)
+    for mp in pending:
+        # `select_songs_for_moment` adds its picks to `placed`, which keeps
+        # later moments from re-selecting the same song.
+        selected = select_songs_for_moment(
+            mp.moment, mp.slots, available, recency_scores, placed,
+        )
+        mp.carried.extend(title for title, _energy in selected)
+        mp.slots -= len(selected)
+
+        if mp.slots:
+            click.secho(
+                f"    ! {mp.moment} is {mp.slots} song(s) short: no other song "
+                f"tagged '{mp.moment}' was available",
+                fg="yellow",
+            )
+
+
+def _reconcile_moments(record: dict, repos, target_slug: str, date: str) -> dict | None:
+    """Project a setlist's moments onto another event type. None to cancel."""
+    et = _resolve_event_type(repos, target_slug)
+    if et is None:
+        click.secho(
+            f"  Cannot read the moments of event type "
+            f"'{target_slug or '(default)'}'; nothing was copied.",
+            fg="red",
+        )
+        return None
+
+    try:
+        songs = repos.songs.get_all()
+    except Exception as exc:
+        click.secho(f"  Cannot load songs ({exc}); nothing was copied.", fg="red")
+        return None
+
+    # Filter with the resolved slug, not the stored one: songs bound to "main"
+    # must stay available when the default type is addressed as "".
+    available = filter_songs_for_event_type(songs, et.slug)
+
+    plan = plan_reconciliation(record.get("moments", {}), et.ordered_moments, available)
+    _report_plan(plan, et.name)
+
+    if plan.total_slots:
+        _fill_slots(plan, available, repos.history.get_all(), date)
+
+    moments: dict[str, list[str]] = {}
+    for mp in plan.moments:
+        if not mp.carried:
+            continue
+        moments[mp.moment] = _energy_ordered(mp, available)
+    return moments
+
+
+def _energy_ordered(mp, available: dict) -> list[str]:
+    """Re-apply the moment's energy arc to its final song list."""
+    if not (ENERGY_ORDERING_ENABLED and mp.moment in ENERGY_ORDERING_RULES):
+        return list(mp.carried)
+
+    with_energy = [
+        (title, available[title].energy) for title in mp.carried if title in available
+    ]
+    return apply_energy_ordering(
+        mp.moment,
+        with_energy,
+        0,
+        energy_ordering_enabled=ENERGY_ORDERING_ENABLED,
+        energy_ordering_rules=ENERGY_ORDERING_RULES,
+    )
 
 
 def _reuse(record: dict, repos) -> None:
-    """Copy a setlist's songs onto a new date/label."""
-    target = _prompt_reuse_target(record)
+    """Copy a setlist's songs onto a new date/label, possibly another type."""
+    target = _prompt_reuse_target(record, repos)
     if target is None:
         click.echo("  Cancelled.")
         return
 
-    date, label = target
-    _, _, event_type = _record_key(record)
+    date, label, event_type = target
 
-    # Re-using onto an existing setlist would silently clobber it — the same
+    # Re-using onto an existing setlist would silently clobber it, the same
     # hazard `songbook generate` guards with its overwrite prompt.
     if repos.history.exists(date, label=label, event_type=event_type):
         existing = date + (f" ({label})" if label else "")
@@ -280,10 +517,19 @@ def _reuse(record: dict, repos) -> None:
             click.echo("  Cancelled.")
             return
 
-    # Deep-copy the song lists: the source record must not alias the new one.
+    if event_type == _record_key(record)[2]:
+        # Same event type: a straight copy. Deep-copy the song lists so the
+        # source record never aliases the new one.
+        moments = {m: list(songs) for m, songs in record["moments"].items()}
+    else:
+        moments = _reconcile_moments(record, repos, event_type, date)
+        if moments is None:
+            click.echo("  Cancelled.")
+            return
+
     setlist = Setlist(
         date=date,
-        moments={m: list(songs) for m, songs in record["moments"].items()},
+        moments=moments,
         label=label,
         event_type=event_type,
     )
@@ -304,7 +550,7 @@ def _reuse(record: dict, repos) -> None:
         click.echo("    Run `songbook markdown` to produce it.")
         return
 
-    click.secho(f"  ✓ Re-used as {date}" + (f" ({label})" if label else ""), fg="green")
+    click.secho(f"  ✓ Re-used as {_describe(setlist.to_dict())}", fg="green")
     click.echo(f"    Markdown: {md_path}")
 
 

@@ -305,7 +305,7 @@ songbook setlists
 |-----|--------|
 | `Enter` | View the setlist's songs (with keys) in a pager; `q` returns to the list |
 | `d` | Delete the setlist — history record + all output files — after confirming |
-| `r` | Re-use the setlist: prompts for a date and optional label, copies the same songs |
+| `r` | Re-use the setlist: prompts for a date, event type and optional label, copies the same songs |
 | `/` | Search the list |
 | `Esc` / `q` | Quit |
 
@@ -326,22 +326,59 @@ songbook setlists
   empty picker.
 
 **Re-use (`r`):**
-- Prompts for a **date** (required, `YYYY-MM-DD`) and an **optional label**.
-  Invalid input re-prompts rather than aborting — a typo must not tear down
-  the browse loop. Blank date cancels.
+- Prompts for a **date** (required, `YYYY-MM-DD`), an **event type** (menu),
+  and an **optional label**. Invalid input re-prompts rather than aborting: a
+  typo must not tear down the browse loop. Blank date cancels, and so does
+  `Esc` on the event type menu.
 - Dates are lenient on input and canonical on output: `2026-2-15` is accepted
   and normalized to `2026-02-15`; `2026-02-30` is rejected (real calendar
   validation, not a regex).
-- **Inherits the source's event type.** Re-using a `ceia` setlist produces
-  another `ceia` setlist, routed to `output/ceia/`. The prompt only asks for
-  date + label, so the event type is carried over rather than re-chosen.
+- **Event type menu** (`_pick_event_type`): lists every type, default first
+  then alphabetical, with the cursor on the source's type so accepting the
+  suggestion is one keypress. Backends with no event types skip the prompt and
+  keep the source's type. Choosing the default type yields the **empty slug**,
+  never `"main"`: `is_default_event_type` routes both to the same files while
+  `exists()`/`get_by_date()` compare slugs literally, so storing `"main"` would
+  make the overwrite guard miss an existing setlist and clobber it.
+- **Same event type** copies the song lists verbatim (copies, not aliases).
+- **Different event type** reconciles the moments first (see below).
 - **Overwrite guard**: a target `(date, label, event_type)` that already
   exists prompts before clobbering — the same hazard `generate` guards with
   `--yes`. Identity includes the event type, so re-using onto a date that has
-  a `main` setlist does *not* collide with a `ceia` one.
-- Copies the song lists (not aliases them), saves history, then regenerates
-  markdown. If markdown generation fails the history record is still correct
-  and the CLI says so, pointing at `songbook markdown`.
+  a `main` setlist does *not* collide with a `ceia` one. The check runs
+  *before* reconciliation, so nobody fills slots by hand only to be asked
+  whether to discard the target.
+- Saves history, then regenerates markdown. If markdown generation fails the
+  history record is still correct and the CLI says so, pointing at
+  `songbook markdown`.
+
+**Cross-event-type re-use (reconciliation):**
+
+Copying to a different event type is never a straight copy: the target has its
+own moments, its own song counts, and its own song pool. `library.reconciler`
+plans the projection, and the CLI turns that plan into prompts.
+
+- **Carried**: for each target moment, the source's songs for that moment, in
+  order. Availability is filtered (`filter_songs_for_event_type`) *before* the
+  count is applied, so a song bound to another type never eats a slot on its
+  way out.
+- **Dropped**, each reported by reason: moments the target does not have,
+  songs past the target's count (overflow), and songs not in the target's pool.
+- **Empty slots** are offered one at a time via `cli.picker.pick_song`,
+  filtered to the moment and excluding everything already placed. `Esc` leaves
+  the slot blank.
+- **Auto-fill** then covers every blank slot in one pass with
+  `calculate_recency_scores` + `select_songs_for_moment` at the *new* date, so
+  it follows exactly the same recency and weight rules as `generate`. Selection
+  is global across moments: no song appears twice.
+- **Energy ordering** is re-applied per moment afterwards. A song you picked
+  is guaranteed *inclusion*, not a *position*, the same contract `--desired`
+  has, and the reason slots are not numbered positions.
+- A moment nothing could fill is left out of the saved setlist rather than
+  saved empty. A moment that came up short prints a warning naming the count.
+- The filter uses the **resolved** slug (`et.slug`), not the stored one, so
+  songs bound to `main` stay available when the default type is addressed as
+  the empty string.
 
 **Non-interactive mode:**
 Falls back to a numbered list and views a single setlist, then exits
@@ -354,7 +391,10 @@ scripted path.
 `TerminalMenu(accept_keys=("enter", "d", "r"))` + `chosen_accept_key`.
 Rendering is `view_setlist.render_setlist` (the pure, returns-a-string half of
 `display_setlist`); deletion and persistence go through the repository layer
-exactly as `delete` and `markdown` do. Note it cannot use
+exactly as `delete` and `markdown` do. Reconciliation is
+`library.reconciler.plan_reconciliation` (pure) plus `_fill_slots` for the
+prompting and auto-selection; `_show_menu` is the generic single-choice menu
+used by the event type prompt, next to the setlist table's `_show_picker`. Note it cannot use
 `cli_utils.validate_label`, which calls `handle_error()` → `SystemExit` and
 would kill the loop on a typo.
 

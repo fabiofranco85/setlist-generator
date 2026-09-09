@@ -61,7 +61,7 @@ songbook view-setlist --label evening  # View labeled setlist
 songbook view-song "Oceanos"         # View song details
 songbook view-song                   # Interactive song picker
 songbook browse                      # Browse the repertoire: list → read → back → repeat
-songbook setlists                    # Browse setlists: view, d to delete, r to re-use
+songbook setlists                    # Browse setlists: view, d to delete, r to re-use (any event type)
 songbook add                         # Add a new song (interactive), then open editor
 songbook add "Novo Louvor" --energy 2 --tags "louvor(5),prelúdio"  # Add via flags
 songbook add "Youth Anthem" --tags "louvor(5)" -e youth --no-edit  # Bind + skip editor
@@ -171,6 +171,7 @@ instructions for this repo's data.
 │   ├── transposer.py           # Chord transposition (chromatic)
 │   ├── generator.py            # Core setlist generation
 │   ├── replacer.py             # Song replacement + derivation
+│   ├── reconciler.py           # Moment projection across event types
 │   ├── formatter.py            # Output formatting
 │   ├── pdf_formatter.py        # PDF generation (file + in-memory bytes, lyrics-only variant)
 │   ├── paths.py                # Output path resolution (PathConfig dataclass)
@@ -367,13 +368,30 @@ songbook setlists        # Newest first → Enter to view, d to delete, r to re-
 
 Lists every generated setlist newest-first, labeled or not, across event types.
 `Enter` pages the setlist's songs (with keys), `d` deletes it after confirming
-(history record + all output files), `r` re-uses it — prompting for a date and
-optional label, then copying the same songs to that new setlist and
-regenerating its markdown. `Esc`/`q` quits.
+(history record + all output files), `r` re-uses it, prompting for a date,
+an event type and an optional label, then copying the songs to that new
+setlist and regenerating its markdown. `Esc`/`q` quits.
 
-Re-use **inherits the source's event type** and guards against overwriting an
-existing `(date, label, event_type)` — it prompts rather than clobbering, the
-same hazard `generate --yes` guards.
+Re-use guards against overwriting an existing `(date, label, event_type)`: it
+prompts rather than clobbering, the same hazard `generate --yes` guards.
+
+**Re-using into another event type** reconciles the moments, because the
+target type has its own moments, counts and song pool:
+
+- Songs carry over for every moment both types share, up to the target's count.
+- Anything that cannot come along is dropped and reported by reason: moments
+  the target does not have, songs past the target's count, and songs bound to
+  a different event type.
+- Every remaining empty slot is offered to you one at a time (a searchable
+  picker filtered to that moment, excluding songs already placed). Press `Esc`
+  to leave a slot blank and the generator fills it using the usual weight +
+  recency selection, at the new date.
+- Energy ordering is re-applied afterwards, so a song you picked is guaranteed
+  to be *in* the moment but not pinned to a position, exactly like `--desired`.
+
+Choosing the default event type stores the setlist under the empty slug (the
+repository convention), so it lands at the output root rather than in a
+subdirectory.
 
 **Song statistics:**
 ```bash
