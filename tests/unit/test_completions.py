@@ -221,3 +221,45 @@ class TestCompletionsAreWiredAcrossTheCLI:
             if _complete(param, "oce") != ["Oceanos"]
         ]
         assert missing == [], f"song argument does not complete on: {missing}"
+
+
+class TestUnknownCommandsOfferNothing:
+    """A typo'd command must not be completed as if it were valid.
+
+    Click resolves an unknown command name against the root group under
+    ``resilient_parsing`` (it suppresses the "No such command" failure during
+    completion), so ``_resolve_context`` hands back the *root* context with the
+    bogus token dropped. Completion then offers the whole top-level command
+    list: ``songbook songs a<TAB>`` becomes ``songbook songs add``, which fails
+    at real parse time. Nothing should be offered after a token that cannot be
+    a command.
+    """
+
+    @staticmethod
+    def _complete_args(args, incomplete):
+        """Drive the same entry point a TAB press goes through."""
+        from click.shell_completion import ShellComplete
+
+        completer = ShellComplete(songbook_cli, {}, "songbook", "_SONGBOOK_COMPLETE")
+        return [item.value for item in completer.get_completions(args, incomplete)]
+
+    def test_nothing_is_offered_after_an_unknown_command(self, repos):
+        assert self._complete_args(["songs"], "a") == []
+
+    def test_nothing_is_offered_after_an_unknown_command_with_no_prefix(self, repos):
+        assert self._complete_args(["nonsense"], "") == []
+
+    def test_nothing_is_offered_after_an_unknown_subcommand(self, repos):
+        assert self._complete_args(["event-type", "bogus"], "a") == []
+
+    def test_top_level_commands_still_complete(self, repos):
+        assert "add" in self._complete_args([], "a")
+
+    def test_a_valid_command_still_completes_its_options(self, repos):
+        assert "--moment" in self._complete_args(["remove"], "--mom")
+
+    def test_a_valid_subcommand_still_completes(self, repos):
+        assert "list" in self._complete_args(["event-type"], "li")
+
+    def test_a_group_option_before_the_command_does_not_block_completion(self, repos):
+        assert "add" in self._complete_args(["--verbose"], "a")

@@ -196,6 +196,29 @@ songbook replace --moment louvor --with "Oceanos" --date <TAB>   # date
 
 `browse` and `setlists` take no parameters — they are fully interactive.
 
+### Nothing Is Completed After an Unknown Command
+
+`songbook songs <TAB>` offers nothing, and neither does any other typo'd
+command name. That takes a deliberate guard, because Click's default is the
+opposite.
+
+During completion Click parses with `resilient_parsing=True`, so a TAB press
+can never crash or prompt. That flag also suppresses the "No such command"
+failure in `Group.resolve_command`, so `shell_completion._resolve_context`
+drops the unrecognized token and returns the *root* group's context. Completion
+then offers the root's whole command list, filtered by whatever was typed:
+`songbook songs a<TAB>` used to expand to `songbook songs add`, a command that
+never existed, which then failed at real parse time with a confusing error.
+
+`SongbookGroup` in `cli/completions.py` checks the leftover arguments Click
+left on the context. When the first one cannot be a command (it is not an
+option, and `get_command` does not know it), completion returns nothing.
+`group_class = type` makes subgroups declared with `@<group>.group()` inherit
+the guard, and `event-type`, declared standalone, passes `cls=SongbookGroup`.
+
+This is upstream Click behavior (reproduced on 8.3.1 with an 8-line app), not
+something specific to this CLI.
+
 ### Deliberately Not Completed
 
 | Parameter | Why |
@@ -397,17 +420,20 @@ exec fish
 1. **Click framework:** uses Click 8.3's built-in shell completion system
 2. **Environment variable:** the shell runs `_SONGBOOK_COMPLETE=<shell>_complete songbook`
    when TAB is pressed
-3. **Completion functions:** custom callbacks in `cli/completions.py` generate suggestions:
+3. **Group class:** the root group and `event-type` use
+   `cli/completions.py:SongbookGroup`, which suppresses completion after an
+   unknown command name (see above)
+4. **Completion functions:** custom callbacks in `cli/completions.py` generate suggestions:
    - `complete_song_names()` - songs from `repos.songs.get_all()`
    - `complete_moment_names()` - `MOMENTS_CONFIG` keys from `library/config.py`
    - `complete_key_names()` - static list of supported musical keys
    - `complete_history_dates()` - dates from `repos.history.get_all()`
    - `complete_history_labels()` - labels from `repos.history.get_all()`
    - `complete_event_type_slugs()` - slugs from `repos.event_types.get_all()`
-4. **Shared plumbing:** `_get_repositories(ctx)` builds the repository container,
+5. **Shared plumbing:** `_get_repositories(ctx)` builds the repository container,
    forwarding `--history-dir` / `--output-dir` when they are already parsed on the
    Click context. Imports are deferred so the TAB round trip stays cheap.
-5. **Return format:** functions return `CompletionItem` objects (with `help=` where a
+6. **Return format:** functions return `CompletionItem` objects (with `help=` where a
    description adds value, e.g. event type names)
 6. **Shell integration:** shell-specific scripts parse the output and display suggestions
 

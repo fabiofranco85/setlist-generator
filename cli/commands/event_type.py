@@ -12,7 +12,7 @@ Provides CRUD operations for event types:
 
 import click
 
-from cli.completions import complete_event_type_slugs
+from cli.completions import SongbookGroup, complete_event_type_slugs
 from library import get_repositories
 from library.event_type import (
     DEFAULT_EVENT_TYPE_SLUG,
@@ -21,7 +21,7 @@ from library.event_type import (
 )
 
 
-@click.group("event-type")
+@click.group("event-type", cls=SongbookGroup)
 def event_type_group():
     """Manage event types for different service configurations.
 

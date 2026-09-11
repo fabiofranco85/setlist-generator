@@ -35,6 +35,7 @@ def _load_dotenv():
 
 _load_dotenv()
 from cli.completions import (
+    SongbookGroup,
     complete_song_names,
     complete_moment_names,
     complete_history_dates,
@@ -44,7 +45,7 @@ from cli.completions import (
 )
 
 
-@click.group()
+@click.group(cls=SongbookGroup)
 @click.version_option(version="1.0.0", prog_name="songbook")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output (debug logging)")
 @click.pass_context

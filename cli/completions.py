@@ -16,6 +16,8 @@ exceptions.
 """
 
 from typing import List
+
+import click
 from click.shell_completion import CompletionItem
 
 
@@ -256,3 +258,48 @@ def complete_event_type_slugs(ctx, param, incomplete: str) -> List[CompletionIte
 
     except Exception:
         return []
+
+
+class SongbookGroup(click.Group):
+    """A Click group that offers no completions after an unknown command.
+
+    Click suppresses the "No such command" failure during completion
+    (``resilient_parsing`` keeps a TAB press from ever crashing), so
+    ``shell_completion._resolve_context`` drops the unrecognized token and
+    hands back *this* group's context. Completion then offers this group's
+    full command list, which is how ``songbook songs a<TAB>`` used to expand
+    to ``songbook songs add``: a command that never existed, assembled by the
+    completer, failing only later at real parse time.
+
+    The information needed to catch it survives in the context, so check it:
+    if the first leftover argument cannot be a command, complete nothing.
+
+    ``group_class = type`` makes subgroups declared with ``@<group>.group()``
+    use this class too, so the guard does not have to be remembered for every
+    future subgroup.
+    """
+
+    group_class = type
+
+    def shell_complete(self, ctx, incomplete):
+        leftover = _leftover_args(ctx)
+        if leftover:
+            first = leftover[0]
+            # A leading "-" is an option, not a command name: Click puts
+            # unparsed options here too, and those still complete normally.
+            if not first.startswith("-") and self.get_command(ctx, first) is None:
+                return []
+        return super().shell_complete(ctx, incomplete)
+
+
+def _leftover_args(ctx) -> list[str]:
+    """Return the args Click could not resolve into a command.
+
+    ``protected_args`` became ``_protected_args`` in Click 8.2; read whichever
+    exists so a version bump degrades to "no guard" rather than an exception
+    inside a TAB press.
+    """
+    protected = getattr(ctx, "_protected_args", None)
+    if protected is None:
+        protected = getattr(ctx, "protected_args", [])
+    return [*protected, *ctx.args]

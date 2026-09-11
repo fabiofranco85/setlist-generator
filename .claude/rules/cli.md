@@ -1480,6 +1480,12 @@ something that does not exist yet), the comma-separated composite values
 - **When adding a command, wire its completions in the same change.**
   `tests/unit/test_completions.py` walks the whole Click command tree and fails if a
   `--date` / `--label` / `--moment` / `--event-type` / song argument does not complete.
+- **Unknown commands complete nothing.** `cli/completions.py:SongbookGroup`
+  is the group class for the root and `event-type` (subgroups inherit it via
+  `group_class = type`). Without it, Click's `resilient_parsing` swallows the
+  unknown token and offers the root command list instead, so
+  `songbook songs a<TAB>` expanded to `songbook songs add`. See
+  `.claude/SHELL_COMPLETION.md`.
 - **zsh installs to `fpath`** (`~/.zsh/completions/_songbook`), not via `source`.
   Sourcing registers with `compdef`, and any `compinit` that runs later in `.zshrc`
   rebuilds `_comps` and silently drops the registration — that failure mode is
