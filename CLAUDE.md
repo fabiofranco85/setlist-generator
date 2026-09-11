@@ -74,6 +74,8 @@ songbook replace --moment louvor --position 2  # Replace song (re-applies energy
 songbook replace --moment louvor --position 2 --pick  # Interactive picker
 songbook replace --moment louvor --position 2 --keep-position  # Don't reorder by energy
 songbook replace --moment louvor --position 2 --label evening  # Replace in labeled
+songbook add-to-setlist --moment louvor --song "Oceanos"  # Add a song to a setlist
+songbook add-to-setlist --moment louvor --position 2  # Insert at a slot (picker opens)
 songbook remove --moment louvor --position 2  # Remove a single song
 songbook remove --moment crianças --all       # Remove an entire moment from the setlist
 songbook label --date 2026-03-01 --to evening  # Add label to setlist
@@ -171,6 +173,7 @@ instructions for this repo's data.
 │   ├── transposer.py           # Chord transposition (chromatic)
 │   ├── generator.py            # Core setlist generation
 │   ├── replacer.py             # Song replacement + derivation
+│   ├── inserter.py             # Song insertion into an existing setlist
 │   ├── reconciler.py           # Moment projection across event types
 │   ├── formatter.py            # Output formatting
 │   ├── pdf_formatter.py        # PDF generation (file + in-memory bytes, lyrics-only variant)
@@ -303,6 +306,31 @@ songbook replace --moment louvor --position 2 --label evening    # In labeled se
 
 - **Manual choice (`--with "Song"` or `--pick`)** always wins. The new song is pinned at the exact requested position, energy reordering is skipped, no surprises. This is what you want when you're sure both *which* song and *where*.
 - **Auto mode** (no `--with`, no `--pick`) keeps the moment's energy arc by reapplying energy ordering after the swap. A new song with very different energy can land at a different position than the one you asked for; the CLI prints a clear note when this happens and shows the actual new position. Pass `--keep-position` to opt out and pin the auto-picked song to the exact requested position.
+
+**Add a song to an existing setlist:**
+```bash
+songbook add-to-setlist --moment louvor --song "Oceanos"            # Append to the moment
+songbook add-to-setlist --moment louvor --song "Oceanos" --position 2  # Insert at slot 2
+songbook add-to-setlist --moment louvor                              # Picker opens
+songbook add-to-setlist --moment ofertório --song "Precioso" --date 2026-09-13 -l culto_dia -e ceia
+```
+
+**Insertion semantics:**
+
+- The song is **appended** unless `--position N` (1-indexed) names a slot. No energy
+  reordering: you named the song and the slot, so both decisions are yours. That is
+  the same contract `replace --with` honors.
+- Omitting `--song` opens the searchable picker, listing the event type's songs minus
+  the ones already in the setlist. It is *not* filtered by moment, so it can reach
+  anything `--song` can.
+- A moment the setlist does not have yet is **created**, the mirror of the way
+  `remove --position` drops a moment whose last song goes.
+- A song may not appear **twice** in one setlist; the command refuses, since the
+  selection and recency logic elsewhere assumes uniqueness.
+- Tags are **not** enforced: a song need not be tagged for the moment it joins.
+- The moment may end up with more songs than the event type configures. That is the
+  point of the command, and it is reported. It affects only newly generated setlists.
+- Markdown is regenerated immediately; an existing PDF is flagged stale, not deleted.
 
 **Remove a song or moment:**
 ```bash

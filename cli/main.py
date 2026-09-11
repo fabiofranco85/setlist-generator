@@ -66,6 +66,7 @@ def cli(ctx, verbose):
       transpose      Transpose a song to a different key
       replace        Replace song in existing setlist
       remove         Remove a song or moment from an existing setlist
+    add-to-setlist Add a song to a moment of an existing setlist
       label          Add, rename, or remove a setlist label
       delete         Delete a setlist (history record + output files)
       pdf            Generate PDF from existing setlist
@@ -354,6 +355,39 @@ def replace(ctx, moment, position, positions, replacement, pick, keep_position, 
     run(moment, position, positions, replacement, date, output_dir, history_dir,
         verbose=ctx.obj.get("verbose", False), label=label, event_type=event_type,
         pick=pick, keep_position=keep_position)
+
+
+@cli.command("add-to-setlist")
+@click.option("--moment", required=True, shell_complete=complete_moment_names, help="Service moment (prelúdio, louvor, etc.)")
+@click.option("--position", type=int, help="Slot the song should occupy (1-indexed). Default: append")
+@click.option("--song", shell_complete=complete_song_names, help="Song to add (opens the picker when omitted)")
+@click.option("--date", shell_complete=complete_history_dates, help="Target date (default: latest)")
+@click.option("--label", "-l", default="", shell_complete=complete_history_labels, help="Setlist label")
+@click.option("--event-type", "-e", default="", shell_complete=complete_event_type_slugs, help="Event type slug")
+@click.option("--output-dir", help="Custom output directory")
+@click.option("--history-dir", help="Custom history directory")
+@click.pass_context
+def add_to_setlist(ctx, moment, position, song, date, label, event_type, output_dir, history_dir):
+    """Add a song to a moment of an existing setlist.
+
+    \b
+    The song is appended unless --position names a slot, and the moment is
+    created when the setlist does not have it yet. Unlike `replace`, this
+    grows the moment: it may end up with more songs than the event type
+    configures, which is allowed and reported.
+
+    \b
+    Examples:
+      songbook add-to-setlist --moment louvor --song "Oceanos"
+      songbook add-to-setlist --moment louvor --position 2
+      songbook add-to-setlist --moment ofertório --song "Precioso" --date 2026-09-13 -l culto_dia -e ceia
+    """
+    from cli.commands.add_to_setlist import run
+    run(
+        moment, position, song, date, label, event_type,
+        output_dir, history_dir,
+        verbose=ctx.obj.get("verbose", False),
+    )
 
 
 @cli.command()

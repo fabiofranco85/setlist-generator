@@ -100,6 +100,7 @@ Where:
     ├── generator.py         # Core setlist generation (label + event-type aware)
     ├── replacer.py          # Song replacement + derive_setlist()
     ├── remover.py           # Song / moment removal with single-song cascade
+    ├── inserter.py          # Song insertion into an existing setlist
     ├── reconciler.py        # Moment projection when copying across event types
     ├── repositories/        # Data access abstraction layer
     │   ├── protocols.py     # Repository interfaces (core + SaaS protocols)
@@ -142,6 +143,7 @@ The codebase is organized into focused modules for better maintainability and re
 - `generator.py` - Orchestrates setlist generation (`SetlistGenerator`, label + event-type aware, strict mode for custom moments configs)
 - `replacer.py` - Song replacement, batch replacement, and `derive_setlist()` for creating labeled variants
 - `reconciler.py` - Projection of one setlist's moments onto another event type's shape (`plan_reconciliation`). Backs the cross-event-type re-use in `songbook setlists`: reports what carries over, what is dropped (missing moment / overflow / not in the target's pool) and how many slots are left for the caller to fill. Pure functions, no prompting and no selection.
+- `inserter.py` - Song insertion into an existing setlist (`add_song_to_setlist`). The mirror of `remover.py`: structural-only, immutable input, zero-indexed position, appends when no position is given, creates a moment the setlist lacks, and refuses a song already present. Backs `songbook add-to-setlist`.
 - `remover.py` - Song and moment removal. `remove_song_from_setlist()` drops a song and cascades to remove the moment when its last song goes; `remove_moment_from_setlist()` drops the whole moment in one call. Pure functions, immutable input pattern.
 - `formatter.py` - Output formatting (markdown, JSON; label + event type name in header)
 - `sharing.py` - Multi-tenant library merging + share-request validation (used by SaaS API)

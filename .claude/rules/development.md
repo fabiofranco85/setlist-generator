@@ -145,6 +145,40 @@ new_setlist = relabel_setlist(source_dict, "")         # Remove label
 - Returns a `Setlist` object (not a dict)
 - Validation (source exists, target doesn't conflict) lives in the CLI layer
 
+### inserter.py
+**Purpose:** Song insertion into an existing setlist (no algorithm, purely structural)
+
+**Contents:**
+- `add_song_to_setlist(setlist_dict, moment, song, position=None, obs=None)` - Insert one song. **Appends** when no position is given, and **creates** the moment when the setlist does not have it.
+
+**Design notes:**
+- The mirror of `remover.py`, and shares its contracts: pure function, immutable input pattern, zero-indexed position (1-indexed → 0-indexed conversion is the CLI's job), input moment order preserved rather than re-canonicalized.
+- Valid positions run 0 to `len(moment_songs)` **inclusive**: inserting *at* the length appends. Error messages report 1-indexed values, matching `remove`.
+- **Duplicates are rejected** (a song may appear only once per setlist): `selector`/`replacer` build exclusion sets on that assumption, and recency scoring counts a date once.
+- Song *existence* is deliberately not validated here, since this module only knows setlist shape. The CLI checks the repertoire and suggests close matches.
+- No moment-tag check, at any layer: `songbook add-to-setlist` accepts a song that is not tagged for the moment. This diverges from `replace --with` on purpose (see `.claude/rules/cli.md`).
+- Creating a moment can push it past the event type's configured count. That is allowed; the CLI reports it.
+- Observability at the orchestration boundary only: `songs_inserted`, `moments_created_by_insert`.
+
+**Usage:**
+```python
+from library import add_song_to_setlist
+
+# Append
+new_dict = add_song_to_setlist(setlist_dict, "louvor", "Oceanos")
+
+# Insert at a slot (zero-indexed: this makes it the 2nd song)
+new_dict = add_song_to_setlist(setlist_dict, "louvor", "Oceanos", position=1)
+
+# A moment the setlist lacks is created
+new_dict = add_song_to_setlist(setlist_dict, "crianças", "Amigo de Deus")
+assert new_dict["moments"]["crianças"] == ["Amigo de Deus"]
+```
+
+**When to modify:**
+- Adding batch insertion (no batch entry point today, matching `remover`).
+- Adding an opt-in energy reorder after insertion (today the song stays exactly where it was put).
+
 ### remover.py
 **Purpose:** Song and moment removal on existing setlists (no algorithm — purely structural)
 

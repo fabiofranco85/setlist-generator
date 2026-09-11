@@ -46,6 +46,8 @@ songbook replace --moment louvor --position 2  # Replace song (re-applies energy
 songbook replace --moment louvor --position 2 --pick  # Interactive picker
 songbook replace --moment louvor --position 2 --keep-position  # Pin to position, no reorder
 songbook replace --moment louvor --position 2 --label evening  # Replace in labeled
+songbook add-to-setlist --moment louvor --song "Oceanos"  # Add a song to a setlist
+songbook add-to-setlist --moment louvor --position 2  # Insert at a slot (picker opens)
 songbook remove --moment louvor --position 2  # Remove a single song from a setlist
 songbook remove --moment crianças --all       # Remove an entire moment (all songs)
 songbook label --date 2026-03-01 --to evening  # Add label to setlist
@@ -803,6 +805,64 @@ songbook replace --moment louvor --position 3 --keep-position
 **Note:** When neither `--position` nor `--positions` is specified, defaults to position 1.
 
 ---
+
+### songbook add-to-setlist
+
+Put a specific song into a moment of an existing setlist. The mirror of
+`songbook remove`, and the only command that *grows* a moment (`replace` swaps
+within the current size, so it can never lengthen one).
+
+**Usage:**
+```bash
+songbook add-to-setlist --moment louvor --song "Oceanos"
+songbook add-to-setlist --moment louvor --song "Oceanos" --position 2
+songbook add-to-setlist --moment louvor
+songbook add-to-setlist --moment ofertório --song "Precioso" --date 2026-09-13 -l culto_dia -e ceia
+```
+
+**Options:**
+
+| Option | Meaning |
+|--------|---------|
+| `--moment` | Required. Moment to insert into; created when the setlist lacks it |
+| `--position N` | 1-indexed slot the song should occupy. Omitted: append |
+| `--song` | Song title (exact, case-sensitive). Omitted: the picker opens |
+| `--date` | Target date; default is the latest setlist |
+| `--label` / `-l` | Setlist label |
+| `--event-type` / `-e` | Event type slug |
+
+**Semantics:**
+
+- **Structural-only**, like `remove`: no recency, no selection, no energy
+  reordering. The caller named the song and the slot, so both decisions are
+  already made, the same reasoning behind `replace --with` skipping the
+  energy reorder.
+- **Position** is 1-indexed at the CLI and zero-indexed in `library/inserter.py`,
+  matching `remove`. Valid values run 1 to *len+1*, that last one being the same
+  as appending.
+- **Missing moment is created.** The mirror of remove's drop-the-moment-when-
+  emptied cascade, so a moment removed by mistake can be rebuilt.
+- **Duplicates are refused**, naming the moment that already holds the song.
+  Uniqueness is assumed by exclusion sets in `selector`/`replacer` and by
+  recency scoring.
+- **Tags are not enforced.** A song need not be tagged for the moment it joins,
+  which is a deliberate divergence from `replace --with`. One-off services do
+  unusual things, and the user naming an exact song is taken as intent.
+- **Unknown song** exits non-zero with `difflib` close-match suggestions, since
+  accented titles are easy to mistype.
+- **Over the configured count** is allowed and reported: `louvor` may end up with
+  5 where the event type configures 4. It only affects newly *generated*
+  setlists; this one keeps what you set.
+- **Picker** (no `--song`) lists the event type's songs minus those already in
+  the setlist, and is deliberately *not* filtered by moment so it can reach
+  anything `--song` can. Cancelling writes nothing and exits 0.
+- Markdown is regenerated; an existing PDF is flagged stale, never deleted,
+  with the same reasoning (and the same resolved-date hint) as `remove`.
+
+**Implementation:**
+`cli/commands/add_to_setlist.py` over `library/inserter.py:add_song_to_setlist`.
+Tests: `tests/unit/test_inserter.py` (the pure function) and
+`tests/integration/test_add_to_setlist_cli.py` (the CLI contract).
 
 ### songbook remove
 
