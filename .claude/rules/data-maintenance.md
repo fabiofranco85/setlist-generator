@@ -135,6 +135,98 @@ git show 775dbc7:scripts/migrate_chords_to_postgres.py
 To populate a fresh database, apply `scripts/schema.sql` and add songs via
 `songbook add`, which writes straight to the active backend.
 
+### scripts/reconstruct_from_outputs.py
+
+Disaster-recovery replay. After restoring a `.backups/*.sql.gz` dump, it
+replays everything the markdown in `output/` knows that the database does not.
+The markdown written by `format_setlist_markdown` embeds every song's chord
+sheet verbatim, so it doubles as a backup of both setlists and chord content.
+
+```bash
+uv run python scripts/reconstruct_from_outputs.py --dry-run   # print the diff, write nothing
+uv run python scripts/reconstruct_from_outputs.py             # apply it
+```
+
+What it does, in order:
+
+1. **New songs** (in `output/` but not in the DB): prompts for energy, a weight
+   per moment the song appeared in, extra moments, YouTube URL and event-type
+   binding, then `repos.songs.add()`. The markdown carries none of that
+   metadata, so the prompts are unavoidable.
+2. **Chord content** newer in `output/` than in the DB: `update_content()`.
+   The newest setlist date wins when a song appears with several variants.
+3. **Setlists** missing from the DB: `repos.history.save()` (upsert).
+
+Selection rules:
+
+- Setlist identity comes from the file path, `output/[<event_type>/]{date}[_{label}].md`,
+  never from the header line (an event type name may itself contain parentheses).
+- Setlists dated on or before `--since` (default: the date of the dump the
+  script was written for, `2026-05-18`) are skipped and reported, unless named
+  with `--include <id>`. `--exclude <id>` drops any setlist. Ids look like
+  `2026-09-13`, `2026-06-07_morning`, `ceia/2026-09-13_culto_dia`.
+- PDF-only setlists (no sibling `.md`) are reported but not replayed; a PDF
+  carries no chord content.
+- `*_lyrics*` files are ignored.
+- An `output/<slug>/` directory for an unknown event type aborts the run;
+  create the event type first.
+- Re-running on an up-to-date database prints "Nothing to do."
+
+The parser and planner are pure functions in `library/output_parser.py`
+(`scan_output_dir`, `parse_setlist_markdown`, `resolve_title`,
+`plan_reconstruction`), unit-tested in `tests/unit/test_output_parser.py`; the
+script itself is covered end-to-end on the filesystem backend in
+`tests/integration/test_reconstruct_script.py`.
+
+### scripts/supabase_hardening.sql
+
+Enables row-level security (no policies) on the five tables and revokes the
+default grants from `anon` and `authenticated`, so Supabase's Data API cannot
+read the repertoire. The CLI's `postgres` role bypasses RLS. Idempotent; apply
+right after creating or restoring the schema on a Supabase project. Fails on a
+plain Postgres (the roles do not exist), which is expected.
+
+### scripts/backup_db.sh
+
+Dumps the database named by `.env`'s `DATABASE_URL` into
+`.backups/songbook-<UTC stamp>.sql.gz` as plain SQL (`--clean --if-exists
+--no-owner --no-privileges`, schema `public` only). Needs a `pg_dump` at least
+as new as the server (see `STORAGE_BACKENDS.md`, "Hosting on Supabase").
+
+## Workflow: Disaster Recovery
+
+The database is the only copy of song metadata (energy, weights, YouTube URLs,
+event-type bindings); `output/` is a second copy of setlists and chord content.
+To rebuild after losing the database:
+
+```bash
+# 0. Snapshot output/ first: `songbook markdown` with --output-dir alone still
+#    writes into output/ (both --output-dir and --history-dir are needed to redirect).
+cp -R output .backups/output-$(date -u +%Y%m%dT%H%M%SZ)
+
+# 1. Restore the newest dump (carries its own DDL)
+set -a; source .env; set +a
+gunzip -c .backups/songbook-<stamp>.sql.gz | psql "$DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction
+
+# 2. Harden (Supabase only)
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/supabase_hardening.sql
+
+# 3. Replay what output/ knows since the dump
+uv run python scripts/reconstruct_from_outputs.py --dry-run --since <dump date>
+uv run python scripts/reconstruct_from_outputs.py --since <dump date>
+
+# 4. Verify: regenerate a few setlists and diff against the snapshot
+songbook markdown --date 2026-09-13 -e ceia -l culto_dia
+diff output/ceia/2026-09-13_culto_dia.md .backups/output-<stamp>/ceia/2026-09-13_culto_dia.md
+
+# 5. Take a fresh backup
+scripts/backup_db.sh
+```
+
+A regenerated file differs from the snapshot only where a song's chord content
+was edited or transposed after that file was written, since the newest content
+wins.
+
 ### migrate_folders.py (project root)
 
 One-shot reorganisation that splits the legacy `setlists/` directory into `output/` (markdown) and `history/` (JSON). Run from the project root once; safe to delete after a successful migration.

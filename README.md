@@ -654,7 +654,13 @@ psql $DATABASE_URL -f scripts/schema.sql   # fresh database only
 DATABASE_URL=... songbook generate          # postgres is the default backend
 ```
 
-For complete setup instructions, see **[Storage Backends Guide (STORAGE_BACKENDS.md)](./STORAGE_BACKENDS.md)**.
+The project's own database is a dedicated cloud Supabase project, reached as
+plain Postgres through its session pooler (port 5432). Backups live in
+`.backups/` (`scripts/backup_db.sh`), and `scripts/reconstruct_from_outputs.py`
+can replay setlists and chord content from `output/` after a restore.
+
+For complete setup instructions, including the Supabase hosting notes, see
+**[Storage Backends Guide (STORAGE_BACKENDS.md)](./STORAGE_BACKENDS.md)**.
 
 ## Programmatic Usage
 

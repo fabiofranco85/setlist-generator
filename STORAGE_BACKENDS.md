@@ -115,16 +115,69 @@ Set two environment variables to use the PostgreSQL backend:
 
 ```bash
 export STORAGE_BACKEND=postgres
-export DATABASE_URL=postgresql://user:pass@localhost:5432/songbook
+export DATABASE_URL=postgresql://user:pass@host:5432/dbname
 ```
 
-For convenience, you can place these in a `.env` file (manually sourced) or your shell profile:
+The CLI loads them from the repo's `.env` file (gitignored, read by
+`cli/main.py:_load_dotenv`), so you normally never export them by hand.
+
+### Hosting on Supabase
+
+The project's database is a **dedicated cloud Supabase project** used as plain
+Postgres. It has nothing to do with the multi-tenant `supabase` backend below;
+the CLI keeps `STORAGE_BACKEND=postgres` and only `DATABASE_URL` changes.
+
+**Connection string.** Use the project's *session pooler* (Dashboard →
+Connect → Session pooler):
+
+```
+DATABASE_URL=postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require
+```
+
+- The database name is `postgres` and the user is `postgres.<project-ref>`.
+- Stay on port 5432 (session mode). Transaction mode (port 6543) breaks
+  psycopg's server-side prepared statements (`prepare_threshold=5`), which the
+  repositories rely on in bulk loops.
+- The direct host `db.<project-ref>.supabase.co` is IPv6-only; the pooler
+  works from IPv4 networks.
+- Percent-encode any URL-special characters in the password.
+
+**Never link this repository to that project.** The `supabase/` directory holds
+the SaaS API's multi-tenant migrations, which create `songs`, `song_tags`,
+`setlists` and `event_types` with a different shape. `supabase link`,
+`supabase db push` or `supabase db reset` against the CLI project would clobber
+its tables. Keep the CLI database in its own project.
+
+**Harden the Data API.** Supabase exposes every table in `public` through
+PostgREST. Right after creating or restoring the schema, run:
 
 ```bash
-# In ~/.bashrc or ~/.zshrc
-export STORAGE_BACKEND=postgres
-export DATABASE_URL=postgresql://user:pass@localhost:5432/songbook
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/supabase_hardening.sql
 ```
+
+It enables row-level security with no policies on the five tables and revokes
+the default grants from `anon` and `authenticated`, so the API returns nothing.
+The CLI connects as `postgres`, which has `BYPASSRLS`, and is unaffected.
+
+**Backups.** Supabase Pro keeps daily backups. For a pre-change snapshot, run
+`scripts/backup_db.sh`, which writes
+`.backups/songbook-<UTC stamp>.sql.gz` (plain SQL, `--clean --if-exists
+--no-owner --no-privileges`). `pg_dump` must be at least as new as the server;
+Homebrew's `postgresql@14` client refuses a Postgres 15/17 server, so install
+`libpq` (`brew install libpq`) or run `pg_dump` through `docker run --rm
+postgres:17`.
+
+**Restore.**
+
+```bash
+set -a; source .env; set +a
+gunzip -c .backups/songbook-<stamp>.sql.gz | psql "$DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/supabase_hardening.sql
+```
+
+The dump carries its own DDL, so `scripts/schema.sql` is not needed. Anything
+created after the dump can be replayed from the markdown in `output/` with
+`scripts/reconstruct_from_outputs.py` (see `.claude/rules/data-maintenance.md`).
 
 ### Usage
 

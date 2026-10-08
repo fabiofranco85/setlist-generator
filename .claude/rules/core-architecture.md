@@ -6,8 +6,11 @@ This document describes the fundamental architecture and concepts of the setlist
 
 **This repository no longer ships song data.** `database.csv`, `chords/`,
 `history/`, and `event_types.json` have been deleted; PostgreSQL holds songs,
-chord content, history, and event types. The repo `.env` pins
-`STORAGE_BACKEND=postgres`.
+chord content, history, and event types. That PostgreSQL is a dedicated cloud
+Supabase project reached as plain Postgres through its session pooler; the repo
+`.env` (gitignored) pins `STORAGE_BACKEND=postgres` and the `DATABASE_URL`.
+Hosting, hardening, backup and restore are documented in `STORAGE_BACKENDS.md`
+("Hosting on Supabase") and `.claude/rules/data-maintenance.md`.
 
 Consequences when working in this codebase:
 

@@ -141,8 +141,12 @@ This is a **setlist generator** for church worship services. It intelligently se
 `history/`, and `event_types.json` were removed — PostgreSQL is the single
 source of truth for songs, chord content, history, and event types.
 
-- The repo `.env` sets `STORAGE_BACKEND=postgres` + `DATABASE_URL`, so every
-  `songbook` command reads and writes the database.
+- The database is a **dedicated cloud Supabase project**, used as plain
+  Postgres through the `postgres` backend (not the multi-tenant `supabase`
+  backend). The repo `.env` (gitignored) sets `STORAGE_BACKEND=postgres` +
+  `DATABASE_URL` pointing at that project's session pooler, so every `songbook`
+  command reads and writes it. See "Database hosting, backup and recovery"
+  under Storage Backend below.
 - Add/edit songs with `songbook add`, `songbook edit`, `songbook weights`, and
   `songbook youtube links` — they all route through `repos.songs.*` to the
   active backend. **Do not** recreate `database.csv` or hand-edit chord files.
@@ -596,6 +600,31 @@ songbook add "Song Title" --energy 2 --tags "louvor(4)"
 # DATABASE_URL is all that's needed; the backend already defaults to postgres
 DATABASE_URL=postgresql://user:pass@host/db songbook generate --date 2026-03-15
 ```
+
+**Database hosting, backup and recovery:**
+
+The project database lives in a dedicated cloud Supabase project and is reached
+as plain Postgres. `DATABASE_URL` in `.env` uses the project's **session
+pooler**:
+
+```
+postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require
+```
+
+- Port 5432 (session mode) only. Transaction mode (port 6543) breaks psycopg's
+  server-side prepared statements. The direct `db.<ref>.supabase.co` host is
+  IPv6-only.
+- Never run `supabase link`, `supabase db push` or `supabase db reset` from this
+  repo against that project. The `supabase/` directory holds the SaaS API's
+  multi-tenant migrations, which create tables with the same names.
+- After creating or restoring the schema, run
+  `psql "$DATABASE_URL" -f scripts/supabase_hardening.sql` so the Data API
+  (anon key) cannot read the tables. The CLI's `postgres` role bypasses RLS.
+- Supabase Pro keeps daily backups. `scripts/backup_db.sh` writes a plain-SQL
+  dump into `.backups/` (gitignored) for pre-change snapshots.
+- Disaster recovery: restore the newest dump, then replay what `output/` knows
+  with `scripts/reconstruct_from_outputs.py --dry-run` (then without the flag).
+  `.claude/rules/data-maintenance.md` has the full procedure.
 
 ### SaaS API (Multi-Tenant)
 
