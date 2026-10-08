@@ -17,7 +17,9 @@ This project uses **path-scoped documentation** to keep context focused. Differe
 Doc updates that match a feature change are *part of the surgical change* (see §3 below), not extra scope. Specifically:
 
 - README.md and its references must reflect features as you implement, change, or remove them.
-- CLAUDE.md and `.claude/*` files must stay in sync with the code they describe.
+- CLAUDE.md, AGENTS.md and `.claude/*` files must stay in sync with the code
+  they describe. AGENTS.md is generated from CLAUDE.md and differs from it only
+  in the agent name, so update both together.
 - Documentation updates land in the same commit as the code change, not after.
 
 ## Quick Start

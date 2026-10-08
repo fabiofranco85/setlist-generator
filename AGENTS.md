@@ -2,22 +2,29 @@
 
 This file provides guidance to Codex when working with code in this repository.
 
+It is generated from CLAUDE.md and must stay identical to it apart from this
+note and the agent name: both agents work on the same code and follow the same
+rules. The path-scoped rule files under `.claude/rules/` are plain markdown and
+apply to Codex too.
+
 ## Documentation Structure
 
 This project uses **path-scoped documentation** to keep context focused. Different documentation files load based on which code you're working on:
 
-- **Core Architecture** (`.Codex/rules/core-architecture.md`) - Always loaded. Contains project overview, algorithms, data structures, and configuration.
-- **CLI Commands** (`.Codex/rules/cli.md`) - Loads when working on `cli/**/*.py`. Contains all command documentation and usage examples.
-- **SaaS API** (`.Codex/rules/api.md`) - Loads when working on `api/**/*.py`, Supabase/S3 backends. Contains endpoints, auth, RBAC, schemas, and backend details.
-- **Data Maintenance** (`.Codex/rules/data-maintenance.md`) - Loads when working on maintenance scripts. Contains cleanup and import utilities.
-- **Development Guide** (`.Codex/rules/development.md`) - Loads when working on `library/**/*.py`. Contains module details and implementation patterns.
+- **Core Architecture** (`.claude/rules/core-architecture.md`) - Always loaded. Contains project overview, algorithms, data structures, and configuration.
+- **CLI Commands** (`.claude/rules/cli.md`) - Loads when working on `cli/**/*.py`. Contains all command documentation and usage examples.
+- **SaaS API** (`.claude/rules/api.md`) - Loads when working on `api/**/*.py`, Supabase/S3 backends. Contains endpoints, auth, RBAC, schemas, and backend details.
+- **Data Maintenance** (`.claude/rules/data-maintenance.md`) - Loads when working on maintenance scripts. Contains cleanup and import utilities.
+- **Development Guide** (`.claude/rules/development.md`) - Loads when working on `library/**/*.py`. Contains module details and implementation patterns.
 
 ### Documentation Rules
 
 Doc updates that match a feature change are *part of the surgical change* (see §3 below), not extra scope. Specifically:
 
 - README.md and its references must reflect features as you implement, change, or remove them.
-- AGENTS.md and `.Codex/*` files must stay in sync with the code they describe.
+- CLAUDE.md, AGENTS.md and `.claude/*` files must stay in sync with the code
+  they describe. AGENTS.md is generated from CLAUDE.md and differs from it only
+  in the agent name, so update both together.
 - Documentation updates land in the same commit as the code change, not after.
 
 ## Quick Start
@@ -61,7 +68,7 @@ songbook view-setlist --label evening  # View labeled setlist
 songbook view-song "Oceanos"         # View song details
 songbook view-song                   # Interactive song picker
 songbook browse                      # Browse the repertoire: list → read → back → repeat
-songbook setlists                    # Browse setlists: view, d to delete, r to re-use
+songbook setlists                    # Browse setlists: view, d to delete, r to re-use (any event type)
 songbook add                         # Add a new song (interactive), then open editor
 songbook add "Novo Louvor" --energy 2 --tags "louvor(5),prelúdio"  # Add via flags
 songbook add "Youth Anthem" --tags "louvor(5)" -e youth --no-edit  # Bind + skip editor
@@ -74,6 +81,8 @@ songbook replace --moment louvor --position 2  # Replace song (re-applies energy
 songbook replace --moment louvor --position 2 --pick  # Interactive picker
 songbook replace --moment louvor --position 2 --keep-position  # Don't reorder by energy
 songbook replace --moment louvor --position 2 --label evening  # Replace in labeled
+songbook add-to-setlist --moment louvor --song "Oceanos"  # Add a song to a setlist
+songbook add-to-setlist --moment louvor --position 2  # Insert at a slot (picker opens)
 songbook remove --moment louvor --position 2  # Remove a single song
 songbook remove --moment crianças --all       # Remove an entire moment from the setlist
 songbook label --date 2026-03-01 --to evening  # Add label to setlist
@@ -112,7 +121,7 @@ data-driven resolves through the repository layer, so completion follows
 **When you add a command or an option with a known set of values, wire its
 `shell_complete=` in the same change** — `tests/unit/test_completions.py` walks
 the Click command tree and fails when one is missing. Callbacks live in
-`cli/completions.py`. See `.Codex/SHELL_COMPLETION.md` for the zsh `fpath`
+`cli/completions.py`. See `.claude/SHELL_COMPLETION.md` for the zsh `fpath`
 install and troubleshooting.
 
 ## Project Overview
@@ -171,6 +180,8 @@ instructions for this repo's data.
 │   ├── transposer.py           # Chord transposition (chromatic)
 │   ├── generator.py            # Core setlist generation
 │   ├── replacer.py             # Song replacement + derivation
+│   ├── inserter.py             # Song insertion into an existing setlist
+│   ├── reconciler.py           # Moment projection across event types
 │   ├── formatter.py            # Output formatting
 │   ├── pdf_formatter.py        # PDF generation (file + in-memory bytes, lyrics-only variant)
 │   ├── paths.py                # Output path resolution (PathConfig dataclass)
@@ -182,7 +193,7 @@ instructions for this repo's data.
 │       ├── postgres/           # PostgreSQL backend (optional)
 │       ├── supabase/           # Supabase multi-tenant backend (optional)
 │       └── s3/                 # S3/R2 cloud output backend (optional)
-├── api/                         # FastAPI SaaS API layer (see .Codex/rules/api.md)
+├── api/                         # FastAPI SaaS API layer (see .claude/rules/api.md)
 ├── scripts/                     # Utilities
 │   ├── schema.sql              # PostgreSQL DDL + seed data
 │   ├── supabase_schema.sql     # Supabase multi-tenant schema + RLS
@@ -303,6 +314,31 @@ songbook replace --moment louvor --position 2 --label evening    # In labeled se
 - **Manual choice (`--with "Song"` or `--pick`)** always wins. The new song is pinned at the exact requested position, energy reordering is skipped, no surprises. This is what you want when you're sure both *which* song and *where*.
 - **Auto mode** (no `--with`, no `--pick`) keeps the moment's energy arc by reapplying energy ordering after the swap. A new song with very different energy can land at a different position than the one you asked for; the CLI prints a clear note when this happens and shows the actual new position. Pass `--keep-position` to opt out and pin the auto-picked song to the exact requested position.
 
+**Add a song to an existing setlist:**
+```bash
+songbook add-to-setlist --moment louvor --song "Oceanos"            # Append to the moment
+songbook add-to-setlist --moment louvor --song "Oceanos" --position 2  # Insert at slot 2
+songbook add-to-setlist --moment louvor                              # Picker opens
+songbook add-to-setlist --moment ofertório --song "Precioso" --date 2026-09-13 -l culto_dia -e ceia
+```
+
+**Insertion semantics:**
+
+- The song is **appended** unless `--position N` (1-indexed) names a slot. No energy
+  reordering: you named the song and the slot, so both decisions are yours. That is
+  the same contract `replace --with` honors.
+- Omitting `--song` opens the searchable picker, listing the event type's songs minus
+  the ones already in the setlist. It is *not* filtered by moment, so it can reach
+  anything `--song` can.
+- A moment the setlist does not have yet is **created**, the mirror of the way
+  `remove --position` drops a moment whose last song goes.
+- A song may not appear **twice** in one setlist; the command refuses, since the
+  selection and recency logic elsewhere assumes uniqueness.
+- Tags are **not** enforced: a song need not be tagged for the moment it joins.
+- The moment may end up with more songs than the event type configures. That is the
+  point of the command, and it is reported. It affects only newly generated setlists.
+- Markdown is regenerated immediately; an existing PDF is flagged stale, not deleted.
+
 **Remove a song or moment:**
 ```bash
 songbook remove --moment louvor --position 2                   # Remove a single song
@@ -367,13 +403,30 @@ songbook setlists        # Newest first → Enter to view, d to delete, r to re-
 
 Lists every generated setlist newest-first, labeled or not, across event types.
 `Enter` pages the setlist's songs (with keys), `d` deletes it after confirming
-(history record + all output files), `r` re-uses it — prompting for a date and
-optional label, then copying the same songs to that new setlist and
-regenerating its markdown. `Esc`/`q` quits.
+(history record + all output files), `r` re-uses it, prompting for a date,
+an event type and an optional label, then copying the songs to that new
+setlist and regenerating its markdown. `Esc`/`q` quits.
 
-Re-use **inherits the source's event type** and guards against overwriting an
-existing `(date, label, event_type)` — it prompts rather than clobbering, the
-same hazard `generate --yes` guards.
+Re-use guards against overwriting an existing `(date, label, event_type)`: it
+prompts rather than clobbering, the same hazard `generate --yes` guards.
+
+**Re-using into another event type** reconciles the moments, because the
+target type has its own moments, counts and song pool:
+
+- Songs carry over for every moment both types share, up to the target's count.
+- Anything that cannot come along is dropped and reported by reason: moments
+  the target does not have, songs past the target's count, and songs bound to
+  a different event type.
+- Every remaining empty slot is offered to you one at a time (a searchable
+  picker filtered to that moment, excluding songs already placed). Press `Esc`
+  to leave a slot blank and the generator fills it using the usual weight +
+  recency selection, at the new date.
+- Energy ordering is re-applied afterwards, so a song you picked is guaranteed
+  to be *in* the moment but not pinned to a position, exactly like `--desired`.
+
+Choosing the default event type stores the setlist under the empty slug (the
+repository convention), so it lands at the output root rather than in a
+subdirectory.
 
 **Song statistics:**
 ```bash
@@ -546,7 +599,7 @@ DATABASE_URL=postgresql://user:pass@host/db songbook generate --date 2026-03-15
 
 ### SaaS API (Multi-Tenant)
 
-The `api/` package provides a FastAPI multi-tenant API backed by Supabase (auth + RLS) and S3 (output storage). Install with `uv sync --group saas` and run with `uvicorn api:create_app --factory --reload`. See `.Codex/rules/api.md` for full documentation.
+The `api/` package provides a FastAPI multi-tenant API backed by Supabase (auth + RLS) and S3 (output storage). Install with `uv sync --group saas` and run with `uvicorn api:create_app --factory --reload`. See `.claude/rules/api.md` for full documentation.
 
 ### Running API Tests
 
@@ -564,7 +617,7 @@ uv run pytest tests/integration/api/ -v -m supabase
 uv run pytest tests/ -m "not supabase"
 ```
 
-Tests exercise the full endpoint pipeline (routes, schemas, PostgREST queries, JSONB handling) against real Postgres. See `.Codex/rules/testing.md` for fixture details.
+Tests exercise the full endpoint pipeline (routes, schemas, PostgREST queries, JSONB handling) against real Postgres. See `.claude/rules/testing.md` for fixture details.
 
 ## Dependencies
 
@@ -578,14 +631,14 @@ Tests exercise the full endpoint pipeline (routes, schemas, PostgREST queries, J
 
 ## Further Reading
 
-For detailed documentation on specific areas, see the path-scoped documentation files in `.Codex/rules/`:
+For detailed documentation on specific areas, see the path-scoped documentation files in `.claude/rules/`:
 
-- **Architecture details** → `.Codex/rules/core-architecture.md`
-- **CLI commands** → `.Codex/rules/cli.md`
-- **Data maintenance** → `.Codex/rules/data-maintenance.md`
-- **Development patterns** → `.Codex/rules/development.md`
+- **Architecture details** → `.claude/rules/core-architecture.md`
+- **CLI commands** → `.claude/rules/cli.md`
+- **Data maintenance** → `.claude/rules/data-maintenance.md`
+- **Development patterns** → `.claude/rules/development.md`
 - **Recency system** → `RECENCY_SYSTEM.md`
-- **SaaS API** → `.Codex/rules/api.md`
+- **SaaS API** → `.claude/rules/api.md`
 - **Storage backends** → `STORAGE_BACKENDS.md`
 - **YouTube integration** → `YOUTUBE.md`
 

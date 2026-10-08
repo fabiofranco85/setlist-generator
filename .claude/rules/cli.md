@@ -1456,8 +1456,9 @@ Then start a new shell (`exec zsh` / `source ~/.bashrc` / `exec fish`).
 **Completion points:**
 - `info` / `view-song` / `edit` / `transpose` `SONG_NAME` - song names
 - `view-song --transpose`, `transpose --to` - key names
-- `replace --moment`, `remove --moment`, `weights --moment` - moment names
-- `replace --with` - song names
+- `replace --moment`, `remove --moment`, `add-to-setlist --moment`,
+  `weights --moment` - moment names
+- `replace --with`, `add-to-setlist --song` - song names
 - `event-type edit|remove|moments SLUG` - existing event type slugs
 - All `--date` options - dates of stored setlists
 - All `--label` options - labels of stored setlists

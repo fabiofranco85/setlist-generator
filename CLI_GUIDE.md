@@ -10,9 +10,17 @@ Complete guide to all `songbook` CLI commands.
   - [generate](#generate---generate-setlists)
   - [view-setlist](#view-setlist---view-generated-setlists)
   - [view-song](#view-song---view-individual-songs)
+  - [setlists](#setlists---browse-generated-setlists)
+  - [browse](#browse---browse-the-repertoire)
+  - [add](#add---add-a-song-to-the-repertoire)
+  - [edit](#edit---edit-a-songs-chords)
   - [replace](#replace---replace-songs-in-setlists)
+  - [add-to-setlist](#add-to-setlist---add-a-song-to-a-setlist)
+  - [remove](#remove---remove-songs-or-moments)
+  - [delete](#delete---delete-a-setlist)
   - [label](#label---manage-setlist-labels)
   - [info](#info---song-statistics)
+  - [weights](#weights---edit-song-moment-weights)
   - [transpose](#transpose---transpose-chords)
   - [list-moments](#list-moments---list-service-moments)
   - [event-type](#event-type---manage-event-types)
@@ -46,6 +54,23 @@ This single command:
 - ✓ Creates an isolated virtual environment
 
 That's it! The `songbook` command is now available.
+
+### Database Connection (Required)
+
+PostgreSQL is the default backend and the source of truth, so every command
+needs `DATABASE_URL`. The repository `.env` supplies it and is loaded
+automatically; without it, commands fail with **"No database URL provided"**.
+
+```bash
+# Apply the schema to a fresh database
+psql $DATABASE_URL -f scripts/schema.sql
+
+# Or point at one explicitly for a single run
+DATABASE_URL=postgresql://user:pass@host/db songbook generate
+```
+
+The filesystem backend (CSV + JSON) still exists but must be requested with
+`STORAGE_BACKEND=filesystem`, and ships no data in this repository.
 
 ### Alternative Setup (Using pip)
 
@@ -437,6 +462,128 @@ G         D       A
 
 ---
 
+### `setlists` - Browse Generated Setlists
+
+Browse every setlist you have generated, newest first, and act on them without
+remembering dates.
+
+**Usage:**
+
+```bash
+songbook setlists
+```
+
+**Keys:**
+
+| Key | Action |
+|-----|--------|
+| `Enter` | View the setlist's songs (with keys) in a pager; `q` returns to the list |
+| `d` | Delete it (history record + every output file) after confirming |
+| `r` | Re-use it: copy the songs to a new date, event type and optional label |
+| `/` | Search the list |
+| `Esc` / `q` | Quit |
+
+Rows read as `DATE  LABEL  N songs  [event-type]`, so labeled variants and
+event types are visible at a glance.
+
+**Re-using (`r`):** prompts for a date, an event type (menu, starting on the
+source's) and an optional label. Keeping the same event type copies the songs
+verbatim. Choosing a **different** one reconciles the moments, because the
+target type has its own moments, counts and song pool:
+
+- Songs carry over for every moment both types share, up to the target's count.
+- Anything that cannot come along is dropped and reported by reason: moments the
+  target does not have, songs past its count, and songs bound to another type.
+- Each remaining empty slot is offered to you (searchable picker, hiding songs
+  already placed). Press `Esc` to leave one blank and the generator fills it
+  using the normal weight + recency selection at the new date.
+- Energy ordering is re-applied afterwards, so a song you picked is guaranteed
+  to be *in* the moment but not pinned to a position.
+
+Re-using onto an existing `(date, label, event type)` asks before overwriting.
+
+---
+
+### `browse` - Browse the Repertoire
+
+The interactive counterpart of `view-song --list`: read a song, come back, pick
+another.
+
+**Usage:**
+
+```bash
+songbook browse
+```
+
+The picker lists every song with its key, energy and tags. Selecting one opens
+it in a pager; `q` returns to the list with the cursor on the song you just
+read. `Esc`/`q` at the list quits. Read-only: it never writes.
+
+---
+
+### `add` - Add a Song to the Repertoire
+
+Add a new song, then open its chord sheet in your editor. The mirror of `edit`.
+
+**Usage:**
+
+```bash
+# Fully interactive, then opens the editor
+songbook add
+
+# Provide the title, get prompted for the rest
+songbook add "Novo Louvor"
+
+# Everything via flags, no prompts
+songbook add "Novo Louvor" --energy 2 --tags "louvor(5),prelúdio"
+
+# Bind to an event type and skip the editor (scripts / CI)
+songbook add "Youth Anthem" --tags "louvor(5)" -e youth --no-edit
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--energy INT` | Energy level 1-4. Prompted if omitted |
+| `--tags TEXT` | Moments with optional weights, e.g. `"louvor(5),prelúdio"`. At least one is required |
+| `--youtube TEXT` | YouTube URL (validated) |
+| `--event-type` / `-e` | Bind to an event type; repeatable. Omitted = available to all |
+| `--editor TEXT` | Editor command for the chord sheet |
+| `--no-edit` | Create the record without opening the editor |
+
+At least one moment is required: an untagged song can never be selected by the
+generator. The song is written to the active backend, so on PostgreSQL there is
+no file to edit by hand.
+
+---
+
+### `edit` - Edit a Song's Chords
+
+Open a song's chord sheet in your editor.
+
+**Usage:**
+
+```bash
+songbook edit "Oceanos"            # by name
+songbook edit                      # interactive picker
+songbook edit "Oceanos" --editor nano
+EDITOR=vim songbook edit "Oceanos"
+```
+
+Editor priority: `--editor` > `$VISUAL` > `$EDITOR` > `vim`.
+
+On the filesystem backend the chord file is edited in place; on PostgreSQL the
+content is round-tripped through a temp file and saved back. If the song has no
+chord sheet yet, a stub heading is created so the editor opens on a real file.
+
+**GUI editors:** `cursor`, `code`, `code-insiders`, `windsurf`, `zed`, `subl`,
+`mate` and `atom` get their wait flag (`--wait` / `-w`) injected automatically.
+Without it they return immediately and the CLI would report "No changes made."
+before you could type.
+
+---
+
 ### `replace` - Replace Songs in Setlists
 
 Replace individual songs in a generated setlist without regenerating the entire setlist.
@@ -613,6 +760,105 @@ Both are completely regenerated to reflect the updated setlist.
 
 ---
 
+### `add-to-setlist` - Add a Song to a Setlist
+
+Put a song into a moment of an existing setlist. This is the only command that
+*grows* a moment: `replace` swaps within the current size, so it can never
+lengthen one.
+
+**Usage:**
+
+```bash
+# Append to the moment
+songbook add-to-setlist --moment louvor --song "Oceanos"
+
+# Insert at a specific slot (1-indexed)
+songbook add-to-setlist --moment louvor --song "Oceanos" --position 2
+
+# Omit --song and the picker opens
+songbook add-to-setlist --moment louvor
+
+# Target a labeled / event-type setlist
+songbook add-to-setlist --moment ofertório --song "Precioso" \
+    --date 2026-09-13 -l culto_dia -e ceia
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--moment TEXT` | **Required.** Moment to insert into; created if the setlist lacks it |
+| `--position N` | 1-indexed slot the song should occupy. Omitted: append |
+| `--song TEXT` | Song title (exact). Omitted: the picker opens |
+| `--date`, `--label`/`-l`, `--event-type`/`-e` | Which setlist to edit |
+
+**Behavior:**
+- **No energy reordering.** You named the song and the slot, so it stays exactly
+  where you put it, the same guarantee `replace --with` gives.
+- **A missing moment is created**, the mirror of the way `remove` drops a moment
+  whose last song goes.
+- **Duplicates are refused**: a song may appear only once in a setlist.
+- **Tags are not enforced**, unlike `replace --with`: a song does not have to be
+  tagged for the moment it joins.
+- The moment may end up **larger than the event type configures** (5 songs where
+  louvor configures 4). That is allowed and reported; it affects only newly
+  generated setlists.
+- Markdown is regenerated; an existing PDF is flagged stale, not deleted.
+
+---
+
+### `remove` - Remove Songs or Moments
+
+Remove a song, or an entire moment, from an existing setlist.
+
+**Usage:**
+
+```bash
+# Remove one song
+songbook remove --moment louvor --position 2
+
+# Remove the whole moment
+songbook remove --moment crianças --all
+
+# Target a labeled / event-type setlist
+songbook remove --moment louvor --position 1 --label evening
+songbook remove --moment ofertório --all -e youth --date 2026-03-20
+```
+
+Exactly one of `--position N` (1-indexed) or `--all` is required.
+
+**Behavior:**
+- **Cascade**: removing the last song in a moment drops the moment itself, and
+  the CLI says so.
+- Structural only: no recency recalculation, no energy reordering.
+- Markdown is regenerated; an existing PDF is flagged stale, not deleted.
+- Removing everything leaves an empty setlist rather than deleting it; use
+  `songbook delete` to discard it.
+
+---
+
+### `delete` - Delete a Setlist
+
+Delete a setlist's history record and all of its output files.
+
+**Usage:**
+
+```bash
+songbook delete --date 2026-02-15                    # prompts to confirm
+songbook delete --date 2026-02-15 --yes              # skip the prompt
+songbook delete --date 2026-03-01 --label evening --yes
+songbook delete --date 2026-03-20 -e youth --yes
+```
+
+`--date` is **required**: deletion never defaults to the latest setlist, so a
+stray command cannot wipe the service you just built. Removes the history
+record plus the markdown, the PDF and the `_lyrics.pdf` variant.
+
+Labels and event types are independent: deleting the unlabeled primary leaves
+its labeled siblings alone, and vice versa.
+
+---
+
 ### `label` - Manage Setlist Labels
 
 Add, rename, or remove labels on existing setlists. Labels allow multiple setlists per date (e.g., morning and evening services). This command safely renames all associated files (history JSON, output markdown) and regenerates the markdown header.
@@ -756,6 +1002,30 @@ USAGE HISTORY (2 time(s))
 - Check when a song was last used before adding it to an override
 - Understand why a song keeps or doesn't keep appearing in setlists
 - Review a song's full performance history
+
+---
+
+### `weights` - Edit Song-Moment Weights
+
+Interactively change how strongly a song is preferred for a moment. Weight
+drives the selection score (`weight × (recency + 0.1) + random`), so raising it
+makes the generator reach for that song more often without removing anything
+from rotation.
+
+**Usage:**
+
+```bash
+songbook weights                     # pick a moment, then a song
+songbook weights --moment louvor     # skip the moment picker
+songbook weights -m louvor -e youth  # scope to the youth song pool
+```
+
+Songs tagged for the chosen moment are listed with their current weight,
+highest first. Pick one, type a new weight (1-10), and it is saved immediately;
+there is no separate save step, so `Ctrl+C` never loses earlier edits.
+
+Adding a song to a moment it is not tagged for is out of scope here. Use
+`songbook add` for a new song, or edit the tags in your backend.
 
 ---
 
@@ -1347,6 +1617,28 @@ songbook label --date 2026-03-01 --label night --remove      # Remove
 
 4. **Not enough songs in that moment**
    - Check if you have enough songs tagged for that moment in `database.csv`
+
+### Problem: Error "No database URL provided"
+
+**Cause:** PostgreSQL is the default backend and `DATABASE_URL` is not set.
+
+**Solutions:**
+1. Run from the repository root so the `.env` is picked up
+2. Or pass it for the run: `DATABASE_URL=postgresql://... songbook generate`
+3. Or switch backends deliberately: `STORAGE_BACKEND=filesystem songbook ...`
+   (note that no song data ships with this repository)
+
+---
+
+### Problem: Error "Song database not found"
+
+**Cause:** `STORAGE_BACKEND=filesystem` is set, but there is no `database.csv`
+in the working directory. The filesystem backend has no data here.
+
+**Solution:** Unset `STORAGE_BACKEND` to use PostgreSQL, or point the command
+at a directory that has `database.csv` and `chords/`.
+
+---
 
 ### Problem: Error "File not found: chords/Song.md"
 

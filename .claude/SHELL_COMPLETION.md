@@ -185,14 +185,15 @@ songbook replace --moment louvor --with "Oceanos" --date <TAB>   # date
 | `transpose` | `--to` | Musical keys |
 | `replace` | `--moment`, `--with` | Moment names, song names |
 | `remove` | `--moment` | Moment names |
+| `add-to-setlist` | `--moment`, `--song` | Moment names, song names |
 | `weights` | `--moment` / `-m` | Moment names |
 | `event-type edit\|remove\|moments` | `SLUG` | Event type slugs |
 | *all setlist commands* | `--date` | Dates |
 | *all setlist commands* | `--label` / `-l` | Labels |
 | *all commands accepting one* | `--event-type` / `-e` | Event type slugs |
 
-"All setlist commands" = `generate`, `view-setlist`, `replace`, `remove`, `label`,
-`delete`, `pdf`, `markdown`, `youtube create`, `youtube links`.
+"All setlist commands" = `generate`, `view-setlist`, `replace`, `add-to-setlist`,
+`remove`, `label`, `delete`, `pdf`, `markdown`, `youtube create`, `youtube links`.
 
 `browse` and `setlists` take no parameters — they are fully interactive.
 

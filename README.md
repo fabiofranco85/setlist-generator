@@ -109,7 +109,7 @@ songbook generate
 ```
 
 This will:
-1. Load all songs from the configured [storage backend](#storage-backends) (default: `database.csv` + `chords/`)
+1. Load all songs from the configured [storage backend](#storage-backends) (default: PostgreSQL, via `DATABASE_URL`)
 2. Analyze **all historical setlists** to calculate time-based recency scores
 3. Generate a new setlist with songs for each service moment
 4. Save the output to `output/YYYY-MM-DD.md` (markdown with chords)
@@ -124,7 +124,9 @@ For complete documentation of all CLI commands, options, and examples, see:
 **📖 [CLI Command Reference (CLI_GUIDE.md)](./CLI_GUIDE.md)**
 
 The CLI guide covers:
-- All commands in detail (`generate`, `view-setlist`, `view-song`, `replace`, `label`, `info`, `transpose`, etc.)
+- All commands in detail (`generate`, `view-setlist`, `setlists`, `view-song`,
+  `browse`, `add`, `edit`, `replace`, `add-to-setlist`, `remove`, `label`,
+  `delete`, `info`, `weights`, `transpose`, etc.)
 - Command options and flags
 - Usage examples and workflows
 - Shell completion setup
@@ -205,13 +207,21 @@ For CLI commands to create and manage event types, see the **[CLI Command Refere
 
 - **Default event type** (`main`): Uses the global `MOMENTS_CONFIG`. With the filesystem backend, data is stored at the root level (e.g., `history/` and `output/`).
 - **Non-default types** (e.g., `youth`): Have their own moments config. Data is stored under the event type name (e.g., `history/youth/` and `output/youth/` with the filesystem backend).
-- **Song binding**: By default, all songs are available for all event types. You can restrict songs to specific types by adding an `event_types` column to `database.csv`.
+- **Song binding**: By default, all songs are available for all event types. Restrict a song with `songbook add "Title" -e youth` (repeatable).
 - **Global recency**: Song recency is computed across ALL event types, so a song used in the youth service affects its freshness for the main service too.
 - **Labels still work**: Event type and label are orthogonal — you can combine them.
 
 ### Binding Songs to Event Types
 
-To restrict a song to specific event types, add an `event_types` column to `database.csv`:
+A song with no binding is available to every event type. Bind one at creation:
+
+```bash
+songbook add "Youth Song" --energy 1 --tags "louvor(4)" -e youth
+songbook add "Christmas Carol" --energy 3 --tags "louvor(5)" -e christmas -e youth
+```
+
+On the **filesystem backend** the same binding is the `event_types` column of
+`database.csv`:
 
 ```csv
 song;energy;tags;youtube;event_types
@@ -226,7 +236,26 @@ General Song;2;louvor(3);;
 
 ## Managing Songs
 
-### Song Database: `database.csv`
+Songs live in the configured storage backend, which is PostgreSQL by default.
+Add and edit them through the CLI rather than by hand:
+
+| Task | Command |
+|------|---------|
+| Add a song | `songbook add` (interactive) or `songbook add "Title" --energy 2 --tags "louvor(5)"` |
+| Edit chords / lyrics | `songbook edit "Title"` |
+| Change per-moment weights | `songbook weights --moment louvor` |
+| Set a YouTube link | `songbook youtube links --date <date>` |
+| Transpose and save | `songbook transpose "Title" --to G --save` |
+
+Each routes through the repository layer, so it writes to whichever backend is
+active. See the **[CLI Command Reference](./CLI_GUIDE.md)** for each command.
+
+### Song Database Format: `database.csv`
+
+> This section documents the **filesystem backend's** storage format. It is
+> accurate for `STORAGE_BACKEND=filesystem`, and is *not* a description of this
+> repository's data: `database.csv` and `chords/` are not present here, and
+> editing them is not how songs are managed on the default backend.
 
 This file maps songs to service moments with energy levels and optional weights.
 
@@ -348,6 +377,9 @@ When adding new songs, classify them by these characteristics:
 
 ### Song Files: `chords/*.md`
 
+> Also specific to the **filesystem backend**. On PostgreSQL the same content is
+> stored per song and edited with `songbook edit`.
+
 Each song has a markdown file with chords and lyrics.
 
 **File naming**: Must exactly match the song name in `database.csv`
@@ -395,7 +427,10 @@ songbook add "Hino Jovem" --tags "louvor(5)" -e youth --no-edit
 At least one moment is required (so the generator can pick the song). Pass
 `--no-edit` to skip the editor (e.g. in scripts).
 
-**Or add it manually:**
+**Or add it manually (filesystem backend only):**
+
+> On the default PostgreSQL backend there is no file to edit. Use `songbook add`
+> above; the steps below apply when `STORAGE_BACKEND=filesystem`.
 
 1. **Classify the song's energy** (1-4):
    - Listen to the song and assess its tempo, intensity, and mood
@@ -439,6 +474,10 @@ Intimidade;4;louvor(5)
 
 ### Removing a Song
 
+There is no `songbook` command for deleting a song from the repertoire. On the
+default PostgreSQL backend, delete its rows directly (`songs` and `song_tags`).
+On the filesystem backend:
+
 1. Delete or comment out the line in `database.csv`:
    ```csv
    # Old Song;2;louvor  ← This song won't be selected anymore
@@ -448,7 +487,10 @@ Intimidade;4;louvor(5)
 
 ### Updating Song Tags/Weights
 
-Edit `database.csv`:
+Use `songbook weights --moment louvor`, which edits the weight of every song
+tagged for a moment and saves each change immediately.
+
+On the filesystem backend the same data is the `tags` column of `database.csv`:
 
 ```csv
 # Before
@@ -580,14 +622,24 @@ DEFAULT_WEIGHT = 3  # Default weight when not specified in tags
    }
    ```
 
-2. Add songs with the new tag in `database.csv`:
+2. Tag songs with the new moment:
+   ```bash
+   songbook add "Lugar Secreto" --energy 4 --tags "meditação"
+   ```
+   On the filesystem backend, the equivalent row in `database.csv`:
    ```csv
    Lugar Secreto;4;meditação
    ```
 
 ## Storage Backends
 
-By default, the generator stores all data as local files (CSV, JSON, markdown). For team or server deployments, a **PostgreSQL backend** is available.
+**PostgreSQL is the default backend** and the source of truth for songs, chord
+content, history and event types. A filesystem backend (CSV + JSON + `.md`) is
+still supported as a code path but must be requested explicitly with
+`STORAGE_BACKEND=filesystem`; it ships no data in this repository.
+
+Generated output (markdown and PDF) is always written to the filesystem, on
+every backend.
 
 | Backend | Data Storage | Best For |
 |---------|-------------|----------|
