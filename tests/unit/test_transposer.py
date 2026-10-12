@@ -250,6 +250,14 @@ class TestTransposeLine:
         assert result.startswith("[Intro]")
         assert "A" in result
 
+    def test_section_marker_keeps_chord_columns(self):
+        """Chords after a marker stay in their columns (no extra space after it)."""
+        assert transpose_line("[Intro] G  D", 2) == "[Intro] A  E"
+        assert transpose_line("[Intro] C  Am7  G", 2) == "[Intro] D  Bm7  A"
+
+    def test_section_marker_without_space_keeps_chord_attached(self):
+        assert transpose_line("[Intro]G  D", 2) == "[Intro]A  E"
+
     def test_no_chord_tokens_returns_unchanged(self):
         # A chord line where regex finds no tokens (pure section marker with chord-like)
         # Actually this is hard to trigger since is_chord_line would return False first.

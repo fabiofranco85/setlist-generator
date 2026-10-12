@@ -256,8 +256,8 @@ def transpose_line(line: str, semitones: int, use_flats: bool = False) -> str:
     for start_col, _orig, transposed in entries:
         # Pad to reach the original start column
         gap = start_col - cursor
-        if gap < 1 and parts:
-            gap = 1  # ensure at least one space between chords
+        if gap < 1 and cursor > len(marker):
+            gap = 1  # ensure at least one space between chords (not after the marker)
         parts.append(" " * gap)
         parts.append(transposed)
         cursor += gap + len(transposed)
