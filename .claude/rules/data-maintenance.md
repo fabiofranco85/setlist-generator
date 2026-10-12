@@ -200,8 +200,10 @@ event-type bindings); `output/` is a second copy of setlists and chord content.
 To rebuild after losing the database:
 
 ```bash
-# 0. Snapshot output/ first: `songbook markdown` with --output-dir alone still
-#    writes into output/ (both --output-dir and --history-dir are needed to redirect).
+# 0. Snapshot output/ first: on the postgres backend `songbook markdown` ignores
+#    --output-dir (the container never forwards --history-dir, and the path
+#    resolver needs both), so it writes into output/. To regenerate elsewhere set
+#    SETLIST_OUTPUT_DIR and SETLIST_HISTORY_DIR instead (see step 4).
 cp -R output .backups/output-$(date -u +%Y%m%dT%H%M%SZ)
 
 # 1. Restore the newest dump (carries its own DDL)
@@ -215,9 +217,10 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/supabase_hardening.sql
 uv run python scripts/reconstruct_from_outputs.py --dry-run --since <dump date>
 uv run python scripts/reconstruct_from_outputs.py --since <dump date>
 
-# 4. Verify: regenerate a few setlists and diff against the snapshot
-songbook markdown --date 2026-09-13 -e ceia -l culto_dia
-diff output/ceia/2026-09-13_culto_dia.md .backups/output-<stamp>/ceia/2026-09-13_culto_dia.md
+# 4. Verify: regenerate a few setlists into a scratch dir and diff against output/
+SETLIST_OUTPUT_DIR=/tmp/rt/out SETLIST_HISTORY_DIR=/tmp/rt/hist \
+  songbook markdown --date 2026-09-13 -e ceia -l culto_dia
+diff /tmp/rt/out/ceia/2026-09-13_culto_dia.md output/ceia/2026-09-13_culto_dia.md
 
 # 5. Take a fresh backup
 scripts/backup_db.sh
