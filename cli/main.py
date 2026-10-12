@@ -228,7 +228,7 @@ def info(song_name):
 @click.option("--tags", default=None, help='Moments with optional weights, e.g. "louvor(5),prelúdio"')
 @click.option("--youtube", default=None, help="YouTube URL (optional)")
 @click.option("--event-type", "-e", "event_types", multiple=True, shell_complete=complete_event_type_slugs, help="Bind the song to event type(s) (repeatable; empty = all)")
-@click.option("--editor", default=None, help="Editor command to use (overrides $VISUAL / $EDITOR; default: vim)")
+@click.option("--editor", default=None, help="Editor command to use (default: vim)")
 @click.option("--no-edit", is_flag=True, help="Create the record without opening the editor")
 def add(title, energy, tags, youtube, event_types, editor, no_edit):
     """Add a new song to your repertoire.
@@ -237,6 +237,12 @@ def add(title, energy, tags, youtube, event_types, editor, no_edit):
     Collects the song's metadata (interactively, or via flags) then opens the
     chord sheet in your editor — the mirror of `songbook edit`. At least one
     moment is required so the song can be selected by the generator.
+
+    \b
+    On a terminal it also asks for an optional Cifra Club URL: the chord
+    sheet is imported from that page and transposed to the key you give
+    (blank = the key the song sounds in, so no capo is needed), then opened
+    in the editor for review.
 
     \b
     Examples:
@@ -251,13 +257,13 @@ def add(title, energy, tags, youtube, event_types, editor, no_edit):
 
 @cli.command()
 @click.argument("song_name", required=False, shell_complete=complete_song_names)
-@click.option("--editor", default=None, help="Editor command to use (overrides $VISUAL / $EDITOR; default: vim)")
+@click.option("--editor", default=None, help="Editor command to use (default: vim)")
 def edit(song_name, editor):
     """Open a song's chord file in your editor.
 
     \b
     When called without a song name, opens an interactive picker.
-    Editor resolution: --editor > $VISUAL > $EDITOR > vim.
+    Editor: --editor if given, else vim ($VISUAL / $EDITOR are ignored).
     If the chord file does not exist yet, a stub heading is created.
 
     \b

@@ -38,7 +38,7 @@ songbook browse                      # Browse repertoire: list → read → back
 songbook setlists                    # Browse setlists: view, d to delete, r to re-use
 songbook info "Oceanos"              # Song statistics and history
 songbook info                        # Interactive picker → statistics
-songbook add                         # Add a new song (interactive), then open editor
+songbook add                         # Add a new song (interactive; optional Cifra Club import), then open editor
 songbook add "Novo Louvor" --energy 2 --tags "louvor(5),prelúdio" --no-edit  # Add via flags
 songbook edit "Oceanos"              # Open chord file in $EDITOR (default: vim)
 songbook edit                        # Interactive picker → editor
@@ -518,7 +518,7 @@ storage backend, then opens the chord sheet in your editor.
 
 **Usage:**
 ```bash
-# Fully interactive (prompts for title, energy, moments, YouTube)
+# Fully interactive (prompts for title, Cifra Club URL + key, energy, moments, YouTube)
 songbook add
 
 # Provide the title, prompt for the rest
@@ -549,14 +549,25 @@ songbook add "Oceanos" --energy 3 --tags "louvor(2)" --youtube "https://youtu.be
   unless the flag is given.
 - `--event-type TEXT` / `-e` - Bind the song to an event type. Repeatable;
   empty (the default) makes the song available for all event types.
-- `--editor TEXT` - Editor command (same resolution as `edit`:
-  `--editor` > `$VISUAL` > `$EDITOR` > `vim`).
+- `--editor TEXT` - Editor command (same resolution as `edit`: the flag,
+  else `vim`).
 - `--no-edit` - Create the record without opening the editor. Required for
   scripts / CI (otherwise the editor launches on the new chord sheet).
 
 **Behavior:**
 - **Validation**: a value supplied via a flag is validated once and aborts on
   error; a missing required field is prompted for and re-asks until valid.
+- **Cifra Club import** (interactive terminals only, no flag): right after the
+  title, `Cifra Club URL (blank to skip)`. The page is fetched and parsed by
+  `library/cifraclub.py` (`fetch_page` + `parse_page`); any failure (not a
+  Cifra Club URL, HTTP error, no chord block) is printed and the URL asked
+  again. Then `Key (blank = <sounding>; written in <shape> with capo on <fret>)`:
+  `render_sheet` heads the sheet with the user's title and transposes it.
+  Blank = the sounding key, so a capo sheet comes out capo-free; a typed key
+  is capitalized and passed through `resolve_target_key` (a minor song stays
+  minor); an unknown key is reported and asked again. The rendered sheet is
+  the song's initial content instead of the stub, so the editor opens on it.
+  Tests patch `cli.commands.add._is_interactive` and `_fetch_sheet`.
 - **Persistence**: the song is created via `repos.songs.add()` (filesystem
   appends to `database.csv` + writes `chords/<title>.md`; postgres inserts into
   `songs` + `song_tags`). A stub `### Title ()` chord heading is created so the
@@ -587,23 +598,17 @@ songbook edit "Oceanos"
 # Override the editor for this invocation
 songbook edit "Oceanos" --editor nano
 songbook edit "Oceanos" --editor "code --wait"
-
-# Use environment variables (standard Unix convention)
-EDITOR=nano songbook edit "Oceanos"
-VISUAL=vim songbook edit "Oceanos"
 ```
 
 **Arguments:**
 - `SONG_NAME` - Optional. Title of the song to edit (supports tab completion). Opens the interactive picker if omitted.
 
 **Options:**
-- `--editor TEXT` - Editor command (may include flags, e.g. `"code --wait"`). Overrides `$VISUAL` and `$EDITOR`. Default: `vim`.
+- `--editor TEXT` - Editor command (may include flags, e.g. `"code --wait"`). Default: `vim`.
 
-**Editor resolution priority:**
-1. `--editor` CLI option
-2. `$VISUAL` environment variable
-3. `$EDITOR` environment variable
-4. `vim`
+**Editor resolution:** `--editor` if given, else `vim`. `$VISUAL` and `$EDITOR`
+are deliberately ignored: a terminal that sets them (IDE terminals often do)
+would otherwise silently swap vim for another editor.
 
 **Behavior:**
 - **Filesystem backend:** Opens `chords/<title>.md` *in place*. After the editor exits, the song cache is invalidated so subsequent commands (`view-song`, `transpose`, `pdf`, ...) immediately see the changes.

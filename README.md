@@ -427,6 +427,12 @@ songbook add "Hino Jovem" --tags "louvor(5)" -e youth --no-edit
 At least one moment is required (so the generator can pick the song). Pass
 `--no-edit` to skip the editor (e.g. in scripts).
 
+**Importing from Cifra Club:** after the title, `songbook add` asks for an
+optional Cifra Club URL. Paste one and the chord sheet is imported; then type a
+key to transpose it, or leave it blank for the key the song sounds in (a capo
+sheet is transposed so you play it without the capo). The sheet opens in vim so
+you can adjust it before it's saved.
+
 **Or add it manually (filesystem backend only):**
 
 > On the default PostgreSQL backend there is no file to edit. Use `songbook add`

@@ -112,7 +112,9 @@ def test_editor_flag_overrides_env(project, mocker, monkeypatch):
     assert captured["argv"][0] == "nano"
 
 
-def test_default_editor_is_vim_when_no_env(project, mocker):
+def test_default_editor_is_vim_even_when_env_is_set(project, mocker, monkeypatch):
+    monkeypatch.setenv("VISUAL", "code")
+    monkeypatch.setenv("EDITOR", "nano")
     captured: dict = {}
 
     def _fake(argv, check):

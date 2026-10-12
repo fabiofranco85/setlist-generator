@@ -445,6 +445,25 @@ ENERGY_ORDERING_RULES = {
 - Transposition is modular arithmetic: `(note_index + semitones) % 12`
 - `resolve_target_key()` infers minor quality: `Bm` + `--to G` → `Gm`
 
+### cifraclub.py
+**Purpose:** Import a chord sheet from a Cifra Club song page (the optional URL prompt of `songbook add`)
+
+**Contents:**
+- `ChordSheet` (frozen dataclass) - `title`, `artist`, `key` (written key), `sounding_key`, `capo`, `body`
+- `is_cifraclub_url(url)` - http(s) on `cifraclub.com.br` or a subdomain (rejects look-alike hosts)
+- `fetch_page(url)` - The only network call. Stdlib `urllib` with browser-like headers: Akamai answers 403 to a bare request. Handles gzip
+- `parse_page(html)` - Pure. The sheet is the `<pre data-chord-content>` block; tags are stripped (chords sit in `<b>`, line pairs in `<div>`s whose newlines are inside them, so alignment survives). Key/capo come from the "Tom:" / "Capotraste:" labels after removing React's `<!-- -->` separators. Raises `ValueError` without a chord block
+- `render_sheet(sheet, title, target_key="")` - Pure. `### <title> (<written key>)` + body, then `transpose_content` to the target. Blank target = sounding key
+
+**Key design decisions:**
+- **Written vs sounding key**: "Tom: Db (com forma de C)" with a capo means the chords are C shapes. The heading must name the key the chords are *in*, because `transpose` computes intervals from it; the default target is the sounding key so the result is played without the capo
+- **No CSS class names**: they are generated per site build; parsing anchors on data attributes and visible labels instead. A layout change fails loudly (`ValueError`), never with a half-parsed sheet
+- **Test fixtures use invented lyrics** that only mimic the page markup (`tests/unit/test_cifraclub.py`)
+
+**When to modify:**
+- Cifra Club changes its markup (update the regexes and the fixture together)
+- Supporting another chord site (add a sibling module; keep the `ChordSheet` shape)
+
 ### generator.py
 **Purpose:** Orchestrates setlist generation
 

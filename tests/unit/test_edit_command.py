@@ -30,15 +30,11 @@ class TestResolveEditor:
         monkeypatch.setenv("EDITOR", "emacs")
         assert resolve_editor("code --wait") == "code --wait"
 
-    def test_visual_wins_over_editor(self, monkeypatch):
+    def test_env_vars_are_ignored(self, monkeypatch):
+        """vim wins over $VISUAL / $EDITOR: only --editor can change it."""
         monkeypatch.setenv("VISUAL", "nano")
         monkeypatch.setenv("EDITOR", "emacs")
-        assert resolve_editor(None) == "nano"
-
-    def test_editor_used_when_no_visual(self, monkeypatch):
-        monkeypatch.delenv("VISUAL", raising=False)
-        monkeypatch.setenv("EDITOR", "emacs")
-        assert resolve_editor(None) == "emacs"
+        assert resolve_editor(None) == DEFAULT_EDITOR
 
     def test_falls_back_to_vim(self, monkeypatch):
         monkeypatch.delenv("VISUAL", raising=False)
@@ -168,7 +164,7 @@ class TestLaunchEditor:
         assert "status 2" in capsys.readouterr().err
 
     def test_gui_editor_gets_wait_flag_and_notice(self, mocker, tmp_path, capsys):
-        """When $EDITOR is a GUI editor without --wait, inject it and tell the user."""
+        """A GUI editor (via --editor) without --wait gets it injected, and the user is told."""
         run_mock = mocker.patch("cli.commands.edit.subprocess.run")
         file = tmp_path / "Song.md"
         file.write_text("body")

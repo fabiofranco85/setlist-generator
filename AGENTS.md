@@ -69,10 +69,10 @@ songbook view-song "Oceanos"         # View song details
 songbook view-song                   # Interactive song picker
 songbook browse                      # Browse the repertoire: list → read → back → repeat
 songbook setlists                    # Browse setlists: view, d to delete, r to re-use (any event type)
-songbook add                         # Add a new song (interactive), then open editor
+songbook add                         # Add a new song (interactive; optional Cifra Club import), then open editor
 songbook add "Novo Louvor" --energy 2 --tags "louvor(5),prelúdio"  # Add via flags
 songbook add "Youth Anthem" --tags "louvor(5)" -e youth --no-edit  # Bind + skip editor
-songbook edit "Oceanos"              # Open chord file in $EDITOR (default: vim)
+songbook edit "Oceanos"              # Open chord file in vim
 songbook edit                        # Interactive picker → editor
 songbook edit "Oceanos" --editor nano  # Override editor for this invocation
 songbook info "Oceanos"              # Song statistics and history
@@ -182,6 +182,7 @@ instructions for this repo's data.
 │   ├── selector.py             # Song selection algorithms
 │   ├── ordering.py             # Energy-based ordering
 │   ├── transposer.py           # Chord transposition (chromatic)
+│   ├── cifraclub.py            # Chord-sheet import from Cifra Club (songbook add)
 │   ├── generator.py            # Core setlist generation
 │   ├── replacer.py             # Song replacement + derivation
 │   ├── inserter.py             # Song insertion into an existing setlist
@@ -237,6 +238,16 @@ The command collects the metadata (prompting for anything not passed as a flag;
 at least one moment is required), persists it via `repos.songs.add()`, then
 opens the chord sheet in your editor — the mirror of `songbook edit`. Pass
 `--no-edit` to skip the editor (required for scripts / CI).
+
+**Importing chords from Cifra Club:** on an interactive terminal, `songbook add`
+asks for an optional Cifra Club URL right after the title. Given one, it imports
+that page's chord sheet (`library/cifraclub.py`) and asks for a key: blank means
+the key the song *sounds* in, so a sheet written in an easier shape with a capo
+("Tom: Db (com forma de C)") is transposed to Db and needs no capo; any other key
+transposes to that key (a minor song stays minor, as in `songbook transpose`). The
+imported sheet, headed `### <your title> (<key>)`, becomes the song's content and
+opens in the editor for review. A URL that fails to fetch or parse is reported and
+asked again; blank skips. Scripted (non-TTY) runs are never asked.
 
 Song metadata means:
 - **Energy**: 1=upbeat, 2=moderate-high, 3=moderate-low, 4=contemplative
@@ -461,13 +472,13 @@ songbook view-song "Oceanos" --transpose G   # View transposed (always dry)
 
 **Edit a song's chords/lyrics in an editor:**
 ```bash
-songbook edit "Oceanos"                      # Opens chords/Oceanos.md in $EDITOR
+songbook edit "Oceanos"                      # Opens the chord sheet in vim
 songbook edit                                # Interactive picker, then editor
 songbook edit "Oceanos" --editor nano        # Pick a specific editor
-EDITOR=code songbook edit "Oceanos"          # via $EDITOR (must block on exit)
 ```
 
-Editor priority: `--editor` > `$VISUAL` > `$EDITOR` > `vim`. If the chord file
+Editor: `--editor` if given, else `vim`. `$VISUAL` and `$EDITOR` are ignored on
+purpose, so a terminal that sets them cannot swap vim out. If the chord file
 doesn't exist yet, a stub `### Title ()` heading is created so the editor opens
 on a real file. On the filesystem backend the chord file is edited in place;
 on other backends (postgres / supabase) the content is round-tripped through a

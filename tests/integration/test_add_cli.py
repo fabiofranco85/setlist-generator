@@ -145,3 +145,99 @@ def test_add_interactive_prompts(project):
     )
     assert result.exit_code == 0, result.output
     assert any(ln.startswith("Cancao Nova;3;louvor(4);") for ln in _db_lines(project)), result.output
+
+
+# ---------------------------------------------------------------------------
+# Cifra Club import (interactive only)
+# ---------------------------------------------------------------------------
+
+_CIFRA_URL = "https://www.cifraclub.com.br/banda/cancao/"
+
+
+@pytest.fixture()
+def cifraclub(project, mocker):
+    """Interactive terminal + a fake Cifra Club fetch (C shapes, capo 1 → Db)."""
+    from library.cifraclub import ChordSheet
+
+    mocker.patch("cli.commands.add._is_interactive", return_value=True)
+    sheet = ChordSheet(
+        title="Canção do Site", artist="Banda", key="C", sounding_key="Db",
+        capo="1ª casa", body="[Intro] C  G\n\nC       G\nLetra de teste",
+    )
+    return mocker.patch("cli.commands.add._fetch_sheet", return_value=sheet)
+
+
+def _add(input_text: str, *extra: str):
+    # Prompt order: Cifra Club URL, key, YouTube (energy + tags come from flags).
+    return CliRunner().invoke(
+        cli,
+        ["add", "Nova Canção", "--energy", "2", "--tags", "louvor(3)", *extra],
+        input=input_text,
+    )
+
+
+def _chord_file(project: Path) -> str:
+    return (project / "chords" / "Nova Canção.md").read_text(encoding="utf-8")
+
+
+def test_add_cifraclub_blank_key_uses_sounding_key(project, cifraclub):
+    result = _add(f"{_CIFRA_URL}\n\n\n", "--no-edit")
+    assert result.exit_code == 0, result.output
+    cifraclub.assert_called_once_with(_CIFRA_URL)
+    assert "blank = Db; written in C with capo on 1ª casa" in result.output
+    assert _chord_file(project) == (
+        "### Nova Canção (Db)\n\n[Intro] Db Ab\n\nDb      Ab\nLetra de teste\n"  # chords keep their columns
+    )
+
+
+def test_add_cifraclub_explicit_key_transposes(project, cifraclub):
+    result = _add(f"{_CIFRA_URL}\nd\n\n", "--no-edit")  # lowercase is accepted
+    assert result.exit_code == 0, result.output
+    assert _chord_file(project).startswith("### Nova Canção (D)\n\n[Intro] D  A\n")
+
+
+def test_add_cifraclub_invalid_key_is_asked_again(project, cifraclub):
+    result = _add(f"{_CIFRA_URL}\nH\nG\n\n", "--no-edit")
+    assert result.exit_code == 0, result.output
+    assert "Unknown key: H" in result.output
+    assert _chord_file(project).startswith("### Nova Canção (G)\n")
+
+
+def test_add_cifraclub_fetch_error_is_asked_again(project, cifraclub):
+    good = cifraclub.return_value
+    cifraclub.side_effect = [ValueError("No chord sheet found on the page."), good]
+    result = _add(f"https://www.cifraclub.com.br/busca\n{_CIFRA_URL}\nC\n\n", "--no-edit")
+    assert result.exit_code == 0, result.output
+    assert "Could not import chords: No chord sheet found" in result.output
+    assert _chord_file(project).startswith("### Nova Canção (C)\n\n[Intro] C  G\n")
+
+
+def test_add_cifraclub_blank_url_keeps_stub(project, cifraclub):
+    result = _add("\n\n", "--no-edit")
+    assert result.exit_code == 0, result.output
+    cifraclub.assert_not_called()
+    assert _chord_file(project) == "### Nova Canção ()\n\n"
+
+
+def test_add_cifraclub_opens_editor_on_imported_sheet(project, cifraclub, mocker):
+    seen: dict = {}
+
+    def _fake(argv, check):
+        seen["argv"] = argv
+        seen["content"] = Path(argv[-1]).read_text(encoding="utf-8")
+
+    mocker.patch("cli.commands.edit.subprocess.run", side_effect=_fake)
+    result = _add(f"{_CIFRA_URL}\n\n\n")
+    assert result.exit_code == 0, result.output
+    assert seen["argv"][0] == "vim"
+    assert seen["content"].startswith("### Nova Canção (Db)\n")
+
+
+def test_add_does_not_ask_for_cifraclub_when_not_interactive(project, mocker):
+    fetch = mocker.patch("cli.commands.add._fetch_sheet")
+    result = CliRunner().invoke(cli, [
+        "add", "Nova Canção", "--energy", "2", "--tags", "louvor(3)", "--no-edit",
+    ])
+    assert result.exit_code == 0, result.output
+    assert "Cifra Club" not in result.output
+    fetch.assert_not_called()

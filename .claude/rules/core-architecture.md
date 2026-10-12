@@ -100,6 +100,7 @@ Where:
     ├── paths.py             # Path resolution utilities
     ├── ordering.py          # Energy-based ordering
     ├── transposer.py        # Chord transposition (chromatic)
+    ├── cifraclub.py         # Chord-sheet import from Cifra Club (songbook add)
     ├── generator.py         # Core setlist generation (label + event-type aware)
     ├── replacer.py          # Song replacement + derive_setlist()
     ├── remover.py           # Song / moment removal with single-song cascade
@@ -143,6 +144,7 @@ The codebase is organized into focused modules for better maintainability and re
 - `paths.py` - Output path resolution (`PathConfig` dataclass, CLI/env/default cascade)
 - `ordering.py` - Energy-based ordering for emotional arcs
 - `transposer.py` - Deterministic chromatic chord transposition (pure functions, `re` only)
+- `cifraclub.py` - Chord-sheet import from a Cifra Club page, backing the optional URL prompt of `songbook add`. `fetch_page` (stdlib `urllib` with browser-like headers, since Akamai answers 403 otherwise), `parse_page` (pure: the `<pre data-chord-content>` block plus the "Tom:" / "Capotraste:" labels into a `ChordSheet` with written key, sounding key and capo) and `render_sheet` (pure: heading with the repertoire title, transposed to a target key; blank = the sounding key, so capo sheets come out capo-free)
 - `generator.py` - Orchestrates setlist generation (`SetlistGenerator`, label + event-type aware, strict mode for custom moments configs)
 - `replacer.py` - Song replacement, batch replacement, and `derive_setlist()` for creating labeled variants
 - `reconciler.py` - Projection of one setlist's moments onto another event type's shape (`plan_reconciliation`). Backs the cross-event-type re-use in `songbook setlists`: reports what carries over, what is dropped (missing moment / overflow / not in the target's pool) and how many slots are left for the caller to fill. Pure functions, no prompting and no selection.

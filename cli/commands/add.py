@@ -10,6 +10,11 @@ Resolution per field:
   prompt re-asks until the value is valid.
 - The optional YouTube link is prompted for only on an interactive terminal,
   so flag-driven / scripted runs never block on it.
+- So is the optional Cifra Club URL (asked right after the title). When given,
+  the chord sheet is imported from that page and the key is asked for: blank
+  means the key the song sounds in (a capo sheet is transposed so no capo is
+  needed), anything else transposes to that key. The imported sheet becomes
+  the song's content, so the editor opens on it.
 
 The editor step reuses the ``edit`` command's machinery, so GUI-editor
 auto-wait and the filesystem/temp-file split behave identically.
@@ -22,6 +27,7 @@ import sys
 import click
 
 from library import get_repositories
+from library.cifraclub import ChordSheet, fetch_page, parse_page, render_sheet
 from library.loader import parse_tags
 from library.models import Song
 from library.youtube import extract_video_id
@@ -84,6 +90,54 @@ def _resolve_title(repos, title_arg: str | None) -> str:
             f'Use `songbook edit "{title}"` to edit it.'
         )
     return title
+
+
+def _fetch_sheet(url: str) -> ChordSheet:
+    """Download and parse a Cifra Club page (patched out in tests)."""
+    return parse_page(fetch_page(url))
+
+
+def _resolve_cifraclub_sheet() -> ChordSheet | None:
+    """Prompt for an optional Cifra Club URL and import its chord sheet.
+
+    Only asked on an interactive terminal, like the YouTube link. A URL that
+    can't be fetched or parsed is reported and asked again; blank skips.
+    """
+    if not _is_interactive():
+        return None
+    while True:
+        url = click.prompt(
+            "Cifra Club URL (blank to skip)", default="", show_default=False
+        ).strip()
+        if not url:
+            return None
+        try:
+            sheet = _fetch_sheet(url)
+        except Exception as exc:  # network, HTTP or layout errors alike
+            click.secho(f"  Could not import chords: {exc}", fg="yellow")
+            continue
+        click.echo(f"  Found '{sheet.title}' by {sheet.artist or 'unknown artist'}.")
+        return sheet
+
+
+def _resolve_cifraclub_content(sheet: ChordSheet, title: str) -> str:
+    """Prompt for the key and render the imported sheet in it."""
+    default = sheet.sounding_key or sheet.key or "as written"
+    note = (
+        f"; written in {sheet.key} with capo on {sheet.capo}"
+        if sheet.capo and sheet.key != sheet.sounding_key
+        else ""
+    )
+    while True:
+        key = click.prompt(
+            f"Key (blank = {default}{note})", default="", show_default=False
+        ).strip()
+        if key:
+            key = key[0].upper() + key[1:]
+        try:
+            return render_sheet(sheet, title, key)
+        except ValueError as exc:
+            click.secho(f"  {exc}", fg="yellow")
 
 
 def _resolve_energy(energy_flag: int | None) -> int:
@@ -161,6 +215,12 @@ def run(
 
     try:
         resolved_title = _resolve_title(repos, title)
+        sheet = _resolve_cifraclub_sheet()
+        content = (
+            _resolve_cifraclub_content(sheet, resolved_title)
+            if sheet
+            else f"### {resolved_title} ()\n\n"
+        )
         resolved_energy = _resolve_energy(energy)
         resolved_tags = _resolve_tags(tags)
         resolved_youtube = _resolve_youtube(youtube)
@@ -176,7 +236,7 @@ def run(
         title=resolved_title,
         tags=resolved_tags,
         energy=resolved_energy,
-        content=f"### {resolved_title} ()\n\n",
+        content=content,
         youtube_url=resolved_youtube,
         event_types=[e.strip() for e in event_types if e and e.strip()],
     )

@@ -1,11 +1,9 @@
 """
 Edit command - open a song's chord file in the user's editor.
 
-Editor resolution order (highest priority first):
-    1. ``--editor`` CLI option
-    2. ``$VISUAL`` environment variable
-    3. ``$EDITOR`` environment variable
-    4. ``vim`` (default)
+Editor resolution: the ``--editor`` CLI option, else ``vim``. ``$VISUAL`` and
+``$EDITOR`` are deliberately ignored, so a terminal that sets them (IDE
+terminals often do) cannot swap vim out from under the user.
 
 For the filesystem backend, the chord file under ``chords/<title>.md`` is
 opened in place. If the file does not yet exist, a stub heading is written so
@@ -14,7 +12,6 @@ the current chord content is round-tripped through a temporary file and
 written back via ``repos.songs.update_content``.
 """
 
-import os
 import shlex
 import subprocess
 import sys
@@ -86,7 +83,7 @@ def _is_gui_editor(editor: str) -> bool:
 
 
 def resolve_editor(editor_flag: str | None = None) -> str:
-    """Return the editor command to run.
+    """Return the editor command to run: ``--editor`` if given, else vim.
 
     Args:
         editor_flag: Value passed via ``--editor`` (may be ``None`` or empty).
@@ -94,9 +91,8 @@ def resolve_editor(editor_flag: str | None = None) -> str:
     Returns:
         Editor command string (may contain arguments, e.g. ``"code --wait"``).
     """
-    for candidate in (editor_flag, os.environ.get("VISUAL"), os.environ.get("EDITOR")):
-        if candidate and candidate.strip():
-            return candidate.strip()
+    if editor_flag and editor_flag.strip():
+        return editor_flag.strip()
     return DEFAULT_EDITOR
 
 
@@ -122,7 +118,7 @@ def _launch_editor(editor: str, file_path: Path) -> None:
     except FileNotFoundError:
         print(
             f"Error: editor not found: '{editor}'. "
-            "Set $EDITOR or pass --editor to choose a different one.",
+            "Pass --editor to choose a different one.",
             file=sys.stderr,
         )
         raise SystemExit(1)
@@ -201,7 +197,7 @@ def run(song_name: str | None, editor: str | None = None) -> None:
     Args:
         song_name: Title of the song to edit, or ``None`` to launch the
             interactive picker.
-        editor: Optional editor command (overrides ``$VISUAL`` / ``$EDITOR``).
+        editor: Optional editor command (default: vim).
     """
     try:
         repos = get_repositories()

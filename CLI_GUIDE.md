@@ -549,12 +549,18 @@ songbook add "Youth Anthem" --tags "louvor(5)" -e youth --no-edit
 | `--tags TEXT` | Moments with optional weights, e.g. `"louvor(5),prelúdio"`. At least one is required |
 | `--youtube TEXT` | YouTube URL (validated) |
 | `--event-type` / `-e` | Bind to an event type; repeatable. Omitted = available to all |
-| `--editor TEXT` | Editor command for the chord sheet |
+| `--editor TEXT` | Editor command for the chord sheet (default: vim) |
 | `--no-edit` | Create the record without opening the editor |
 
 At least one moment is required: an untagged song can never be selected by the
 generator. The song is written to the active backend, so on PostgreSQL there is
 no file to edit by hand.
+
+**Cifra Club import:** on a terminal, `add` asks for an optional Cifra Club URL
+after the title. The page's chord sheet is imported and you are asked for a key:
+leave it blank for the key the song sounds in (a capo sheet such as "Tom: Db (com
+forma de C)" is transposed to Db, so no capo is needed), or type a key to
+transpose to it. The sheet then opens in the editor for review.
 
 ---
 
@@ -568,10 +574,9 @@ Open a song's chord sheet in your editor.
 songbook edit "Oceanos"            # by name
 songbook edit                      # interactive picker
 songbook edit "Oceanos" --editor nano
-EDITOR=vim songbook edit "Oceanos"
 ```
 
-Editor priority: `--editor` > `$VISUAL` > `$EDITOR` > `vim`.
+Editor: `--editor` if given, else `vim`. `$VISUAL` and `$EDITOR` are ignored.
 
 On the filesystem backend the chord file is edited in place; on PostgreSQL the
 content is round-tripped through a temp file and saved back. If the song has no
