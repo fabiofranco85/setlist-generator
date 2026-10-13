@@ -42,6 +42,7 @@ songbook add                         # Add a new song (interactive; optional Cif
 songbook add "Novo Louvor" --energy 2 --tags "louvor(5),prelúdio" --no-edit  # Add via flags
 songbook edit "Oceanos"              # Open chord file in $EDITOR (default: vim)
 songbook edit                        # Interactive picker → editor
+songbook replace                     # Interactive: pick setlist → song → how to replace
 songbook replace --moment louvor --position 2  # Replace song (re-applies energy order)
 songbook replace --moment louvor --position 2 --pick  # Interactive picker
 songbook replace --moment louvor --position 2 --keep-position  # Pin to position, no reorder
@@ -761,6 +762,11 @@ Replace songs in a previously generated setlist.
 
 **Usage:**
 ```bash
+# Interactive mode: pick the setlist, the song, then how to replace it
+songbook replace
+songbook replace --date 2026-02-15        # Interactive, starting at that setlist's songs
+songbook replace -e youth                 # Interactive, setlist menu narrowed to youth
+
 # Auto-select replacement for position 2 in louvor
 songbook replace --moment louvor --position 2
 
@@ -788,7 +794,7 @@ songbook replace --moment louvor --position 3 --keep-position
 ```
 
 **Options:**
-- `--moment MOMENT` - Required: Service moment (prelúdio, ofertório, saudação, crianças, louvor, poslúdio)
+- `--moment MOMENT` - Service moment (prelúdio, ofertório, saudação, crianças, louvor, poslúdio). Omit it for interactive mode
 - `--position N` - Position to replace (1-indexed, default: 1)
 - `--positions N,N` - Multiple positions (comma-separated). Cannot be used with `--position`
 - `--with SONG` - Manual replacement song (auto-select if omitted)
@@ -808,6 +814,26 @@ songbook replace --moment louvor --position 3 --keep-position
 - **Batch mode** (`--positions`): Always auto (`--with` is rejected for multi-position batches). Energy reorder applies unless `--keep-position` is passed.
 
 **Note:** When neither `--position` nor `--positions` is specified, defaults to position 1.
+
+**Interactive mode (no `--moment`):**
+1. **Setlist menu**: newest first, the same rows as `songbook setlists`. `--label` / `-e`
+   narrow the list; `--date` names the setlist (exact `(date, label, event_type)` match,
+   like the flagged command) and skips this menu.
+2. **Song menu**: one row per song in service order (`louvor #2  Oceanos (Bm)`), so one
+   choice gives both the moment and the position. Order follows the event type's
+   `moments_order`, falling back to `MOMENTS_CONFIG`.
+3. **Style menu**: auto (energy arc kept), auto with `--keep-position`, or pick from
+   list (`--pick`).
+4. Calls `run()` with those values, so output, saving and the drift note are identical
+   to the flagged command. One replacement, then exit.
+
+- `Esc` at any menu prints `Cancelled.`, exits 0 and writes nothing.
+- `--position`, `--positions`, `--with`, `--pick` and `--keep-position` without
+  `--moment` is a usage error: they describe a moment that was never named.
+- Without a TTY the menus fall back to numbered prompts (`setlists._show_menu`).
+- Not offered interactively: multi-position batches and typing a `--with` title.
+- Implementation: `cli/commands/replace.py:run_interactive`, reusing `_build_rows`,
+  `_show_menu`, `_record_key` and `_moments_order` from `cli/commands/setlists.py`.
 
 ---
 

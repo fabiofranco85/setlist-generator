@@ -322,3 +322,176 @@ class TestKeepPositionFlag:
         assert result.exit_code == 0, result.output
         louvor = _read_louvor(project_with_extra)
         assert louvor[0] == "Extra Energy Song"
+
+
+# ---------------------------------------------------------------------------
+# Interactive mode — `songbook replace` with no --moment walks through menus
+# (setlist → song → mode) and then runs the same replacement as the flags.
+# ---------------------------------------------------------------------------
+
+
+class _ScriptedMenu:
+    """Stands in for ``_show_menu``: returns scripted answers, records calls."""
+
+    def __init__(self, answers):
+        self.answers = list(answers)
+        self.calls: list[tuple[list[str], str]] = []
+
+    def __call__(self, rows, title, *, cursor_index=0):
+        self.calls.append((list(rows), title))
+        return self.answers.pop(0)
+
+
+@pytest.fixture()
+def scripted_menu(monkeypatch):
+    def install(*answers):
+        menu = _ScriptedMenu(answers)
+        monkeypatch.setattr("cli.commands.replace._show_menu", menu)
+        return menu
+    return install
+
+
+# Rows of the song menu for the seeded setlist, in service order.
+_LOUVOR_1 = 4  # prelúdio, ofertório, saudação, crianças, then louvor #1
+
+
+def test_no_args_starts_interactive_auto_replacement(
+    project_with_extra, scripted_menu, monkeypatch
+):
+    """No arguments: pick setlist, song, then auto mode keeps the energy arc."""
+    monkeypatch.setattr(
+        "cli.commands.replace.select_replacement_song",
+        lambda **kwargs: "Extra Energy Song",
+    )
+    menu = scripted_menu(0, _LOUVOR_1, 0)
+
+    result = CliRunner().invoke(cli, ["replace"])
+
+    assert result.exit_code == 0, result.output
+    song_rows = menu.calls[1][0]
+    assert song_rows[_LOUVOR_1].startswith("louvor")
+    assert "#1" in song_rows[_LOUVOR_1] and "Upbeat Song" in song_rows[_LOUVOR_1]
+    louvor = _read_louvor(project_with_extra)
+    assert "Extra Energy Song" in louvor
+    assert louvor[0] != "Extra Energy Song"  # energy reorder ran
+    assert "energy reordering moved" in result.output.lower()
+
+
+def test_song_menu_lists_every_song_in_service_order(project, scripted_menu):
+    menu = scripted_menu(0, None)
+
+    CliRunner().invoke(cli, ["replace"])
+
+    rows = menu.calls[1][0]
+    labels = [row.split("  ")[0].split(" #")[0].strip() for row in rows]
+    assert labels == [
+        "prelúdio", "ofertório", "saudação", "crianças",
+        "louvor", "louvor", "louvor", "louvor", "poslúdio",
+    ]
+    assert "Moderate Song" in rows[_LOUVOR_1 + 1] and "#2" in rows[_LOUVOR_1 + 1]
+
+
+def test_interactive_keep_position_pins_auto_pick(
+    project_with_extra, scripted_menu, monkeypatch
+):
+    monkeypatch.setattr(
+        "cli.commands.replace.select_replacement_song",
+        lambda **kwargs: "Extra Energy Song",
+    )
+    scripted_menu(0, _LOUVOR_1, 1)
+
+    result = CliRunner().invoke(cli, ["replace"])
+
+    assert result.exit_code == 0, result.output
+    assert _read_louvor(project_with_extra)[0] == "Extra Energy Song"
+
+
+def test_interactive_pick_opens_song_picker(
+    project_with_extra, scripted_menu, monkeypatch
+):
+    seen = {}
+
+    def fake_pick_song(songs, *, title, moment_filter=None, exclude=None, **kw):
+        seen["moment"] = moment_filter
+        return "Extra Energy Song"
+
+    monkeypatch.setattr("cli.picker.pick_song", fake_pick_song)
+    scripted_menu(0, _LOUVOR_1, 2)
+
+    result = CliRunner().invoke(cli, ["replace"])
+
+    assert result.exit_code == 0, result.output
+    assert seen["moment"] == "louvor"
+    assert _read_louvor(project_with_extra)[0] == "Extra Energy Song"
+
+
+@pytest.mark.parametrize("answers", [(None,), (0, None), (0, _LOUVOR_1, None)])
+def test_interactive_cancel_writes_nothing(project, scripted_menu, answers):
+    before = (project / "history" / "2026-02-15.json").read_text(encoding="utf-8")
+    scripted_menu(*answers)
+
+    result = CliRunner().invoke(cli, ["replace"])
+
+    assert result.exit_code == 0, result.output
+    assert "Cancelled." in result.output
+    after = (project / "history" / "2026-02-15.json").read_text(encoding="utf-8")
+    assert after == before
+    assert not (project / "output" / "2026-02-15.md").exists()
+
+
+def test_date_without_moment_skips_setlist_menu(project, scripted_menu, monkeypatch):
+    """--date names the setlist, so the flow starts at the song menu."""
+    (project / "history" / "2026-03-01.json").write_text(
+        json.dumps({"date": "2026-03-01", "moments": {"louvor": ["Worship Song"]}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "cli.commands.replace.select_replacement_song",
+        lambda **kwargs: "Reflective Song",
+    )
+    menu = scripted_menu(0, 1)  # prelúdio #1, keep position
+
+    result = CliRunner().invoke(cli, ["replace", "--date", "2026-02-15"])
+
+    assert result.exit_code == 0, result.output
+    assert len(menu.calls) == 2
+    assert "prelúdio" in menu.calls[0][0][0]
+    history = json.loads(
+        (project / "history" / "2026-02-15.json").read_text(encoding="utf-8")
+    )
+    assert history["moments"]["prelúdio"] == ["Reflective Song"]
+
+
+def test_setlist_menu_lists_newest_first(project, scripted_menu):
+    (project / "history" / "2026-03-01.json").write_text(
+        json.dumps({"date": "2026-03-01", "moments": {"louvor": ["Worship Song"]}}),
+        encoding="utf-8",
+    )
+    menu = scripted_menu(None)
+
+    CliRunner().invoke(cli, ["replace"])
+
+    rows = menu.calls[0][0]
+    assert rows[0].startswith("2026-03-01")
+    assert rows[1].startswith("2026-02-15")
+
+
+def test_unknown_date_without_moment_errors(project, scripted_menu):
+    scripted_menu()
+
+    result = CliRunner().invoke(cli, ["replace", "--date", "2030-01-01"])
+
+    assert result.exit_code != 0
+    assert "2030-01-01" in result.output
+
+
+@pytest.mark.parametrize(
+    "flags",
+    [["--position", "2"], ["--positions", "1,2"], ["--with", "Upbeat Song"],
+     ["--pick"], ["--keep-position"]],
+)
+def test_song_flags_without_moment_error(project, flags):
+    result = CliRunner().invoke(cli, ["replace", *flags])
+
+    assert result.exit_code != 0
+    assert "--moment" in result.output

@@ -334,7 +334,7 @@ def list_moments(event_type):
 
 
 @cli.command()
-@click.option("--moment", required=True, shell_complete=complete_moment_names, help="Service moment (prelúdio, louvor, etc.)")
+@click.option("--moment", shell_complete=complete_moment_names, help="Service moment (prelúdio, louvor, etc.); omit for interactive mode")
 @click.option("--position", type=int, help="Position to replace (1-indexed)")
 @click.option("--positions", help="Multiple positions (comma-separated)")
 @click.option("--with", "replacement", shell_complete=complete_song_names, help="Manual song selection")
@@ -349,8 +349,13 @@ def list_moments(event_type):
 def replace(ctx, moment, position, positions, replacement, pick, keep_position, date, label, event_type, output_dir, history_dir):
     """Replace song in existing setlist.
 
+    Without --moment, an interactive mode picks the setlist, the song and the
+    replacement style from menus.
+
     \b
     Examples:
+      songbook replace                                  # interactive
+      songbook replace --date 2026-02-15                # interactive, that setlist
       songbook replace --moment prelúdio
       songbook replace --moment louvor --position 2
       songbook replace --moment louvor --position 2 --with "Oceanos"
@@ -358,6 +363,17 @@ def replace(ctx, moment, position, positions, replacement, pick, keep_position, 
       songbook replace --moment louvor --position 2 --keep-position
       songbook replace --moment louvor --position 2 -e youth
     """
+    if moment is None:
+        if position is not None or positions or replacement or pick or keep_position:
+            raise click.UsageError(
+                "--position, --positions, --with, --pick and --keep-position need --moment "
+                "(omit them all for interactive mode)"
+            )
+        from cli.commands.replace import run_interactive
+        run_interactive(date, output_dir, history_dir, verbose=ctx.obj.get("verbose", False),
+                        label=label, event_type=event_type)
+        return
+
     from cli.commands.replace import run
     run(moment, position, positions, replacement, date, output_dir, history_dir,
         verbose=ctx.obj.get("verbose", False), label=label, event_type=event_type,

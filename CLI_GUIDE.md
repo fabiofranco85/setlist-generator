@@ -593,6 +593,17 @@ before you could type.
 
 Replace individual songs in a generated setlist without regenerating the entire setlist.
 
+**Interactive Mode (No Arguments):**
+
+```bash
+songbook replace                     # Pick the setlist, the song, then how to replace it
+songbook replace --date 2026-02-15   # Start at that setlist's songs
+```
+
+Three menus: the setlist (newest first), the song (`louvor #2  Oceanos (Bm)`), then
+the style: auto (keeps the energy arc), auto keeping the position, or pick from a list.
+It performs one replacement and exits. `Esc` cancels without changing anything.
+
 **Simplified Usage (Position Defaults to 1):**
 
 For single-song moments (prelúdio, ofertório, saudação, crianças, poslúdio), you can omit the position:

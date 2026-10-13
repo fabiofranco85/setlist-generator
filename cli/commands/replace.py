@@ -5,10 +5,14 @@ Replace command - replace songs in generated setlists.
 import sys
 from pathlib import Path
 
+from cli.commands.setlists import _build_rows, _moments_order, _record_key, _show_menu
+from cli.picker import extract_key
 from library import (
     format_setlist_markdown,
     get_repositories,
 )
+from library.config import canonical_moment_order
+from library.event_type import DEFAULT_EVENT_TYPE_SLUG
 from library.models import Setlist
 from library.replacer import (
     find_target_setlist,
@@ -359,3 +363,95 @@ def run(moment, position, positions, replacement, date, output_dir, history_dir,
 
     if verbose:
         print_metrics_summary(obs.metrics.get_summary())
+
+
+# Interactive-mode replacement styles: (menu row, run() keyword arguments).
+_INTERACTIVE_MODES = [
+    ("Auto: best song by weight + recency, keep the energy arc", {}),
+    ("Auto, keep this position", {"keep_position": True}),
+    ("Pick from list", {"pick": True}),
+]
+
+
+def _song_rows(record: dict, songs: dict, moments_order: list[str] | None) -> tuple[list[str], list[tuple[str, int]]]:
+    """Return ``(display_rows, [(moment, position_1_indexed), ...])``.
+
+    One row per song in the setlist, in service order, so a single choice
+    names both the moment and the position.
+    """
+    moments = record.get("moments", {})
+    reference = {m: 0 for m in moments_order} if moments_order else None
+    order = canonical_moment_order(moments, reference)
+
+    slots = [(m, i) for m in order for i in range(1, len(moments[m]) + 1)]
+    width = max((len(f"{m} #{i}") for m, i in slots), default=0)
+
+    rows = []
+    for moment, position in slots:
+        title = moments[moment][position - 1]
+        song = songs.get(title)
+        key = extract_key(song.content) if song else ""
+        rows.append(f"{f'{moment} #{position}':<{width}}  {title}{f' ({key})' if key else ''}")
+    return rows, slots
+
+
+def run_interactive(date, output_dir, history_dir, verbose=False, label="", event_type=""):
+    """Choose the setlist, song and replacement style from menus, then replace.
+
+    Started by ``songbook replace`` without ``--moment``. ``--date`` names the
+    setlist directly; ``--label`` / ``--event-type`` alone narrow the setlist
+    menu. Esc at any menu cancels without writing anything.
+    """
+    from cli.cli_utils import resolve_paths, handle_error, validate_label
+
+    label = validate_label(label)
+    paths = resolve_paths(output_dir, history_dir)
+    repos = get_repositories(history_dir=paths.history_dir, output_dir=paths.output_dir)
+
+    history = repos.history.get_all()
+    if not history:
+        handle_error("No setlists found in history")
+
+    def cancelled():
+        print("Cancelled.")
+        raise SystemExit(0)
+
+    if date:
+        try:
+            record = find_target_setlist(history, date, target_label=label, event_type=event_type)
+        except ValueError as e:
+            handle_error(str(e))
+    else:
+        candidates = [
+            r for r in history
+            if (not label or _record_key(r)[1] == label)
+            and (not event_type or _record_key(r)[2] == event_type)
+        ]
+        if not candidates:
+            handle_error("No setlists match the given label / event type")
+        rows, records = _build_rows(candidates)
+        index = _show_menu(rows, "Replace a song in which setlist? (newest first)")
+        if index is None:
+            cancelled()
+        record = records[index]
+
+    record_date, record_label, record_event_type = _record_key(record)
+    rows, slots = _song_rows(
+        record,
+        repos.songs.get_all(),
+        _moments_order(repos, record_event_type or DEFAULT_EVENT_TYPE_SLUG),
+    )
+    if not rows:
+        handle_error("This setlist has no songs to replace")
+    index = _show_menu(rows, "Which song should be replaced?")
+    if index is None:
+        cancelled()
+    moment, position = slots[index]
+
+    index = _show_menu([row for row, _ in _INTERACTIVE_MODES], "How should it be replaced?")
+    if index is None:
+        cancelled()
+    mode = _INTERACTIVE_MODES[index][1]
+
+    run(moment, position, None, None, record_date, output_dir, history_dir,
+        verbose=verbose, label=record_label, event_type=record_event_type, **mode)

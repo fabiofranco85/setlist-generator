@@ -72,6 +72,7 @@ songbook edit                        # Interactive picker → editor
 songbook edit "Oceanos" --editor nano  # Override editor for this invocation
 songbook info "Oceanos"              # Song statistics and history
 songbook info                        # Interactive picker → statistics
+songbook replace                     # Interactive: pick setlist → song → how to replace
 songbook replace --moment louvor --position 2  # Replace song (re-applies energy ordering)
 songbook replace --moment louvor --position 2 --pick  # Interactive picker
 songbook replace --moment louvor --position 2 --keep-position  # Don't reorder by energy
@@ -312,6 +313,8 @@ songbook generate --date 2026-03-01 --label evening --replace all  # Replace all
 
 **Replace a song:**
 ```bash
+songbook replace                                                # Interactive: setlist → song → how
+songbook replace --date 2026-02-15                              # Interactive, that setlist
 songbook replace --moment louvor --position 2
 songbook replace --moment louvor --position 2 --pick             # Interactive picker
 songbook replace --moment louvor --position 2 --with "Oceanos"   # Manual
@@ -321,6 +324,11 @@ songbook replace --moment louvor --position 2 --label evening    # In labeled se
 
 **Replacement semantics:**
 
+- **Interactive mode (no `--moment`)** walks three menus: the setlist (newest first; skipped when
+  `--date` names it, narrowed by `--label` / `-e`), the song (one row per `moment #position`), then
+  how to replace it: auto, auto with `--keep-position`, or `--pick`. It then runs the same
+  replacement as the flags and exits. `Esc` at any menu cancels without writing. `--position`,
+  `--positions`, `--with`, `--pick` and `--keep-position` still require `--moment`.
 - **Manual choice (`--with "Song"` or `--pick`)** always wins. The new song is pinned at the exact requested position, energy reordering is skipped, no surprises. This is what you want when you're sure both *which* song and *where*.
 - **Auto mode** (no `--with`, no `--pick`) keeps the moment's energy arc by reapplying energy ordering after the swap. A new song with very different energy can land at a different position than the one you asked for; the CLI prints a clear note when this happens and shows the actual new position. Pass `--keep-position` to opt out and pin the auto-picked song to the exact requested position.
 
