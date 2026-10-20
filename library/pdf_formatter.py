@@ -1,5 +1,6 @@
 """PDF formatting for setlists using ReportLab."""
 
+import re
 from io import BytesIO
 
 from reportlab.lib.pagesizes import A4
@@ -207,20 +208,48 @@ def _filter_out_chord_lines(content: str) -> str:
     return "\n".join(kept)
 
 
+# A bracketed or parenthesized span (kept as written), or a hyphen with a
+# space on at least one side sitting between two word characters. A span
+# stops at the next opening bracket, so unclosed ones cannot rescan the line.
+_SPLIT_HYPHEN_RE = re.compile(
+    r"(\([^()]*\)|\[[^\[\]]*\])|(?<=\w)(?: +- *| *- +)(?=\w)"
+)
+
+
+def _join_split_hyphens(line: str) -> str:
+    """Rejoin syllables a chord sheet split apart with a spaced hyphen.
+
+    ``presen - ça`` becomes ``presença``. Only a hyphen between two lowercase
+    letters is joined: ``tocar - Te`` is the real ``tocar-Te``. Spans in
+    parentheses or brackets are notes and markers (``(solo - sopro)``,
+    ``[Tab - Solo 1]``), so they are left alone. A hyphen with no space
+    around it (``Leva-me``) never matches.
+    """
+
+    def join(match: re.Match) -> str:
+        if match.group(1):
+            return match.group(1)
+        before = match.string[match.start() - 1]
+        after = match.string[match.end()]
+        return "" if before.islower() and after.islower() else match.group()
+
+    return _SPLIT_HYPHEN_RE.sub(join, line)
+
+
 def _strip_alignment_padding(content: str) -> str:
     """Return lyric content without the padding added to align chords.
 
-    Chord sheets stretch a syllable with underscores (``Coroa__mos``) or
-    extra spaces so the chord above lands on it. Once the chord lines are
-    gone that padding is noise, so underscores are dropped, runs of spaces
-    collapse to one and leading spaces go. Hyphens are left alone: a split
-    like ``presen - ça`` cannot be told apart from a real ``tocar-Te``.
+    Chord sheets stretch a syllable with underscores (``Coroa__mos``),
+    extra spaces or a spaced hyphen (``presen - ça``) so the chord above
+    lands on it. Once the chord lines are gone that padding is noise, so
+    underscores are dropped, runs of spaces collapse to one, leading spaces
+    go and spaced hyphens are rejoined (see ``_join_split_hyphens``).
 
     Run it after ``_filter_out_chord_lines``; on chord lines it would break
     the column alignment it exists to undo.
     """
     lines = (
-        " ".join(line.replace("_", "").split())
+        _join_split_hyphens(" ".join(line.replace("_", "").split()))
         for line in content.split("\n")
     )
     return "\n".join(lines)

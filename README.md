@@ -821,7 +821,7 @@ A second PDF variant for singers and other non-musicians, generated with `--no-c
 - Guitar tablature lines (`E|-----7--7/9----|`)
 - The chord-key suffix from song titles
 - The chord-key suffix from the table of contents
-- The padding that lines chords up with syllables: underscores (`Coroa__mos` → `Coroamos`), runs of spaces and leading spaces. Hyphen splits like `presen - ça` stay, because a hyphen can be part of the lyric (`tocar-Te`)
+- The padding that lines chords up with syllables: underscores (`Coroa__mos` → `Coroamos`), runs of spaces, leading spaces and syllables split by a spaced hyphen (`presen - ça` → `presença`). A spaced hyphen is joined only between lowercase letters and outside parentheses or brackets, so `tocar - Te`, `Leva-me` and `(solo - sopro)` stay as written
 
 Section markers like `[Refrão]` and `[Verso 1]` are preserved so singers can still follow song structure. The `_lyrics` filename suffix lets the full and lyrics variants coexist on disk.
 

@@ -6,6 +6,8 @@ section markers (like ``[Refrão]``). It reuses ``is_chord_line()`` from
 transposition behavior.
 """
 
+import time
+
 from library.pdf_formatter import _filter_out_chord_lines, _strip_alignment_padding
 
 
@@ -134,9 +136,37 @@ def test_padding_drops_underscore_run_standing_alone_between_words():
     assert _strip_alignment_padding(content) == "Santo Santo"
 
 
-def test_padding_keeps_hyphens():
-    # A hyphen can be real Portuguese ("tocar-Te"), so it is never touched.
-    content = "Quero tocar - Te\nDa Tua presen - ça"
+def test_padding_joins_syllables_split_by_spaced_hyphen():
+    content = "Da Tua presen - ça é o que mais quero ter"
+    assert _strip_alignment_padding(content) == "Da Tua presença é o que mais quero ter"
+
+
+def test_padding_joins_several_splits_in_one_word():
+    content = "Espirito de    Deus, vem re - ful - ge   em  nós"
+    assert _strip_alignment_padding(content) == "Espirito de Deus, vem refulge em nós"
+
+
+def test_padding_joins_hyphen_spaced_on_one_side_only():
+    content = "Faz transbor- dar sobre os povos\nVem or -de -nar"
+    assert _strip_alignment_padding(content) == "Faz transbordar sobre os povos\nVem ordenar"
+
+
+def test_padding_keeps_spaced_hyphen_before_capital():
+    # "tocar - Te" is the real "tocar-Te", not a syllable split.
+    content = "Quero tocar - Te"
+    assert _strip_alignment_padding(content) == content
+
+
+def test_padding_keeps_spaced_hyphen_inside_parens_and_brackets():
+    content = "(solo - sopro)\n[Tab - Solo 1]\n[Verso - final] presen - ça"
+    assert _strip_alignment_padding(content) == (
+        "(solo - sopro)\n[Tab - Solo 1]\n[Verso - final] presença"
+    )
+
+
+def test_padding_keeps_unspaced_hyphens():
+    # With no space around it a hyphen is ordinary Portuguese ("Leva-me").
+    content = "Leva-me mais perto\nSobre as montanhas e o pôr-do-sol"
     assert _strip_alignment_padding(content) == content
 
 
@@ -162,3 +192,12 @@ def test_filter_strips_guitar_tab_lines():
         "Tua graça me basta"
     )
     assert _filter_out_chord_lines(content) == "[Solo]\nTua graça me basta"
+
+
+def test_padding_handles_unclosed_brackets_in_linear_time():
+    # Each unclosed "(" used to rescan the rest of the line (quadratic).
+    content = "presen - ça " + "( [ " * 50_000
+    start = time.perf_counter()
+    result = _strip_alignment_padding(content)
+    assert time.perf_counter() - start < 0.5
+    assert result.startswith("presença (")
