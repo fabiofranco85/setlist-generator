@@ -34,7 +34,7 @@ _FLAT_KEYS = {"F", "Bb", "Eb", "Ab", "Db", "Gb",
 _ROOT_RE = r"[A-G][#b]?"
 _PAREN_EXT_RE = r"\((?:[\d#b/+\-,]|maj|add|sus|dim|aug|M|m)*\)"
 _QUALITY_RE = (
-    rf"(?:m(?!aj)|M|maj|dim|aug|sus|add|[°º]|[#b]\d+|\d+|{_PAREN_EXT_RE}|\+|\-)*"
+    rf"(?:m(?!aj)|M|maj|dim|aug|sus|add|[°º]|[#b]\d|\d|{_PAREN_EXT_RE}|\+|\-)*"
 )
 _CHORD_RE = re.compile(
     rf"({_ROOT_RE})({_QUALITY_RE})(?:/({_ROOT_RE}))?$"

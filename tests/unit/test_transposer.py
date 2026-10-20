@@ -454,3 +454,10 @@ class TestIsTabLine:
     def test_tab_line_is_left_alone_by_transposition(self):
         tab = "E|-----7--7/9-------------------------|"
         assert transpose_content(tab, 2) == tab
+
+
+def test_long_digit_run_does_not_backtrack_catastrophically():
+    # "\d+" inside the repeated quality group split a digit run 2^n ways
+    # before failing; 60 digits would never finish.
+    assert is_chord_line("C" + "1" * 60 + "x") is False
+    assert transpose_chord("C" + "1" * 60, 2) == "D" + "1" * 60
