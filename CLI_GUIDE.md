@@ -1319,7 +1319,7 @@ songbook pdf --date 2026-01-25 --no-chords
 - 🎼 **Monospace chords**: Perfect alignment for guitar/piano notation
 - 🇧🇷 **Portuguese formatting**: "Domingo, 25 de Janeiro de 2026"
 - 🏛️ **Church terminology**: Uses "Oferta" and "Comunhão" instead of internal names
-- 🎤 **Lyrics-only variant** (`--no-chords`): Strips chord lines, the chord-key suffix from song titles, and from the table of contents, and removes the underscores and extra spaces used to line chords up with syllables. Written with a `_lyrics` filename suffix (e.g. `2026-02-15_lyrics.pdf`) so the chord and lyrics versions can coexist on disk
+- 🎤 **Lyrics-only variant** (`--no-chords`): Strips chord lines and guitar tab lines, the chord-key suffix from song titles, and from the table of contents, and removes the underscores and extra spaces used to line chords up with syllables. Written with a `_lyrics` filename suffix (e.g. `2026-02-15_lyrics.pdf`) so the chord and lyrics versions can coexist on disk
 
 **How it works:**
 

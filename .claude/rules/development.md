@@ -415,7 +415,8 @@ ENERGY_ORDERING_RULES = {
 **Contents:**
 - `transpose_note(note, semitones, use_flats)` - Shift a single note by N semitones
 - `transpose_chord(chord, semitones, use_flats)` - Transpose full chord symbol (root + optional bass)
-- `is_chord_line(line)` - Classify a text line as chords vs lyrics
+- `is_chord_line(line)` - Classify a text line as chords vs lyrics. Tokens may open or close a parenthesized group (`(Dm  G7)`) and bare `(` `)` are allowed
+- `is_tab_line(line)` - Recognize a guitar tablature line (`E|--7--|`). Transposition leaves tabs alone (fret numbers do not follow chord names); the lyrics-only PDF drops them
 - `transpose_line(line, semitones, use_flats)` - Transpose all chords in a line, preserving column alignment
 - `transpose_content(content, semitones, use_flats)` - Transpose entire song markdown (chord lines + heading key)
 - `calculate_semitones(from_key, to_key)` - Calculate interval between two keys
@@ -432,11 +433,14 @@ ENERGY_ORDERING_RULES = {
 - Simple: `G`, `Am`, `C#m`, `Bb`
 - Slash: `A/C#`, `E/G#`, `Em7(11)/B`
 - Extended: `F7M(9)`, `Dm7(9)`, `G4(6)`, `A7M`
+- Parenthesized extensions with a slash, alteration or comma: `B7(4/9)`, `E7(#9)`, `Bm7(b5,11)`. Inside parens a `/` is part of the extension, never a bass note
+- Altered degrees and diminished: `C7#9`, `D#°`, `G#º`
+- Chords opening/closing a group: `(Dm`, `G7)`, `(Eb(add9)` (the paren is kept, the chord inside transposed)
 
 **When to modify:**
 - Supporting new chord notation patterns
 - Changing sharp/flat key conventions
-- Adjusting line classification heuristics
+- Adjusting line classification heuristics. When you do, transpose every song by 6 semitones and check that every chord root moved: that is how the gaps above were found
 - Adding new enharmonic spellings
 
 **Implementation notes:**
@@ -523,7 +527,7 @@ generator = SetlistGenerator.from_repositories(
 **Contents:**
 - `generate_setlist_pdf(setlist, songs, output_path, event_type_name="", moments_order=None, include_chords=True)` - Create professional PDF
 - `generate_setlist_pdf_bytes(setlist, songs, event_type_name="", moments_order=None, include_chords=True) -> bytes` - Same output written to a `BytesIO` buffer (used by the API and for cloud storage)
-- `_filter_out_chord_lines(content)` - Lyrics-only helper that drops both pure and "mixed" chord lines (e.g. `C D G (Dm G7)`, `Eb F Bb Riff`) using both `is_chord_line` and `_is_mixed_chord_line` from `library/transposer`. Section markers like `[Refrão]` are preserved
+- `_filter_out_chord_lines(content)` - Lyrics-only helper that drops both pure and "mixed" chord lines (e.g. `C D G (Dm G7)`, `Eb F Bb Riff`) using `is_chord_line`, `_is_mixed_chord_line` and `is_tab_line` from `library/transposer` (tab lines go too). Section markers like `[Refrão]` are preserved
 - `_strip_alignment_padding(content)` - Lyrics-only helper run after `_filter_out_chord_lines`: drops underscores, collapses runs of spaces and strips leading spaces (padding that aligned chords over syllables). Hyphens are untouched because `presen - ça` (padding) and `tocar-Te` (real) look alike
 - `MOMENT_DISPLAY_NAMES` - Internal-to-PDF moment name map (e.g. `ofertório → Oferta`)
 - Table of contents on page 1

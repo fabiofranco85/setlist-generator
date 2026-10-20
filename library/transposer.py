@@ -26,18 +26,22 @@ _FLAT_KEYS = {"F", "Bb", "Eb", "Ab", "Db", "Gb",
 
 # A chord token is:  Root  [quality/extensions]  [/Bass]
 #   Root = C | C# | Db | ... (uppercase letter + optional # or b)
-#   Quality = any combo of m, M, 7, 9, 11, 13, dim, aug, sus, add, (, ), +, -
+#   Quality = any combo of m, M, 7, 9, 11, 13, dim, aug, sus, add, °, +, -,
+#             altered degrees (#9, b13) and parenthesized extensions
 #   Bass = /Root
+# Inside parentheses a slash, an alteration or a comma is part of the
+# extension, not a bass note: B7(4/9), E7(#9), Bm7(b5,11).
 _ROOT_RE = r"[A-G][#b]?"
-_QUALITY_RE = r"(?:m(?!aj)|M|maj|dim|aug|sus|add|\d+|\(|\)|\+|\-)*"
+_PAREN_EXT_RE = r"\((?:[\d#b/+\-,]|maj|add|sus|dim|aug|M|m)*\)"
+_QUALITY_RE = (
+    rf"(?:m(?!aj)|M|maj|dim|aug|sus|add|[°º]|[#b]\d+|\d+|{_PAREN_EXT_RE}|\+|\-)*"
+)
 _CHORD_RE = re.compile(
     rf"({_ROOT_RE})({_QUALITY_RE})(?:/({_ROOT_RE}))?$"
 )
 
-# For scanning chord tokens inside a line (non-anchored)
-_CHORD_TOKEN_RE = re.compile(
-    rf"(?<![a-zà-ú])({_ROOT_RE}{_QUALITY_RE}(?:/{_ROOT_RE})?)(?![a-zà-ú])"
-)
+# Guitar tablature: a string name, a bar, then frets and techniques.
+_TAB_LINE_RE = re.compile(r"^\s*[A-Ga-g][#b]?\|(?=.*-)[-\d|~/\\()hpbrx.\s]*$")
 
 
 # ── public helpers ───────────────────────────────────────────────────
@@ -125,7 +129,7 @@ def transpose_chord(chord: str, semitones: int, use_flats: bool = False) -> str:
     >>> transpose_chord("Am7", 2)
     'Bm7'
     >>> transpose_chord("A/C#", 3, use_flats=True)
-    'C/Eb'
+    'C/E'
     >>> transpose_chord("F7M(9)", 2)
     'G7M(9)'
     """
@@ -145,12 +149,43 @@ def transpose_chord(chord: str, semitones: int, use_flats: bool = False) -> str:
 
 # Section markers like [Intro], [Refrão], etc.
 _SECTION_MARKER_RE = re.compile(r"^\[.*?\]\s*")
+_TOKEN_RE = re.compile(r"\S+")
+
+
+def _split_chord_token(token: str) -> tuple[str, str, str] | None:
+    """Split *token* into ``(prefix, chord, suffix)``, or ``None`` if no chord.
+
+    A chord may open or close a parenthesized group, as in ``(Dm  G7)``,
+    so one leading ``(`` and one trailing ``)`` are peeled off when the
+    token does not parse as a chord on its own (``B7(9)`` does).
+
+    >>> _split_chord_token("(Dm")
+    ('(', 'Dm', '')
+    >>> _split_chord_token("B7(9))")
+    ('', 'B7(9)', ')')
+    >>> _split_chord_token("(O") is None
+    True
+    """
+    prefix = "(" if token.startswith("(") else ""
+    body = token[len(prefix):]
+    if body and _CHORD_RE.match(body):
+        return prefix, body, ""
+    if body.endswith(")") and body[:-1] and _CHORD_RE.match(body[:-1]):
+        return prefix, body[:-1], ")"
+    return None
+
+
+def _line_tokens(line: str) -> list[str]:
+    """Whitespace tokens of *line* after any leading section marker."""
+    return _SECTION_MARKER_RE.sub("", line.strip()).split()
+
 
 def is_chord_line(line: str) -> bool:
     """Return ``True`` if *line* looks like a chord line.
 
     A chord line is one where every non-whitespace, non-section-marker
-    token parses as a valid chord symbol.
+    token parses as a valid chord symbol, possibly opening or closing a
+    parenthesized group. Bare ``(`` and ``)`` tokens are allowed too.
 
     >>> is_chord_line("G   D   Em   C")
     True
@@ -158,26 +193,27 @@ def is_chord_line(line: str) -> bool:
     False
     >>> is_chord_line("[Intro] F7M(9)  Am  G4(6)")
     True
+    >>> is_chord_line("C   G   (Dm  G7)")
+    True
     >>> is_chord_line("")
     False
     """
-    stripped = line.strip()
-    if not stripped:
-        return False
+    tokens = [t for t in _line_tokens(line) if t not in ("(", ")")]
+    return bool(tokens) and all(_split_chord_token(t) for t in tokens)
 
-    # Remove section markers like [Intro], [Refrão]
-    test = _SECTION_MARKER_RE.sub("", stripped).strip()
-    if not test:
-        return False
 
-    tokens = test.split()
-    if not tokens:
-        return False
+def is_tab_line(line: str) -> bool:
+    """Return ``True`` if *line* is a guitar tablature line.
 
-    for token in tokens:
-        if not _CHORD_RE.match(token):
-            return False
-    return True
+    Tabs name a string, not a chord, and their fret numbers do not move
+    when the chord names do, so transposition leaves them alone.
+
+    >>> is_tab_line("E|-----7--7/9----|")
+    True
+    >>> is_tab_line("E eu tão pequeno")
+    False
+    """
+    return bool(_TAB_LINE_RE.match(line))
 
 
 def _is_mixed_chord_line(line: str) -> bool:
@@ -197,19 +233,8 @@ def _is_mixed_chord_line(line: str) -> bool:
     >>> _is_mixed_chord_line("Em Deus")
     False
     """
-    stripped = line.strip()
-    if not stripped:
-        return False
-
-    test = _SECTION_MARKER_RE.sub("", stripped).strip()
-    if not test:
-        return False
-
-    tokens = test.split()
-    if not tokens:
-        return False
-
-    chord_count = sum(1 for t in tokens if _CHORD_RE.match(t))
+    tokens = [t for t in _line_tokens(line) if t not in ("(", ")")]
+    chord_count = sum(1 for t in tokens if _split_chord_token(t))
     non_chord_count = len(tokens) - chord_count
     return chord_count >= 2 and non_chord_count >= 1 and chord_count >= non_chord_count
 
@@ -230,39 +255,7 @@ def transpose_line(line: str, semitones: int, use_flats: bool = False) -> str:
     """
     if not is_chord_line(line):
         return line
-
-    # Collect (start_col, original_token, transposed_token)
-    entries: list[tuple[int, str, str]] = []
-
-    # Find section marker if present and keep it in place
-    marker_match = _SECTION_MARKER_RE.match(line)
-    marker = marker_match.group(0) if marker_match else ""
-    search_start = len(marker)
-
-    for m in _CHORD_TOKEN_RE.finditer(line, search_start):
-        original = m.group(0)
-        transposed = transpose_chord(original, semitones, use_flats)
-        entries.append((m.start(), original, transposed))
-
-    if not entries:
-        return line
-
-    # Reconstruct the line preserving column alignment
-    parts: list[str] = []
-    if marker:
-        parts.append(marker)
-
-    cursor = len(marker)
-    for start_col, _orig, transposed in entries:
-        # Pad to reach the original start column
-        gap = start_col - cursor
-        if gap < 1 and cursor > len(marker):
-            gap = 1  # ensure at least one space between chords (not after the marker)
-        parts.append(" " * gap)
-        parts.append(transposed)
-        cursor += gap + len(transposed)
-
-    return "".join(parts)
+    return _transpose_tokens(line, semitones, use_flats)
 
 
 def _transpose_mixed_line(line: str, semitones: int, use_flats: bool = False) -> str:
@@ -272,39 +265,45 @@ def _transpose_mixed_line(line: str, semitones: int, use_flats: bool = False) ->
     this preserves non-chord tokens (e.g. ``Riff``, ``Intro 2x:``) while
     transposing the chord tokens and maintaining column alignment.
     """
+    return _transpose_tokens(line, semitones, use_flats)
+
+
+def _transpose_tokens(line: str, semitones: int, use_flats: bool) -> str:
+    """Transpose every chord token of *line*, keeping each token's column.
+
+    Non-chord tokens (annotations, parentheses) are copied as they are.
+    When a transposed chord is longer than the gap that followed it, the
+    next token is pushed right just enough to keep one space between.
+    """
+    # Find section marker if present and keep it in place
     marker_match = _SECTION_MARKER_RE.match(line)
     marker = marker_match.group(0) if marker_match else ""
-    search_start = len(marker)
 
-    # Classify every whitespace-delimited token as chord or non-chord
     entries: list[tuple[int, str]] = []  # (start_col, output_text)
-    for m in re.finditer(r"\S+", line):
-        if m.start() < search_start:
-            continue  # inside section marker — skip
+    for m in _TOKEN_RE.finditer(line, len(marker)):
         token = m.group(0)
-        if _CHORD_RE.match(token):
-            entries.append((m.start(), transpose_chord(token, semitones, use_flats)))
-        else:
-            entries.append((m.start(), token))  # keep annotation as-is
+        parts = _split_chord_token(token)
+        if parts:
+            prefix, chord, suffix = parts
+            token = prefix + transpose_chord(chord, semitones, use_flats) + suffix
+        entries.append((m.start(), token))
 
     if not entries:
         return line
 
-    # Reconstruct preserving column alignment
-    parts: list[str] = []
-    if marker:
-        parts.append(marker)
-
+    # Reconstruct the line preserving column alignment
+    out: list[str] = [marker]
     cursor = len(marker)
     for start_col, text in entries:
+        # Pad to reach the original start column
         gap = start_col - cursor
-        if gap < 1 and parts:
-            gap = 1
-        parts.append(" " * gap)
-        parts.append(text)
+        if gap < 1 and cursor > len(marker):
+            gap = 1  # ensure at least one space between tokens (not after the marker)
+        out.append(" " * gap)
+        out.append(text)
         cursor += gap + len(text)
 
-    return "".join(parts)
+    return "".join(out)
 
 
 # ── heading key replacement ──────────────────────────────────────────

@@ -78,9 +78,8 @@ def test_filter_strips_parenthesized_chord_alternation():
 
 
 def test_filter_strips_chords_with_slash_inside_parens():
-    # Real pattern: D7(4/9) — the chord regex doesn't parse this fully
-    # because of the inner slash, so is_chord_line rejects the whole line.
-    # The mixed-line heuristic must catch it.
+    # Real pattern: D7(4/9). The slash inside the parens is part of the
+    # extension, not a bass note, so the line is a plain chord line.
     content = (
         "   Am  Bm7  C7M  D7(4/9)  G  Dm7  G7\n"
         "Estar ao teu lado, senhor"
@@ -148,3 +147,18 @@ def test_padding_preserves_blank_lines_and_section_markers():
 
 def test_padding_handles_empty_content():
     assert _strip_alignment_padding("") == ""
+
+
+def test_filter_strips_chord_lines_with_slash_inside_parens():
+    content = "    A               B7(4/9)\nEu continuo olhando para Ti"
+    assert _filter_out_chord_lines(content) == "Eu continuo olhando para Ti"
+
+
+def test_filter_strips_guitar_tab_lines():
+    content = (
+        "[Solo]\n"
+        "E|-----7--7/9-------------------------|\n"
+        "B|-/9----------------7/9--9~----------|\n"
+        "Tua graça me basta"
+    )
+    assert _filter_out_chord_lines(content) == "[Solo]\nTua graça me basta"

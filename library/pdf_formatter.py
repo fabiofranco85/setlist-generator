@@ -190,17 +190,18 @@ def _filter_out_chord_lines(content: str) -> str:
     containing stray non-chord tokens such as parenthesized groupings
     ``(Dm G7)`` or annotations like ``Riff``). Standalone section
     markers (``[Refrão]``, ``[Verso 1]``) are preserved because they
-    help non-musicians follow song structure.
+    help non-musicians follow song structure. Guitar tab lines
+    (``E|--7--|``) go too.
 
     Used to produce a lyrics-only PDF variant for non-musicians — the
     requirement is that no chord notation leaks into the final PDF, so
     the stricter ``_is_mixed_chord_line`` heuristic is layered on top of
     ``is_chord_line``.
     """
-    from .transposer import _is_mixed_chord_line, is_chord_line
+    from .transposer import _is_mixed_chord_line, is_chord_line, is_tab_line
 
     def is_chord(line: str) -> bool:
-        return is_chord_line(line) or _is_mixed_chord_line(line)
+        return is_chord_line(line) or _is_mixed_chord_line(line) or is_tab_line(line)
 
     kept = [line.rstrip() for line in content.split("\n") if not is_chord(line)]
     return "\n".join(kept)

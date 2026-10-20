@@ -818,6 +818,7 @@ Professional PDF setlist for print or digital use (generated with `--pdf` flag).
 A second PDF variant for singers and other non-musicians, generated with `--no-chords` (on `songbook pdf` or on `songbook generate --pdf`). It strips:
 
 - All chord lines (pure and mixed, including parenthesized groupings like `(Dm G7)` and chord+annotation lines like `Eb F Bb Riff`)
+- Guitar tablature lines (`E|-----7--7/9----|`)
 - The chord-key suffix from song titles
 - The chord-key suffix from the table of contents
 - The padding that lines chords up with syllables: underscores (`Coroa__mos` → `Coroamos`), runs of spaces and leading spaces. Hyphen splits like `presen - ça` stay, because a hyphen can be part of the lyric (`tocar-Te`)

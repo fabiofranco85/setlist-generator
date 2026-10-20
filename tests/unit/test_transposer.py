@@ -8,6 +8,7 @@ from library.transposer import (
     _transpose_mixed_line,
     calculate_semitones,
     is_chord_line,
+    is_tab_line,
     resolve_target_key,
     should_use_flats,
     transpose_chord,
@@ -259,10 +260,7 @@ class TestTransposeLine:
         assert transpose_line("[Intro]G  D", 2) == "[Intro]A  E"
 
     def test_no_chord_tokens_returns_unchanged(self):
-        # A chord line where regex finds no tokens (pure section marker with chord-like)
-        # Actually this is hard to trigger since is_chord_line would return False first.
-        # Let's test a line that is_chord_line=True but _CHORD_TOKEN_RE finds nothing:
-        # That scenario can't actually happen, so we test edge case of marker-only
+        # A marker with no chords after it is not a chord line, so it is returned as is
         assert transpose_line("[Intro]", 2) == "[Intro]"
 
 
@@ -360,3 +358,99 @@ class TestTransposeContent:
         # The mixed line should have chords transposed
         assert "Intro 2x:" in result
         assert "Lyrics here" in result
+
+
+# ---------------------------------------------------------------------------
+# Real-repertoire chord notation (each case was mis-transposed once)
+# ---------------------------------------------------------------------------
+
+
+class TestRepertoireNotation:
+    @pytest.mark.parametrize(
+        "chord, expected",
+        [
+            ("B7(4/9)", "C#7(4/9)"),     # slash inside the parens is not a bass
+            ("Am7(6/9)", "Bm7(6/9)"),
+            ("E7(#9)", "F#7(#9)"),       # sharp / flat alterations
+            ("Bm7(b5,11)", "C#m7(b5,11)"),  # comma-separated extensions
+            ("D#°", "F°"),               # diminished sign
+            ("G#º", "A#º"),              # ordinal sign used as diminished
+            ("C7#9", "D7#9"),
+            ("Eb(add9)", "F(add9)"),
+        ],
+    )
+    def test_chord_with_extension_is_transposed(self, chord, expected):
+        assert transpose_chord(chord, 2) == expected
+
+    @pytest.mark.parametrize(
+        "line",
+        [
+            "        A7M  B7(4/9)",
+            "Am7(6/9)",
+            " A        E7(#9)  A",
+            " G        C  D D#°      Em",
+            "Dm           Dm/C   Bm7(b5,11)  E",
+        ],
+    )
+    def test_line_with_extensions_is_a_chord_line(self, line):
+        assert is_chord_line(line) is True
+
+    def test_slash_inside_parens_keeps_columns(self):
+        assert transpose_line("    A               B7(4/9)", 2) == (
+            "    B               C#7(4/9)"
+        )
+
+    def test_parenthesized_alternative_is_transposed(self):
+        assert transpose_content("C            D          G      (Dm  G7)", 2) == (
+            "D            E          A      (Em  A7)"
+        )
+
+    def test_parenthesized_group_with_nested_extension_is_transposed(self):
+        line = "  Eb(add9) (Eb(add9) Bb/D Gm)       Cm9 Cm/Bb   F9/A"
+        assert transpose_content(line, 2, use_flats=True) == (
+            "  F(add9)  (F(add9)  C/E  Am)       Dm9 Dm/C    G9/B"
+        )
+
+    def test_riff_in_parens_is_transposed(self):
+        line = "            D        G  (F F# G F)"
+        assert transpose_content(line, 2) == "            E        A  (G G# A G)"
+
+    def test_lone_parens_are_kept(self):
+        assert transpose_content("( B/D#  C#m7 A7M  B7(9) )", 1) == (
+            "( C/E   Dm7  A#7M C7(9) )"
+        )
+
+    def test_lyric_line_starting_with_portuguese_article_is_not_a_chord_line(self):
+        for lyric in ("E eu tão pequeno e frágil", "A Tua mão", "Amém", "(O Amor de Deus) sara"):
+            assert is_chord_line(lyric) is False
+            assert _is_mixed_chord_line(lyric) is False
+            assert transpose_content(lyric, 3) == lyric
+
+
+# ---------------------------------------------------------------------------
+# is_tab_line
+# ---------------------------------------------------------------------------
+
+
+class TestIsTabLine:
+    @pytest.mark.parametrize(
+        "line",
+        [
+            "E|-----7--7/9-------------------------|",
+            "B|-/9----------------7/9--9~----------|",
+            "D|------------------------------------|",
+            "  e|--3--|",
+        ],
+    )
+    def test_guitar_tab_line(self, line):
+        assert is_tab_line(line) is True
+
+    @pytest.mark.parametrize(
+        "line", ["G   D   Em   C", "E eu tão pequeno", "", "[Solo]", "A--------------mor"]
+    )
+    def test_not_a_tab_line(self, line):
+        assert is_tab_line(line) is False
+
+    def test_tab_line_is_left_alone_by_transposition(self):
+        tab = "E|-----7--7/9-------------------------|"
+        assert transpose_content(tab, 2) == tab
