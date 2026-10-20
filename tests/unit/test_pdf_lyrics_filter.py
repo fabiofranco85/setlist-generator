@@ -6,7 +6,7 @@ section markers (like ``[Refrão]``). It reuses ``is_chord_line()`` from
 transposition behavior.
 """
 
-from library.pdf_formatter import _filter_out_chord_lines
+from library.pdf_formatter import _filter_out_chord_lines, _strip_alignment_padding
 
 
 def test_filter_removes_pure_chord_lines():
@@ -105,3 +105,46 @@ def test_filter_strips_chord_plus_riff_annotation():
         "Vem reinar em mim, Senhor"
     )
     assert _filter_out_chord_lines(content) == "Vem reinar em mim, Senhor"
+
+
+# --- Alignment padding (spaces / underscores added so chords land on syllables) ---
+
+
+def test_padding_removes_underscores_inside_words():
+    content = "Coroa__mos a Ti, ó rei Jesus\nA___le____lu____ia"
+    assert _strip_alignment_padding(content) == "Coroamos a Ti, ó rei Jesus\nAleluia"
+
+
+def test_padding_collapses_runs_of_spaces_between_words():
+    content = "Quero Te ver,     quero Te ver"
+    assert _strip_alignment_padding(content) == "Quero Te ver, quero Te ver"
+
+
+def test_padding_strips_leading_spaces():
+    content = "    Firme, oh Deus, está o meu cora__ção"
+    assert _strip_alignment_padding(content) == "Firme, oh Deus, está o meu coração"
+
+
+def test_padding_handles_underscore_and_spaces_together():
+    content = "Vou  lu____tar e vencer"
+    assert _strip_alignment_padding(content) == "Vou lutar e vencer"
+
+
+def test_padding_drops_underscore_run_standing_alone_between_words():
+    content = "Santo ___ Santo"
+    assert _strip_alignment_padding(content) == "Santo Santo"
+
+
+def test_padding_keeps_hyphens():
+    # A hyphen can be real Portuguese ("tocar-Te"), so it is never touched.
+    content = "Quero tocar - Te\nDa Tua presen - ça"
+    assert _strip_alignment_padding(content) == content
+
+
+def test_padding_preserves_blank_lines_and_section_markers():
+    content = "[Refrão]\nSanto  Santo\n\nVerso   dois"
+    assert _strip_alignment_padding(content) == "[Refrão]\nSanto Santo\n\nVerso dois"
+
+
+def test_padding_handles_empty_content():
+    assert _strip_alignment_padding("") == ""

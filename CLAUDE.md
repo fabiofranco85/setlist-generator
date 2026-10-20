@@ -301,7 +301,7 @@ When a setlist already exists at the target `(date, label, event_type)` triple, 
 
 **Lyrics-only PDF (for singers / non-musicians):**
 
-`--no-chords` (on `pdf` and on `generate --pdf`) strips chord lines, the chord-key suffix from song titles, and from the table of contents. The variant is written next to the regular PDF with a `_lyrics` suffix (e.g. `output/2026-02-15_lyrics.pdf`) so both can coexist on disk.
+`--no-chords` (on `pdf` and on `generate --pdf`) strips chord lines, the chord-key suffix from song titles, and from the table of contents. It also removes the padding added to line chords up with syllables: underscores (`Coroa__mos` → `Coroamos`), runs of spaces and leading spaces. Hyphen splits (`presen - ça`) are kept, since a hyphen can be real (`tocar-Te`). The variant is written next to the regular PDF with a `_lyrics` suffix (e.g. `output/2026-02-15_lyrics.pdf`) so both can coexist on disk.
 
 **Multiple setlists per date (labels):**
 ```bash

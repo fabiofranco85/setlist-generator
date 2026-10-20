@@ -206,6 +206,25 @@ def _filter_out_chord_lines(content: str) -> str:
     return "\n".join(kept)
 
 
+def _strip_alignment_padding(content: str) -> str:
+    """Return lyric content without the padding added to align chords.
+
+    Chord sheets stretch a syllable with underscores (``Coroa__mos``) or
+    extra spaces so the chord above lands on it. Once the chord lines are
+    gone that padding is noise, so underscores are dropped, runs of spaces
+    collapse to one and leading spaces go. Hyphens are left alone: a split
+    like ``presen - ça`` cannot be told apart from a real ``tocar-Te``.
+
+    Run it after ``_filter_out_chord_lines``; on chord lines it would break
+    the column alignment it exists to undo.
+    """
+    lines = (
+        " ".join(line.replace("_", "").split())
+        for line in content.split("\n")
+    )
+    return "\n".join(lines)
+
+
 class PageTracker:
     """Tracks page numbers during PDF generation."""
 
@@ -488,7 +507,9 @@ def build_pdf_content(
             # Chord content (monospace)
             chord_content = extract_chord_content(song)
             if not include_chords:
-                chord_content = _filter_out_chord_lines(chord_content)
+                chord_content = _strip_alignment_padding(
+                    _filter_out_chord_lines(chord_content)
+                )
             if chord_content:
                 # Use Preformatted for monospace rendering
                 preformatted = Preformatted(

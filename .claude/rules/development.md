@@ -524,12 +524,14 @@ generator = SetlistGenerator.from_repositories(
 - `generate_setlist_pdf(setlist, songs, output_path, event_type_name="", moments_order=None, include_chords=True)` - Create professional PDF
 - `generate_setlist_pdf_bytes(setlist, songs, event_type_name="", moments_order=None, include_chords=True) -> bytes` - Same output written to a `BytesIO` buffer (used by the API and for cloud storage)
 - `_filter_out_chord_lines(content)` - Lyrics-only helper that drops both pure and "mixed" chord lines (e.g. `C D G (Dm G7)`, `Eb F Bb Riff`) using both `is_chord_line` and `_is_mixed_chord_line` from `library/transposer`. Section markers like `[Refrão]` are preserved
+- `_strip_alignment_padding(content)` - Lyrics-only helper run after `_filter_out_chord_lines`: drops underscores, collapses runs of spaces and strips leading spaces (padding that aligned chords over syllables). Hyphens are untouched because `presen - ça` (padding) and `tocar-Te` (real) look alike
 - `MOMENT_DISPLAY_NAMES` - Internal-to-PDF moment name map (e.g. `ofertório → Oferta`)
 - Table of contents on page 1
 - Each moment on separate page with chords
 
 **Lyrics-only variant** (`include_chords=False`):
 - Strips chord lines from the rendered content
+- Removes chord-alignment padding (underscores, extra and leading spaces) from the remaining lyric lines
 - Removes the chord-key suffix from song titles
 - Removes the chord-key suffix from the table of contents
 - Wired up via `--no-chords` (CLI: `pdf` + `generate --pdf`) and `?no_chords=true` (API: `GET /setlists/{date}/pdf`). Files are written with a `_lyrics` suffix so both variants coexist on disk

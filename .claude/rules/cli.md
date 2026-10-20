@@ -1054,7 +1054,7 @@ songbook pdf --date 2026-02-15 --no-chords
 - `--date YYYY-MM-DD` - Target date (default: latest)
 - `--event-type TEXT` or `-e` - Event type slug
 - `--label TEXT` or `-l` - Setlist label
-- `--no-chords` - Generate a lyrics-only PDF (chord lines stripped, no key suffix in titles or TOC); written with a `_lyrics` filename suffix so it coexists with the regular PDF
+- `--no-chords` - Generate a lyrics-only PDF (chord lines stripped, chord-alignment underscores and extra spaces removed, no key suffix in titles or TOC); written with a `_lyrics` filename suffix so it coexists with the regular PDF
 - `--output-dir PATH` - Custom output directory
 - `--history-dir PATH` - Custom history directory
 
