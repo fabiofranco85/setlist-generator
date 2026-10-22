@@ -307,6 +307,8 @@ For detailed documentation, see: [`RECENCY_SYSTEM.md`](../../RECENCY_SYSTEM.md)
 
 The generator supports configurable output paths through multiple methods with the following priority (highest to lowest):
 
+Each directory is resolved on its own, so `--output-dir` works without `--history-dir` (on the postgres backend history lives in the database, so `--output-dir` is the only one that matters).
+
 **1. CLI Arguments (Highest Priority):**
 ```bash
 songbook generate --output-dir custom/output --history-dir custom/history

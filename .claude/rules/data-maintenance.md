@@ -200,10 +200,8 @@ event-type bindings); `output/` is a second copy of setlists and chord content.
 To rebuild after losing the database:
 
 ```bash
-# 0. Snapshot output/ first: on the postgres backend `songbook markdown` ignores
-#    --output-dir (the container never forwards --history-dir, and the path
-#    resolver needs both), so it writes into output/. To regenerate elsewhere set
-#    SETLIST_OUTPUT_DIR and SETLIST_HISTORY_DIR instead (see step 4).
+# 0. Snapshot output/ first: the steps below regenerate files, and output/ is
+#    gitignored, so a mistyped path has no other copy to fall back on.
 cp -R output .backups/output-$(date -u +%Y%m%dT%H%M%SZ)
 
 # 1. Restore the newest dump (carries its own DDL)
@@ -218,8 +216,7 @@ uv run python scripts/reconstruct_from_outputs.py --dry-run --since <dump date>
 uv run python scripts/reconstruct_from_outputs.py --since <dump date>
 
 # 4. Verify: regenerate a few setlists into a scratch dir and diff against output/
-SETLIST_OUTPUT_DIR=/tmp/rt/out SETLIST_HISTORY_DIR=/tmp/rt/hist \
-  songbook markdown --date 2026-09-13 -e ceia -l culto_dia
+songbook markdown --date 2026-09-13 -e ceia -l culto_dia --output-dir /tmp/rt/out
 diff /tmp/rt/out/ceia/2026-09-13_culto_dia.md output/ceia/2026-09-13_culto_dia.md
 
 # 5. Take a fresh backup

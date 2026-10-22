@@ -1,6 +1,7 @@
 """Path resolution utilities for output and history directories.
 
-This module provides centralized path resolution with multi-layer configuration:
+This module provides centralized path resolution with multi-layer configuration,
+applied to each directory on its own:
 1. CLI arguments (highest priority)
 2. Environment variables
 3. Config defaults (from config.py)
@@ -37,6 +38,10 @@ def get_output_paths(
 ) -> PathConfig:
     """Resolve output paths with priority: CLI > ENV > config > defaults.
 
+    Each directory is resolved on its own, so ``--output-dir`` works without
+    ``--history-dir``. That matters on the postgres backend, where history
+    lives in the database and there is no history directory to pass.
+
     Configuration priority (highest to lowest):
     1. CLI arguments (cli_output_dir, cli_history_dir)
     2. Environment variables (SETLIST_OUTPUT_DIR, SETLIST_HISTORY_DIR)
@@ -62,33 +67,27 @@ def get_output_paths(
         >>> os.environ["SETLIST_OUTPUT_DIR"] = "/data/output"
         >>> paths = get_output_paths(Path("."))
     """
-    # Priority 1: CLI arguments (both must be provided to use this layer)
-    if cli_output_dir is not None and cli_history_dir is not None:
-        return PathConfig(
-            output_dir=Path(cli_output_dir).resolve(),
-            history_dir=Path(cli_history_dir).resolve()
-        )
-
-    # Priority 2: Environment variables (both must be set to use this layer)
-    env_output = os.getenv("SETLIST_OUTPUT_DIR")
-    env_history = os.getenv("SETLIST_HISTORY_DIR")
-    if env_output and env_history:
-        return PathConfig(
-            output_dir=Path(env_output).resolve(),
-            history_dir=Path(env_history).resolve()
-        )
-
     # Priority 3 & 4: Config defaults with fallback
     try:
         from .config import DEFAULT_OUTPUT_DIR, DEFAULT_HISTORY_DIR
-        output_dir = DEFAULT_OUTPUT_DIR
-        history_dir = DEFAULT_HISTORY_DIR
+        default_output = DEFAULT_OUTPUT_DIR
+        default_history = DEFAULT_HISTORY_DIR
     except (ImportError, AttributeError):
         # Fallback if config doesn't have these constants
-        output_dir = "output"
-        history_dir = "history"
+        default_output = "output"
+        default_history = "history"
+
+    def resolve(cli_value: str | None, env_var: str, default: str) -> Path:
+        # Priority 1: CLI argument
+        if cli_value is not None:
+            return Path(cli_value).resolve()
+        # Priority 2: Environment variable
+        env_value = os.getenv(env_var)
+        if env_value:
+            return Path(env_value).resolve()
+        return (base_path / default).resolve()
 
     return PathConfig(
-        output_dir=(base_path / output_dir).resolve(),
-        history_dir=(base_path / history_dir).resolve()
+        output_dir=resolve(cli_output_dir, "SETLIST_OUTPUT_DIR", default_output),
+        history_dir=resolve(cli_history_dir, "SETLIST_HISTORY_DIR", default_history),
     )

@@ -33,20 +33,35 @@ class TestGetOutputPaths:
         assert paths.output_dir == Path("/env/output").resolve()
         assert paths.history_dir == Path("/env/history").resolve()
 
-    def test_partial_cli_falls_through(self, tmp_path, monkeypatch):
-        """If only one CLI arg is provided, env vars are checked."""
+    def test_cli_output_dir_alone_is_honored(self, tmp_path, monkeypatch):
+        """--output-dir works without --history-dir (postgres has no history dir)."""
+        monkeypatch.delenv("SETLIST_OUTPUT_DIR", raising=False)
+        monkeypatch.delenv("SETLIST_HISTORY_DIR", raising=False)
+        paths = get_output_paths(tmp_path, cli_output_dir="/cli/out")
+        assert paths.output_dir == Path("/cli/out").resolve()
+        assert paths.history_dir == (tmp_path / "history").resolve()
+
+    def test_cli_history_dir_alone_is_honored(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("SETLIST_OUTPUT_DIR", raising=False)
+        monkeypatch.delenv("SETLIST_HISTORY_DIR", raising=False)
+        paths = get_output_paths(tmp_path, cli_history_dir="/cli/hist")
+        assert paths.output_dir == (tmp_path / "output").resolve()
+        assert paths.history_dir == Path("/cli/hist").resolve()
+
+    def test_each_dir_falls_through_independently(self, tmp_path, monkeypatch):
+        """A CLI value for one dir does not stop the env var for the other."""
         monkeypatch.setenv("SETLIST_OUTPUT_DIR", "/env/output")
         monkeypatch.setenv("SETLIST_HISTORY_DIR", "/env/history")
         paths = get_output_paths(tmp_path, cli_output_dir="/cli/out")
-        # cli_history_dir is None, so CLI layer is skipped
-        assert paths.output_dir == Path("/env/output").resolve()
+        assert paths.output_dir == Path("/cli/out").resolve()
+        assert paths.history_dir == Path("/env/history").resolve()
 
-    def test_partial_env_falls_through_to_defaults(self, tmp_path, monkeypatch):
-        """If only one env var is set, defaults are used."""
+    def test_env_output_dir_alone_is_honored(self, tmp_path, monkeypatch):
         monkeypatch.setenv("SETLIST_OUTPUT_DIR", "/env/output")
         monkeypatch.delenv("SETLIST_HISTORY_DIR", raising=False)
         paths = get_output_paths(tmp_path)
-        assert paths.output_dir == (tmp_path / "output").resolve()
+        assert paths.output_dir == Path("/env/output").resolve()
+        assert paths.history_dir == (tmp_path / "history").resolve()
 
     def test_all_paths_resolved_to_absolute(self, tmp_path, monkeypatch):
         monkeypatch.delenv("SETLIST_OUTPUT_DIR", raising=False)
