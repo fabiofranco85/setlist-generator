@@ -67,6 +67,14 @@ def test_body_strips_tags_keeps_alignment():
     assert "Segunda linha & mais" in lines  # entities unescaped
     assert "<" not in body
 
+def test_body_drops_zero_width_spaces():
+    # Some pages prefix every line with U+200B (raw or as &#8203;); left in,
+    # it hides chord lines from is_chord_line and from transposition.
+    page = _page().replace("[Intro]", "​[Intro]").replace("Refrão de", "&#8203;Refrão de")
+    body = parse_page(page).body
+    assert "​" not in body
+    assert body.splitlines()[0] == "[Intro] C  Am7  G"
+
 def test_body_has_no_leading_or_trailing_blank_lines():
     body = parse_page(_page()).body
     assert not body.startswith("\n") and not body.endswith("\n")

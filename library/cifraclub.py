@@ -104,7 +104,9 @@ def parse_page(page: str) -> ChordSheet:
     pre = _PRE_RE.search(page)
     if not pre:
         raise ValueError("No chord sheet found on the page.")
-    lines = html.unescape(re.sub(r"<[^>]+>", "", pre.group(1))).splitlines()
+    # Some pages prefix each line with an invisible zero-width space (U+200B).
+    text = html.unescape(re.sub(r"<[^>]+>", "", pre.group(1))).replace("​", "")
+    lines = text.splitlines()
     body = "\n".join(line.rstrip() for line in lines).strip("\n")
 
     # "<Song> - <Artist> - Cifra Club"
